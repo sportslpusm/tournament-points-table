@@ -65,6 +65,8 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
     navigator.clipboard.writeText(formatRecoveryKey(recoveryKey)).then(() => {
       setKeyCopied(true);
       setTimeout(() => setKeyCopied(false), 2000);
+    }).catch(() => {
+      // Clipboard access denied — user can still manually copy
     });
   }
 

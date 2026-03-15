@@ -192,7 +192,7 @@ export default function Settings() {
         <div className="space-y-3">
           <div>
             <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tournament Name</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputCls} />
+            <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={200} className={inputCls} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import { useTournament } from '../context/TournamentContext';
+import { useTournament, useDispatch } from '../context/TournamentContext';
 import { validateImageFile, validateImageDataUrl, LIMITS } from '../utils/validation';
 import { compressImage } from '../utils/imageCompression';
 
 export default function ImageUpload({ value, onChange, label = 'Upload Image', size = 80 }) {
   const { darkMode } = useTournament();
+  const { showToast } = useDispatch();
   const inputRef = useRef(null);
   const [compressing, setCompressing] = useState(false);
 
@@ -15,7 +16,7 @@ export default function ImageUpload({ value, onChange, label = 'Upload Image', s
     // Validate file type and size
     const error = validateImageFile(file);
     if (error) {
-      alert(error);
+      showToast(error, 'error');
       e.target.value = '';
       return;
     }
@@ -25,7 +26,7 @@ export default function ImageUpload({ value, onChange, label = 'Upload Image', s
       const dataUrl = ev.target.result;
       // Validate the data URL
       if (!validateImageDataUrl(dataUrl)) {
-        alert('Invalid image file. Please try a different image.');
+        showToast('Invalid image file. Please try a different image.', 'error');
         return;
       }
       // Always compress to keep logos small for Firestore storage
@@ -41,7 +42,7 @@ export default function ImageUpload({ value, onChange, label = 'Upload Image', s
       }
     };
     reader.onerror = () => {
-      alert('Failed to read image file');
+      showToast('Failed to read image file', 'error');
     };
     reader.readAsDataURL(file);
     e.target.value = '';
