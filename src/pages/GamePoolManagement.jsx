@@ -7,12 +7,13 @@ import EmptyState from '../components/EmptyState';
 export default function GamePoolManagement() {
   const state = useTournament();
   const { dispatch, showToast } = useDispatch();
-  const { games, pools, teams, matches, darkMode, knockoutConfig } = state;
+  const { games, pools, teams, matches, darkMode, knockoutConfig, athletes, categories } = state;
 
   const [showGameModal, setShowGameModal] = useState(false);
   const [editGame, setEditGame] = useState(null);
   const [gameName, setGameName] = useState('');
   const [gameEmoji, setGameEmoji] = useState('🎮');
+  const [gameType, setGameType] = useState('team');
   const [deleteGameId, setDeleteGameId] = useState(null);
 
   const [showPoolModal, setShowPoolModal] = useState(false);
@@ -27,7 +28,7 @@ export default function GamePoolManagement() {
   const EMOJI_OPTIONS = ['🎮', '🏐', '🏏', '⚽', '🏀', '🎾', '🏓', '🤼', '🏋', '🏊', '🥊', '⛳', '🎯', '♟️', '🎳', '🏑'];
 
   const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${
-    darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+    darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
   }`;
 
   // Game CRUD
@@ -35,6 +36,7 @@ export default function GamePoolManagement() {
     setEditGame(null);
     setGameName('');
     setGameEmoji('🎮');
+    setGameType('team');
     setShowGameModal(true);
   }
 
@@ -42,6 +44,7 @@ export default function GamePoolManagement() {
     setEditGame(game);
     setGameName(game.name);
     setGameEmoji(game.emoji);
+    setGameType(game.type || 'team');
     setShowGameModal(true);
   }
 
@@ -60,7 +63,7 @@ export default function GamePoolManagement() {
       dispatch({ type: 'UPDATE_GAME', payload: { id: editGame.id, name: gameName.trim(), emoji: gameEmoji } });
       showToast('Game updated');
     } else {
-      dispatch({ type: 'ADD_GAME', payload: { name: gameName.trim(), emoji: gameEmoji } });
+      dispatch({ type: 'ADD_GAME', payload: { name: gameName.trim(), emoji: gameEmoji, type: gameType } });
       showToast('Game added');
     }
     setShowGameModal(false);
@@ -107,9 +110,16 @@ export default function GamePoolManagement() {
     dispatch({ type: 'UPDATE_KNOCKOUT_CONFIG', payload: { gameId, ...updates } });
   }
 
-  // Assign teams
+  // Assign teams — exclude teams already in ANY pool of the same game
   const assignPool = pools.find(p => p.id === assignPoolId);
-  const unassignedTeams = assignPool ? teams.filter(t => !assignPool.teamIds.includes(t.id)) : [];
+  const teamsInSameGame = assignPool
+    ? new Set(
+        pools
+          .filter(p => p.gameId === assignPool.gameId)
+          .flatMap(p => p.teamIds)
+      )
+    : new Set();
+  const unassignedTeams = assignPool ? teams.filter(t => !teamsInSameGame.has(t.id)) : [];
 
   // KO settings for currently open modal
   const koSettingsGame = games.find(g => g.id === showKoSettings);
@@ -134,9 +144,12 @@ export default function GamePoolManagement() {
       ) : (
         <div className="space-y-6">
           {games.map(game => {
+            const isIndividual = game.type === 'individual';
             const gamePools = pools.filter(p => p.gameId === game.id);
             const cfg = knockoutConfig[game.id] || {};
-            const stageLabel = cfg.stage === 'knockout' ? 'Knockout' : cfg.stage === 'completed' ? 'Completed' : 'Pool';
+            const gameAthletes = athletes.filter(a => a.gameId === game.id);
+            const gameCategories = categories.filter(c => c.gameId === game.id);
+            const stageLabel = isIndividual ? 'Individual' : cfg.stage === 'knockout' ? 'Knockout' : cfg.stage === 'completed' ? 'Completed' : 'Pool';
 
             return (
               <div key={game.id} className={`rounded-xl border overflow-hidden ${
@@ -149,10 +162,17 @@ export default function GamePoolManagement() {
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{game.emoji}</span>
                     <span className="font-bold">{game.name}</span>
-                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                      ({gamePools.length} pool{gamePools.length !== 1 ? 's' : ''})
-                    </span>
+                    {isIndividual ? (
+                      <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        ({gameCategories.length} categories · {gameAthletes.length} athletes)
+                      </span>
+                    ) : (
+                      <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        ({gamePools.length} pool{gamePools.length !== 1 ? 's' : ''})
+                      </span>
+                    )}
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                      isIndividual ? 'bg-purple-500/10 text-purple-400' :
                       stageLabel === 'Knockout' ? 'bg-accent/10 text-accent' :
                       stageLabel === 'Completed' ? 'bg-win/10 text-win' :
                       darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
@@ -161,32 +181,64 @@ export default function GamePoolManagement() {
                     </span>
                   </div>
                   <div className="flex gap-1 items-center">
-                    <button
-                      onClick={() => setShowKoSettings(game.id)}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                        cfg.enabled !== false ? 'bg-accent/10 text-accent' : darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
-                      }`}
-                      title="Knockout Settings"
-                      aria-label="Knockout settings"
-                    >
-                      ⚔️ KO
-                    </button>
+                    {!isIndividual && (
+                      <button
+                        onClick={() => setShowKoSettings(game.id)}
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                          cfg.enabled !== false ? 'bg-accent/10 text-accent' : darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
+                        }`}
+                        title="Knockout Settings"
+                        aria-label="Knockout settings"
+                      >
+                        ⚔️ KO
+                      </button>
+                    )}
+                    {isIndividual && (
+                      <button
+                        onClick={() => dispatch({ type: 'SELECT_GAME', payload: game.id })}
+                        className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 text-purple-400 transition-colors hover:bg-purple-500/20"
+                      >
+                        Manage →
+                      </button>
+                    )}
                     <button onClick={() => openEditGame(game)} className={`p-1.5 rounded-lg text-sm transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`} aria-label="Edit game">
                       ✏️
                     </button>
                     <button onClick={() => setDeleteGameId(game.id)} className="p-1.5 rounded-lg hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-colors" aria-label="Delete game">
                       🗑
                     </button>
-                    <button onClick={() => openAddPool(game.id)} className={`px-3 py-1 rounded-lg text-xs font-medium ml-2 transition-colors ${
-                      darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}>
-                      + Pool
-                    </button>
+                    {!isIndividual && (
+                      <button onClick={() => openAddPool(game.id)} className={`px-3 py-1 rounded-lg text-xs font-medium ml-2 transition-colors ${
+                        darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}>
+                        + Pool
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Pools */}
-                {gamePools.length === 0 ? (
+                {/* Content: Pools for team games, summary for individual games */}
+                {isIndividual ? (
+                  <div className="p-4">
+                    <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {gameCategories.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {gameCategories.map(cat => (
+                            <span key={cat.id} className={`px-2 py-1 rounded-lg text-xs ${
+                              cat.status === 'completed'
+                                ? 'bg-win/10 text-win'
+                                : darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {cat.name} ({cat.athleteIds.length})
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>No categories yet. Click "Manage" to add categories and athletes.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : gamePools.length === 0 ? (
                   <p className={`p-4 text-sm ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>No pools yet. Add a pool to this game.</p>
                 ) : (
                   <div className={`divide-y ${darkMode ? 'divide-white/5' : 'divide-gray-100'}`}>
@@ -257,13 +309,63 @@ export default function GamePoolManagement() {
       {/* Game Modal */}
       <Modal isOpen={showGameModal} onClose={() => setShowGameModal(false)} title={editGame ? 'Edit Game' : 'Add Game'}>
         <div className="space-y-4">
+          {/* Game Type Selector — only for new games or games without data */}
+          {(() => {
+            const hasData = editGame && (
+              pools.some(p => p.gameId === editGame.id) ||
+              athletes.some(a => a.gameId === editGame.id) ||
+              categories.some(c => c.gameId === editGame.id)
+            );
+            return (
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game Type *</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => !hasData && setGameType('team')}
+                    disabled={hasData}
+                    className={`px-3 py-3 rounded-lg text-sm font-medium border transition-all text-center ${
+                      gameType === 'team'
+                        ? 'bg-accent/20 border-accent text-accent'
+                        : hasData
+                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/5 border-white/10 text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
+                          : darkMode ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="text-xl mb-1">🏐</div>
+                    Team Sport
+                    <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team vs Team</div>
+                  </button>
+                  <button
+                    onClick={() => !hasData && setGameType('individual')}
+                    disabled={hasData}
+                    className={`px-3 py-3 rounded-lg text-sm font-medium border transition-all text-center ${
+                      gameType === 'individual'
+                        ? 'bg-purple-500/20 border-purple-400 text-purple-400'
+                        : hasData
+                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/5 border-white/10 text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
+                          : darkMode ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="text-xl mb-1">🏋️</div>
+                    Individual Sport
+                    <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Athletes in categories</div>
+                  </button>
+                </div>
+                {hasData && (
+                  <p className={`text-xs mt-1 ${darkMode ? 'text-yellow-400/70' : 'text-yellow-600'}`}>
+                    ⚠️ Game type cannot be changed after data has been added.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
           <div>
             <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game Name *</label>
             <input
               type="text"
               value={gameName}
               onChange={e => setGameName(e.target.value)}
-              placeholder="e.g. Volleyball"
+              placeholder={gameType === 'individual' ? 'e.g. Powerlifting' : 'e.g. Volleyball'}
               className={inputCls}
             />
           </div>
@@ -283,6 +385,30 @@ export default function GamePoolManagement() {
                   {emoji}
                 </button>
               ))}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>or type custom:</span>
+              <input
+                type="text"
+                value={!EMOJI_OPTIONS.includes(gameEmoji) ? gameEmoji : ''}
+                onChange={e => {
+                  const val = e.target.value;
+                  // Allow emojis and special chars, limit to first grapheme cluster (max 2 chars for surrogate pairs)
+                  const segments = val.length > 0 ? [...new Intl.Segmenter().segment(val)] : [];
+                  if (segments.length > 0) setGameEmoji(segments[0].segment);
+                  else if (val === '') setGameEmoji(EMOJI_OPTIONS[0]);
+                }}
+                placeholder="🏸"
+                className={`w-16 h-10 text-center text-xl rounded-lg border ${
+                  !EMOJI_OPTIONS.includes(gameEmoji)
+                    ? 'bg-accent/20 border-accent'
+                    : darkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-300'
+                }`}
+                maxLength={4}
+              />
+              {!EMOJI_OPTIONS.includes(gameEmoji) && (
+                <span className="text-2xl">{gameEmoji}</span>
+              )}
             </div>
           </div>
           <div className="flex gap-3 pt-2">
@@ -326,6 +452,27 @@ export default function GamePoolManagement() {
                     <option key={n} value={n}>Top {n} from each pool</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Starting Round
+                </label>
+                <select
+                  value={koConfig.startingRound || 'auto'}
+                  onChange={e => updateKoConfig(showKoSettings, { startingRound: e.target.value })}
+                  className={inputCls}
+                >
+                  <option value="auto">Auto (based on qualified teams)</option>
+                  <option value="final">Final only (top 2)</option>
+                  <option value="sf">Semi Finals (top 3-4)</option>
+                  <option value="qf">Quarter Finals (top 5-8)</option>
+                  <option value="ro16">Round of 16 (top 9-16)</option>
+                  <option value="ro32">Round of 32 (top 17-32)</option>
+                </select>
+                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Skip rounds by selecting a later starting round (e.g., start from Semi Finals to skip Quarter Finals).
+                </p>
               </div>
 
               <div>
@@ -435,7 +582,7 @@ export default function GamePoolManagement() {
               disabled={!!editPool}
             >
               <option value="">Select Game</option>
-              {games.map(g => <option key={g.id} value={g.id}>{g.emoji} {g.name}</option>)}
+              {games.filter(g => g.type !== 'individual').map(g => <option key={g.id} value={g.id}>{g.emoji} {g.name}</option>)}
             </select>
           </div>
           <div className="flex gap-3 pt-2">

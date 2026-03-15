@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import LoginModal from './LoginModal';
+import SaveIndicator from './SaveIndicator';
+import OfflineBanner from './OfflineBanner';
 
 const ALL_NAV_ITEMS = [
   { view: 'dashboard', label: 'Leaderboard', icon: '🏆', adminOnly: false },
   { view: 'game', label: 'Games', icon: '🎮', adminOnly: false },
   { view: 'matches', label: 'Matches', icon: '📋', adminOnly: false },
   { view: 'teams', label: 'Teams', icon: '👥', adminOnly: false },
+  { view: 'athletes', label: 'Athletes', icon: '🏃', adminOnly: false },
   { view: 'gameManagement', label: 'Manage', icon: '⚙️', adminOnly: true },
   { view: 'settings', label: 'Settings', icon: '🔧', adminOnly: true },
 ];
@@ -33,7 +36,7 @@ export default function Layout({ children }) {
 
         <div className={`p-4 flex items-center gap-3 border-b ${darkMode ? 'border-white/5' : 'border-gray-200'}`}>
           {tournament.logo ? (
-            <img src={tournament.logo} alt="" className="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10" />
+            <img src={tournament.logo} alt="" className="w-10 h-10 rounded-lg object-contain ring-1 ring-white/10" />
           ) : (
             <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center text-accent font-bold text-lg">
               T
@@ -41,7 +44,7 @@ export default function Layout({ children }) {
           )}
           <div className="flex-1 min-w-0">
             <h1 className="font-bold text-sm truncate">{tournament.name}</h1>
-            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Tournament</p>
+            <SaveIndicator darkMode={darkMode} />
           </div>
         </div>
 
@@ -101,31 +104,44 @@ export default function Layout({ children }) {
               Admin Login
             </button>
           )}
+          {/* USC Branding */}
+          <div className={`flex items-center gap-2 px-3 pt-2 ${darkMode ? 'opacity-30' : 'opacity-40'}`}>
+            <img src="/USC.png" alt="USC" className="w-4 h-4 object-contain" />
+            <span className="text-[9px] text-gray-500 tracking-wide">Uni Sports Council, LPU</span>
+          </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 min-w-0 pb-20 lg:pb-0">
+        {/* Offline Banner */}
+        <OfflineBanner darkMode={darkMode} />
+
         {/* Mobile Header */}
         <div className={`lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b no-print ${
           darkMode
             ? 'bg-navy-900/90 backdrop-blur-xl border-white/5'
             : 'bg-white/90 backdrop-blur-xl border-gray-200'
         }`}>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             {tournament.logo ? (
-              <img src={tournament.logo} alt="" className="w-8 h-8 rounded-lg object-cover" />
+              <img src={tournament.logo} alt="" className="w-8 h-8 rounded-lg object-contain flex-shrink-0" />
             ) : (
-              <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent font-bold text-sm">
+              <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent font-bold text-sm flex-shrink-0">
                 T
               </div>
             )}
-            <h1 className="font-bold text-sm truncate max-w-[140px]">{tournament.name}</h1>
-            {isAdmin && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold">
-                ADMIN
-              </span>
-            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h1 className="font-bold text-sm truncate max-w-[120px]">{tournament.name}</h1>
+                {isAdmin && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold flex-shrink-0">
+                    ADMIN
+                  </span>
+                )}
+              </div>
+              <SaveIndicator darkMode={darkMode} />
+            </div>
           </div>
           <div className="flex items-center gap-1">
             {isAdmin && (

@@ -4,11 +4,12 @@ import { useDispatch } from '../context/TournamentContext';
 import { hashPassword, generateRecoveryKey, formatRecoveryKey, validatePassword } from '../utils/auth';
 import ImageUpload from './ImageUpload';
 
-export default function FirstTimeSetup({ onComplete }) {
+export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false }) {
   const { setupPassword } = useAuth();
   const { dispatch, showToast, setAdminFlag } = useDispatch();
 
-  const [step, setStep] = useState(1);
+  // If tournament already exists, skip step 1 (tournament info)
+  const [step, setStep] = useState(skipTournamentInfo ? 2 : 1);
 
   // Step 1: Tournament info
   const [tName, setTName] = useState('');
@@ -49,11 +50,13 @@ export default function FirstTimeSetup({ onComplete }) {
     // Immediately set admin flag so dispatch guard passes (useEffect sync might be delayed)
     setAdminFlag(true);
 
-    // Save tournament info (now we're admin, dispatch guard passes)
-    dispatch({
-      type: 'SET_TOURNAMENT',
-      payload: { name: tName.trim() || 'My Tournament', logo: tLogo },
-    });
+    // Only save tournament info if we went through step 1 (not skipped for existing tournament)
+    if (!skipTournamentInfo) {
+      dispatch({
+        type: 'SET_TOURNAMENT',
+        payload: { name: tName.trim() || 'My Tournament', logo: tLogo },
+      });
+    }
 
     setStep(3);
   }
@@ -127,9 +130,15 @@ export default function FirstTimeSetup({ onComplete }) {
           {step === 2 && (
             <div className="animate-slideUp">
               <div className="text-center mb-6">
-                <div className="text-3xl mb-2">🔐</div>
-                <h2 className="text-xl font-bold text-white">Set Admin Password</h2>
-                <p className="text-sm text-gray-400 mt-1">Protect your tournament data from unauthorized edits</p>
+                <div className="text-3xl mb-2">{skipTournamentInfo ? '🔄' : '🔐'}</div>
+                <h2 className="text-xl font-bold text-white">
+                  {skipTournamentInfo ? 'Set New Admin Password' : 'Set Admin Password'}
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  {skipTournamentInfo
+                    ? 'Your tournament data was found. Set a password to manage it from this device.'
+                    : 'Protect your tournament data from unauthorized edits'}
+                </p>
               </div>
               <div className="space-y-4">
                 <div>
@@ -167,12 +176,14 @@ export default function FirstTimeSetup({ onComplete }) {
                   <p className="text-red-400 text-sm">{pwError}</p>
                 )}
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => setStep(1)}
-                    className="flex-1 px-4 py-2.5 bg-white/10 text-gray-300 rounded-lg hover:bg-white/15 transition-colors"
-                  >
-                    Back
-                  </button>
+                  {!skipTournamentInfo && (
+                    <button
+                      onClick={() => setStep(1)}
+                      className="flex-1 px-4 py-2.5 bg-white/10 text-gray-300 rounded-lg hover:bg-white/15 transition-colors"
+                    >
+                      Back
+                    </button>
+                  )}
                   <button
                     onClick={handleStep2}
                     className="flex-1 px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-lg hover:bg-accent-dark transition-colors"
@@ -239,9 +250,12 @@ export default function FirstTimeSetup({ onComplete }) {
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-4">
-          Tournament Points Table
-        </p>
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <img src="/USC.png" alt="USC" className="w-5 h-5 object-contain opacity-40" />
+          <p className="text-xs text-gray-600">
+            Tournament Points Table &middot; Uni Sports Council, LPU
+          </p>
+        </div>
       </div>
     </div>
   );

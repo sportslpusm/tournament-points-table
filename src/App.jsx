@@ -1,25 +1,42 @@
 import { useEffect, useState } from 'react';
 import { TournamentProvider, useTournament, useDispatch } from './context/TournamentContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SyncProvider } from './context/SyncContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import ToastContainer from './components/Toast';
 import FirstTimeSetup from './components/FirstTimeSetup';
+import LoadingScreen from './components/LoadingScreen';
 import Dashboard from './pages/Dashboard';
 import GameView from './pages/GameView';
+import IndividualGameView from './pages/IndividualGameView';
 import MatchManagement from './pages/MatchManagement';
 import TeamManagement from './pages/TeamManagement';
+import AthleteManagement from './pages/AthleteManagement';
 import GamePoolManagement from './pages/GamePoolManagement';
 import Settings from './pages/Settings';
 
+function GameRouter() {
+  const { games, selectedGameId } = useTournament();
+  const game = games.find(g => g.id === selectedGameId);
+  return game?.type === 'individual' ? <IndividualGameView /> : <GameView />;
+}
+
 function AppContent() {
   const { currentView } = useTournament();
-  const { isAdmin, needsSetup, setOnLogoutCallback } = useAuth();
-  const { setAdminFlag, showToast } = useDispatch();
+  const { isAdmin, needsSetup, authLoaded, hasExistingTournament, setOnLogoutCallback } = useAuth();
+  const { setAdminFlag, showToast, dataLoaded } = useDispatch();
 
   // Track whether setup wizard is still active (persists even after password is set
   // so the recovery key step can be shown)
-  const [showingSetup, setShowingSetup] = useState(needsSetup);
+  const [showingSetup, setShowingSetup] = useState(false);
+
+  // Once data is loaded, determine if setup is needed
+  useEffect(() => {
+    if (dataLoaded && authLoaded && needsSetup) {
+      setShowingSetup(true);
+    }
+  }, [dataLoaded, authLoaded, needsSetup]);
 
   // Sync admin flag to TournamentContext's dispatch guard
   useEffect(() => {
@@ -33,9 +50,14 @@ function AppContent() {
     });
   }, [setOnLogoutCallback, showToast]);
 
+  // Show loading screen while data loads from Firestore
+  if (!dataLoaded || !authLoaded) {
+    return <LoadingScreen />;
+  }
+
   // Show first-time setup if needed OR if the wizard is still active
   if (needsSetup || showingSetup) {
-    return <FirstTimeSetup onComplete={() => setShowingSetup(false)} />;
+    return <FirstTimeSetup onComplete={() => setShowingSetup(false)} skipTournamentInfo={hasExistingTournament} />;
   }
 
   // Redirect admin-only views to dashboard if not admin
@@ -44,9 +66,10 @@ function AppContent() {
 
   const pages = {
     dashboard: Dashboard,
-    game: GameView,
+    game: GameRouter,
     matches: MatchManagement,
     teams: TeamManagement,
+    athletes: AthleteManagement,
     gameManagement: GamePoolManagement,
     settings: Settings,
   };
@@ -64,11 +87,13 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <TournamentProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-      </TournamentProvider>
+      <SyncProvider>
+        <TournamentProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </TournamentProvider>
+      </SyncProvider>
     </ErrorBoundary>
   );
 }

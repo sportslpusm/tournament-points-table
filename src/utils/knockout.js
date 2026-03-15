@@ -73,11 +73,62 @@ export function getPoolMatchesRemaining(pools, matches, gameId) {
   return poolMatches.filter(m => m.status !== 'completed').length;
 }
 
+// Get the max teams a round can hold
+export function getMaxTeamsForRound(round) {
+  const roundSlots = { ro32: 32, ro16: 16, qf: 8, sf: 4, final: 2 };
+  return roundSlots[round] || null;
+}
+
+// Get available starting round options for a given number of qualified teams
+export function getAvailableStartingRounds(teamCount) {
+  const options = [];
+  if (teamCount >= 2) options.push({ value: 'final', label: 'Final (2 teams)' });
+  if (teamCount >= 3) options.push({ value: 'sf', label: 'Semi Finals (3-4 teams)' });
+  if (teamCount >= 5) options.push({ value: 'qf', label: 'Quarter Finals (5-8 teams)' });
+  if (teamCount >= 9) options.push({ value: 'ro16', label: 'Round of 16 (9-16 teams)' });
+  if (teamCount >= 17) options.push({ value: 'ro32', label: 'Round of 32 (17-32 teams)' });
+  return options.reverse(); // largest first
+}
+
 // Generate bracket matches with cross-pool seeding
-export function generateBracket(qualifiers, pools, gameId, genIdFn) {
+export function generateBracket(qualifiers, pools, gameId, genIdFn, customStartRound) {
   const teamCount = qualifiers.length;
-  const startRound = getStartingRound(teamCount);
+  const startRound = customStartRound && customStartRound !== 'auto'
+    ? customStartRound
+    : getStartingRound(teamCount);
   if (!startRound) return [];
+
+  // If custom start round needs fewer teams, pick top teams evenly across pools.
+  // E.g. for SF (4 teams) with 4 pools: take rank 1 from each pool.
+  // For SF (4 teams) with 2 pools: take rank 1 and 2 from each pool.
+  const maxTeams = getMaxTeamsForRound(startRound);
+  let effectiveQualifiers = qualifiers;
+  if (maxTeams && teamCount > maxTeams) {
+    // Group qualifiers by pool
+    const byPool = {};
+    for (const q of qualifiers) {
+      if (!byPool[q.poolId]) byPool[q.poolId] = [];
+      byPool[q.poolId].push(q);
+    }
+    // Sort each pool by rank
+    for (const pid in byPool) byPool[pid].sort((a, b) => a.rank - b.rank);
+
+    // Pick teams round-robin by rank: all rank-1 first, then rank-2, etc.
+    const poolKeys = Object.keys(byPool);
+    const selected = [];
+    let rank = 0;
+    while (selected.length < maxTeams) {
+      for (const pid of poolKeys) {
+        if (selected.length >= maxTeams) break;
+        if (byPool[pid][rank]) {
+          selected.push(byPool[pid][rank]);
+        }
+      }
+      rank++;
+      if (rank > 20) break; // safety
+    }
+    effectiveQualifiers = selected;
+  }
 
   const rounds = getRoundsNeeded(startRound);
   const allMatches = [];
@@ -85,7 +136,7 @@ export function generateBracket(qualifiers, pools, gameId, genIdFn) {
 
   // Sort qualifiers by pool for cross-seeding
   const poolMap = {};
-  for (const q of qualifiers) {
+  for (const q of effectiveQualifiers) {
     if (!poolMap[q.poolId]) poolMap[q.poolId] = [];
     poolMap[q.poolId].push(q);
   }
@@ -98,7 +149,7 @@ export function generateBracket(qualifiers, pools, gameId, genIdFn) {
   const poolIds = Object.keys(poolMap);
 
   // Create seeded team list for first round using cross-pool seeding
-  let seededTeams = crossPoolSeed(poolMap, poolIds, teamCount, startRound);
+  let seededTeams = crossPoolSeed(poolMap, poolIds, effectiveQualifiers.length, startRound);
 
   // Pad to next power of 2 for byes
   const bracketSize = nextPowerOf2(seededTeams.length);

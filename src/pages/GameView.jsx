@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker } from '../utils/points';
-import { calculateQualifiers, generateBracket, getPoolMatchesRemaining, isKnockoutComplete, getStartingRound } from '../utils/knockout';
+import { calculateQualifiers, generateBracket, getPoolMatchesRemaining, isKnockoutComplete, getStartingRound, getAvailableStartingRounds } from '../utils/knockout';
 import TeamLogo from '../components/TeamLogo';
 import EmptyState from '../components/EmptyState';
 import BracketView from '../components/BracketView';
@@ -10,6 +10,7 @@ import KnockoutFixtures from '../components/KnockoutFixtures';
 import QualificationPanel from '../components/QualificationPanel';
 import ChampionDisplay from '../components/ChampionDisplay';
 import Modal, { ConfirmDialog } from '../components/Modal';
+import PointsExplainer, { TableLegend } from '../components/PointsExplainer';
 
 let _idCounter = Date.now() + 100000;
 function localGenId(prefix = '') {
@@ -26,6 +27,8 @@ export default function GameView() {
   const [showAdvanceConfirm, setShowAdvanceConfirm] = useState(false);
   const [showForceAdvance, setShowForceAdvance] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showChangeRound, setShowChangeRound] = useState(false);
+  const [selectedStartRound, setSelectedStartRound] = useState('auto');
 
   const currentGame = games.find(g => g.id === selectedGameId) || games[0];
   const gameId = currentGame?.id;
@@ -92,8 +95,8 @@ export default function GameView() {
     const qualifiers = calculateQualifiers(gamePools, matches, teams, config?.qualifyCount || 2);
     dispatch({ type: 'SET_QUALIFIED_TEAMS', payload: { gameId, teams: qualifiers } });
 
-    // Generate bracket
-    const bracketMatches = generateBracket(qualifiers, gamePools, gameId, localGenId);
+    // Generate bracket (pass custom starting round from config if set)
+    const bracketMatches = generateBracket(qualifiers, gamePools, gameId, localGenId, config?.startingRound);
     dispatch({ type: 'SET_KNOCKOUT_MATCHES', payload: { gameId, matches: bracketMatches } });
 
     // Advance stage
@@ -111,6 +114,32 @@ export default function GameView() {
     showToast('Reset to pool stage');
     setActiveTab('pool');
     setShowResetConfirm(false);
+  }
+
+  // Regenerate bracket with a different starting round
+  function handleRegenerateBracket(newStartRound) {
+    if (!gameId) return;
+
+    // Recalculate qualifiers from current pool data
+    const qualifiers = calculateQualifiers(gamePools, matches, teams, config?.qualifyCount || 2);
+    dispatch({ type: 'SET_QUALIFIED_TEAMS', payload: { gameId, teams: qualifiers } });
+
+    // Save the starting round preference
+    dispatch({ type: 'UPDATE_KNOCKOUT_CONFIG', payload: { gameId, startingRound: newStartRound } });
+
+    // Regenerate bracket with new starting round
+    const bracketMatches = generateBracket(qualifiers, gamePools, gameId, localGenId, newStartRound);
+    dispatch({ type: 'SET_KNOCKOUT_MATCHES', payload: { gameId, matches: bracketMatches } });
+
+    const roundLabels = { auto: 'Auto', sf: 'Semi Finals', qf: 'Quarter Finals', final: 'Final', ro16: 'Round of 16', ro32: 'Round of 32' };
+    showToast(`Bracket regenerated — starting from ${roundLabels[newStartRound] || newStartRound}`);
+    setShowChangeRound(false);
+  }
+
+  // Sync selectedStartRound when config changes or modal opens
+  function openChangeRound() {
+    setSelectedStartRound(config?.startingRound || 'auto');
+    setShowChangeRound(true);
   }
 
   if (games.length === 0) {
@@ -219,14 +248,22 @@ export default function GameView() {
               </button>
             )}
             {isAdmin && (stage === 'knockout' || stage === 'completed') && (
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                  darkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-              >
-                Reset to Pool
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={openChangeRound}
+                  className="px-3 py-1.5 text-xs rounded-lg font-medium transition-colors bg-accent/10 text-accent hover:bg-accent/20"
+                >
+                  Change Round
+                </button>
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                    darkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  Reset to Pool
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -254,6 +291,9 @@ export default function GameView() {
           ))}
         </div>
       )}
+
+      {/* Per-Game Points Explainer */}
+      <PointsExplainer filterType="team" gameId={gameId} />
 
       {/* Champion Display */}
       {stage === 'completed' && <ChampionDisplay gameId={gameId} />}
@@ -353,6 +393,7 @@ export default function GameView() {
                           })}
                         </tbody>
                       </table>
+                      <TableLegend type="team" />
                     </div>
                   ) : (
                     <p className={`p-4 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No teams assigned to this pool yet.</p>
@@ -459,6 +500,78 @@ export default function GameView() {
         title="Reset to Pool Stage"
         message="This will delete all knockout matches, brackets, and qualification data for this game. Pool stage data will be preserved."
       />}
+
+      {/* Change Starting Round Modal - admin only */}
+      {isAdmin && <Modal
+        isOpen={showChangeRound}
+        onClose={() => setShowChangeRound(false)}
+        title="Change Knockout Starting Round"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Choose which round the knockout stage starts from. This will <strong>regenerate the entire bracket</strong> — all existing knockout results will be lost.
+          </p>
+
+          <div className="space-y-2">
+            {[
+              { value: 'auto', label: 'Auto', desc: `Based on ${qualified.length} qualified teams` },
+              { value: 'sf', label: 'Semi Finals', desc: 'Top 4 teams only' },
+              { value: 'qf', label: 'Quarter Finals', desc: 'Top 8 teams' },
+              { value: 'final', label: 'Final Only', desc: 'Top 2 teams' },
+              { value: 'ro16', label: 'Round of 16', desc: 'Top 16 teams' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedStartRound(opt.value)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border text-left transition-all ${
+                  selectedStartRound === opt.value
+                    ? 'bg-accent/10 border-accent text-accent'
+                    : darkMode
+                    ? 'bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/5'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div>
+                  <div className="font-medium text-sm">{opt.label}</div>
+                  <div className={`text-xs ${selectedStartRound === opt.value ? 'text-accent/70' : darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {opt.desc}
+                  </div>
+                </div>
+                {selectedStartRound === opt.value && (
+                  <span className="text-accent text-lg">✓</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Warning about losing results */}
+          {gameKoMatches.some(m => m.status === 'completed') && (
+            <div className={`rounded-lg p-3 ${darkMode ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200'}`}>
+              <p className="text-xs text-red-400 font-medium">
+                ⚠️ Warning: You have completed knockout matches. Regenerating will erase all knockout results.
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setShowChangeRound(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                darkMode ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleRegenerateBracket(selectedStartRound)}
+              className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors"
+            >
+              Regenerate Bracket
+            </button>
+          </div>
+        </div>
+      </Modal>}
     </div>
   );
 }

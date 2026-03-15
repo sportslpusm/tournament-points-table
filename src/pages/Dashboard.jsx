@@ -2,13 +2,16 @@ import { useState, useMemo, useRef } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker, getTeamCombinedStats } from '../utils/points';
 import { getTeamFurthestRound, getChampion } from '../utils/knockout';
+import { getIndividualPointsForTeam, getTeamMedals } from '../utils/individualPoints';
 import TeamLogo from '../components/TeamLogo';
 import EmptyState from '../components/EmptyState';
+import PointsExplainer, { TableLegend } from '../components/PointsExplainer';
+import PointsBreakdownPopover from '../components/PointsBreakdownPopover';
 
 export default function Dashboard() {
   const state = useTournament();
   const { dispatch } = useDispatch();
-  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches } = state;
+  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories } = state;
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState('table');
   const [compareTeams, setCompareTeams] = useState([null, null]);
@@ -115,6 +118,11 @@ export default function Dashboard() {
         }
       }
 
+      // Individual game points
+      const indPts = getIndividualPointsForTeam(team.id, athletes, individualResults, individualPointsConfig);
+      const medals = getTeamMedals(team.id, athletes, individualResults);
+      totalPoints += indPts;
+
       return {
         teamId: team.id,
         teamName: team.name,
@@ -128,12 +136,14 @@ export default function Dashboard() {
         points: totalPoints,
         poolPoints: poolPts,
         knockoutPoints: koPts,
+        individualPoints: indPts,
+        medals,
         advancement: bestAdvancement,
         championOf,
       };
     });
     return sortTeamsByTiebreaker(teamStats, matches);
-  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig]);
+  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig]);
 
   const filtered = standings.filter(s =>
     s.teamName.toLowerCase().includes(search.toLowerCase())
@@ -142,13 +152,20 @@ export default function Dashboard() {
   // Tournament Progress
   const gameProgress = useMemo(() => {
     return games.map(g => {
+      if (g.type === 'individual') {
+        const gameCats = categories.filter(c => c.gameId === g.id);
+        const completedCats = gameCats.filter(c => c.status === 'completed').length;
+        const totalCats = gameCats.length;
+        const stage = totalCats > 0 && completedCats === totalCats ? 'completed' : 'pool';
+        return { game: g, stage, champTeam: null, isIndividual: true, completedCats, totalCats };
+      }
       const cfg = knockoutConfig[g.id];
       const stage = cfg?.stage || 'pool';
       const champ = getChampion(knockoutMatches, g.id);
       const champTeam = champ ? teams.find(t => t.id === champ) : null;
-      return { game: g, stage, champTeam };
+      return { game: g, stage, champTeam, isIndividual: false };
     });
-  }, [games, knockoutConfig, knockoutMatches, teams]);
+  }, [games, knockoutConfig, knockoutMatches, teams, categories]);
 
   // Recent results (pool + knockout)
   const recentResults = useMemo(() => {
@@ -179,10 +196,10 @@ export default function Dashboard() {
   }, [matches, knockoutMatches, teams, pools, games]);
 
   function getRankBadge(rank) {
-    if (rank === 1) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-navy-900 font-bold text-sm shadow-lg shadow-yellow-500/20">1</span>;
-    if (rank === 2) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-navy-900 font-bold text-sm shadow-lg shadow-gray-400/20">2</span>;
-    if (rank === 3) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-500/20">3</span>;
-    return <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-mono text-sm ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>{rank}</span>;
+    if (rank === 1) return <span className="inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-navy-900 font-bold text-[10px] sm:text-sm shadow-lg shadow-yellow-500/20">1</span>;
+    if (rank === 2) return <span className="inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-navy-900 font-bold text-[10px] sm:text-sm shadow-lg shadow-gray-400/20">2</span>;
+    if (rank === 3) return <span className="inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-[10px] sm:text-sm shadow-lg shadow-orange-500/20">3</span>;
+    return <span className={`inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full font-mono text-[10px] sm:text-sm ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>{rank}</span>;
   }
 
   function getRowBg(rank) {
@@ -264,10 +281,11 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
         {[
           { label: 'Teams', value: teams.length, icon: '👥' },
           { label: 'Games', value: games.length, icon: '🎮' },
+          { label: 'Athletes', value: athletes.length, icon: '🏃' },
           { label: 'Pool Played', value: totalMatches, icon: '✔' },
           { label: 'KO Played', value: totalKoMatches, icon: '⚔️' },
         ].map((stat, i) => (
@@ -299,23 +317,26 @@ export default function Dashboard() {
         }`}>
           <h3 className={`section-heading mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Tournament Progress</h3>
           <div className="flex flex-wrap gap-2">
-            {gameProgress.map(({ game, stage, champTeam }) => {
+            {gameProgress.map((gp) => {
+              const { game, stage, champTeam, isIndividual, completedCats, totalCats } = gp;
               const stageColors = {
                 pool: darkMode ? 'bg-white/5 text-gray-300 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200',
                 knockout: 'bg-accent/10 text-accent border-accent/20',
                 completed: 'bg-win/10 text-win border-win/20',
               };
-              const stageLabels = { pool: 'Pool', knockout: 'Knockout', completed: 'Completed' };
+              const stageLabel = isIndividual
+                ? (totalCats > 0 ? `${completedCats}/${totalCats}` : 'Individual')
+                : (stage === 'pool' ? 'Pool' : stage === 'knockout' ? 'Knockout' : 'Completed');
 
               return (
                 <button
                   key={game.id}
                   onClick={() => dispatch({ type: 'SELECT_GAME', payload: game.id })}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:scale-[1.02] border ${stageColors[stage]}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:scale-[1.02] border ${isIndividual ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : stageColors[stage]}`}
                 >
                   <span>{game.emoji}</span>
                   <span className="font-medium">{game.name}</span>
-                  <span className="text-[10px] opacity-70">{stageLabels[stage]}</span>
+                  <span className="text-[10px] opacity-70">{stageLabel}</span>
                   {champTeam && (
                     <span className="flex items-center gap-1 text-xs">
                       🏆 <TeamLogo team={champTeam} size={16} />
@@ -327,6 +348,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Points Explainer */}
+      <PointsExplainer filterType="all" />
 
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
@@ -381,7 +405,7 @@ export default function Dashboard() {
               value={compareTeams[0] || ''}
               onChange={e => setCompareTeams([e.target.value || null, compareTeams[1]])}
               className={`px-3 py-2 rounded-lg border text-sm flex-1 w-full sm:w-auto ${
-                darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-300'
+                darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-gray-50 border-gray-300'
               }`}
             >
               <option value="">Select Team A</option>
@@ -392,7 +416,7 @@ export default function Dashboard() {
               value={compareTeams[1] || ''}
               onChange={e => setCompareTeams([compareTeams[0], e.target.value || null])}
               className={`px-3 py-2 rounded-lg border text-sm flex-1 w-full sm:w-auto ${
-                darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-300'
+                darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-gray-50 border-gray-300'
               }`}
             >
               <option value="">Select Team B</option>
@@ -428,14 +452,14 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className={darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}>
-                  <th className={`px-3 py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
-                  <th className={`px-3 py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team</th>
-                  <th className={`px-3 py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GP</th>
-                  <th className="px-3 py-3 text-center section-heading text-win">W</th>
-                  <th className="px-3 py-3 text-center section-heading text-loss">L</th>
-                  <th className="px-3 py-3 text-center section-heading text-draw">D</th>
-                  <th className="px-3 py-3 text-center section-heading text-bye">B</th>
-                  <th className={`px-3 py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>PTS</th>
+                  <th className={`px-1.5 sm:px-3 py-2 sm:py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                  <th className={`px-1.5 sm:px-3 py-2 sm:py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team</th>
+                  <th className={`px-1 sm:px-3 py-2 sm:py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GP</th>
+                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-win">W</th>
+                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-loss">L</th>
+                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-draw">D</th>
+                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-bye">B</th>
+                  <th className={`px-1 sm:px-3 py-2 sm:py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>PTS</th>
                   <th className={`px-3 py-3 text-left section-heading hidden md:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Status</th>
                 </tr>
               </thead>
@@ -444,31 +468,87 @@ export default function Dashboard() {
                   const rank = i + 1;
                   return (
                     <tr key={row.teamId} className={`border-b transition-colors ${darkMode ? 'border-white/5' : 'border-gray-100'} ${getRowBg(rank)} ${getRowLeftBorder(rank)}`}>
-                      <td className="px-3 py-3">{getRankBadge(rank)}</td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <TeamLogo team={row.team} size={32} />
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-semibold whitespace-nowrap">{row.teamName}</span>
+                      <td className="px-1.5 sm:px-3 py-2 sm:py-3">{getRankBadge(rank)}</td>
+                      <td className="px-1.5 sm:px-3 py-2 sm:py-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
+                          <TeamLogo team={row.team} size={24} className="sm:!w-8 sm:!h-8" />
+                          <div className="min-w-0">
+                            {/* Mobile: show short code, Desktop: show full name */}
+                            <div className="flex items-center gap-1">
+                              <span className="font-semibold whitespace-nowrap text-xs sm:text-sm hidden sm:inline">{row.teamName}</span>
+                              <span className="font-semibold whitespace-nowrap text-xs sm:hidden">{row.team.shortCode || row.teamName}</span>
                               {row.championOf.map(g => (
                                 <span key={g.id} className="text-xs" title={`${g.name} Champion`}>🏆</span>
                               ))}
                             </div>
-                            <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{row.team.shortCode}</div>
+                            <div className={`text-[10px] sm:text-xs hidden sm:block ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{row.team.shortCode}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-center font-mono">{row.played}</td>
-                      <td className="px-3 py-3 text-center font-mono font-bold text-win">{row.wins}</td>
-                      <td className="px-3 py-3 text-center font-mono font-bold text-loss">{row.losses}</td>
-                      <td className="px-3 py-3 text-center font-mono font-bold text-draw">{row.draws}</td>
-                      <td className="px-3 py-3 text-center font-mono font-bold text-bye">{row.byes}</td>
-                      <td className="px-3 py-3 text-center">
-                        <span className="font-mono font-black text-lg">{row.points}</span>
-                        {row.knockoutPoints > 0 && (
-                          <div className="text-[10px] text-accent">+{row.knockoutPoints} KO</div>
-                        )}
+                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center font-mono text-xs sm:text-sm">{row.played}</td>
+                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="wins"
+                          value={row.wins}
+                          className="font-mono font-bold text-win text-xs sm:text-sm"
+                        />
+                      </td>
+                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="losses"
+                          value={row.losses}
+                          className="font-mono font-bold text-loss text-xs sm:text-sm"
+                        />
+                      </td>
+                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="draws"
+                          value={row.draws}
+                          className="font-mono font-bold text-draw text-xs sm:text-sm"
+                        />
+                      </td>
+                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="byes"
+                          value={row.byes}
+                          className="font-mono font-bold text-bye text-xs sm:text-sm"
+                        />
+                      </td>
+                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="total"
+                          value={row.points}
+                          className="font-mono font-black text-sm sm:text-lg"
+                        >
+                          <span className="font-mono font-black text-sm sm:text-lg">{row.points}</span>
+                        </PointsBreakdownPopover>
+                        <div className="flex flex-wrap justify-center gap-x-1">
+                          {row.knockoutPoints > 0 && (
+                            <PointsBreakdownPopover
+                              teamId={row.teamId}
+                              type="knockout"
+                              value={row.knockoutPoints}
+                              className="text-[10px] text-accent"
+                            >
+                              <span className="text-[10px] text-accent">+{row.knockoutPoints} KO</span>
+                            </PointsBreakdownPopover>
+                          )}
+                          {row.individualPoints > 0 && (
+                            <PointsBreakdownPopover
+                              teamId={row.teamId}
+                              type="pool"
+                              value={row.individualPoints}
+                              className="text-[10px] text-purple-400"
+                            >
+                              <span className="text-[10px] text-purple-400">+{row.individualPoints} Ind</span>
+                            </PointsBreakdownPopover>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-3 hidden md:table-cell">
                         <div className="flex gap-1 flex-wrap items-center">
@@ -488,6 +568,8 @@ export default function Dashboard() {
                 })}
               </tbody>
             </table>
+            {/* Table Legend */}
+            <TableLegend type="master" />
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -502,9 +584,33 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-3">
                     {getRankBadge(rank)}
                     <div className="text-right">
-                      <span className="font-mono font-black text-2xl text-accent">{row.points}<span className="text-xs font-normal text-gray-500 ml-1">pts</span></span>
+                      <PointsBreakdownPopover
+                        teamId={row.teamId}
+                        type="total"
+                        value={row.points}
+                        className="font-mono font-black text-2xl text-accent"
+                      >
+                        <span className="font-mono font-black text-2xl text-accent">{row.points}<span className="text-xs font-normal text-gray-500 ml-1">pts</span></span>
+                      </PointsBreakdownPopover>
                       {row.knockoutPoints > 0 && (
-                        <div className="text-[10px] text-accent">+{row.knockoutPoints} KO</div>
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="knockout"
+                          value={row.knockoutPoints}
+                          className="text-[10px] text-accent block"
+                        >
+                          <span className="text-[10px] text-accent">+{row.knockoutPoints} KO</span>
+                        </PointsBreakdownPopover>
+                      )}
+                      {row.individualPoints > 0 && (
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="pool"
+                          value={row.individualPoints}
+                          className="text-[10px] text-purple-400 block"
+                        >
+                          <span className="text-[10px] text-purple-400">+{row.individualPoints} Ind</span>
+                        </PointsBreakdownPopover>
                       )}
                     </div>
                   </div>
@@ -523,14 +629,23 @@ export default function Dashboard() {
                   </div>
                   <div className="grid grid-cols-5 gap-1 text-center text-xs">
                     {[
-                      { label: 'GP', value: row.played },
-                      { label: 'W', value: row.wins, cls: 'text-win' },
-                      { label: 'L', value: row.losses, cls: 'text-loss' },
-                      { label: 'D', value: row.draws, cls: 'text-draw' },
-                      { label: 'B', value: row.byes, cls: 'text-bye' },
+                      { label: 'GP', value: row.played, type: null },
+                      { label: 'W', value: row.wins, cls: 'text-win', type: 'wins' },
+                      { label: 'L', value: row.losses, cls: 'text-loss', type: 'losses' },
+                      { label: 'D', value: row.draws, cls: 'text-draw', type: 'draws' },
+                      { label: 'B', value: row.byes, cls: 'text-bye', type: 'byes' },
                     ].map(s => (
                       <div key={s.label}>
-                        <div className={`font-mono font-bold text-sm ${s.cls || ''}`}>{s.value}</div>
+                        {s.type ? (
+                          <PointsBreakdownPopover
+                            teamId={row.teamId}
+                            type={s.type}
+                            value={s.value}
+                            className={`font-mono font-bold text-sm ${s.cls || ''}`}
+                          />
+                        ) : (
+                          <div className="font-mono font-bold text-sm">{s.value}</div>
+                        )}
                         <div className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{s.label}</div>
                       </div>
                     ))}

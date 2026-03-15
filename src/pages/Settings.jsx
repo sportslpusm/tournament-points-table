@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
+import { useSyncStatus } from '../context/SyncContext';
 import { generateSampleData } from '../utils/sampleData';
 import { validatePassword } from '../utils/auth';
 import { validateImportData, LIMITS } from '../utils/validation';
@@ -9,10 +10,12 @@ import { ConfirmDialog } from '../components/Modal';
 
 export default function Settings() {
   const state = useTournament();
-  const { dispatch, showToast } = useDispatch();
+  const { dispatch, showToast, forceSaveNow } = useDispatch();
   const { isAdmin, changePassword, getExportAuth, importAuth } = useAuth();
+  const { saveStatus, lastSavedAt, isOnline } = useSyncStatus();
   const { tournament, darkMode } = state;
   const importRef = useRef(null);
+  const [forceSaving, setForceSaving] = useState(false);
 
   const [name, setName] = useState(tournament.name);
   const [startDate, setStartDate] = useState(tournament.startDate);
@@ -48,6 +51,10 @@ export default function Settings() {
       knockoutConfig: state.knockoutConfig,
       knockoutMatches: state.knockoutMatches,
       qualifiedTeams: state.qualifiedTeams,
+      athletes: state.athletes || [],
+      categories: state.categories || [],
+      individualResults: state.individualResults || [],
+      individualPointsConfig: state.individualPointsConfig || {},
       auth: authData || undefined,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -323,6 +330,75 @@ export default function Settings() {
               <div className={`text-xs ${darkMode ? 'text-red-400/60' : 'text-red-400'}`}>Clear everything and start fresh</div>
             </div>
           </button>
+        </div>
+      </div>
+
+      {/* Sync Status */}
+      <div className={sectionCls}>
+        <h3 className={sectionTitle}>Cloud Sync Status</h3>
+        <div className="space-y-3">
+          {/* Connection Status */}
+          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+            <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Connection</span>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400 animate-pulseLive'}`} />
+              <span className={`text-sm font-medium ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
+            </div>
+          </div>
+
+          {/* Save Status */}
+          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+            <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Save Status</span>
+            <span className={`text-sm font-medium ${
+              saveStatus === 'saving' ? 'text-amber-400' :
+              saveStatus === 'saved' ? 'text-green-400' :
+              saveStatus === 'error' ? 'text-red-400' :
+              darkMode ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              {saveStatus === 'saving' ? 'Saving...' :
+               saveStatus === 'saved' ? 'Saved ✓' :
+               saveStatus === 'error' ? 'Save failed ✗' :
+               'Idle'}
+            </span>
+          </div>
+
+          {/* Last Saved */}
+          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+            <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Last Saved</span>
+            <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              {lastSavedAt ? lastSavedAt.toLocaleTimeString() : 'Not yet saved'}
+            </span>
+          </div>
+
+          {/* Force Save Button */}
+          <button
+            onClick={async () => {
+              setForceSaving(true);
+              try {
+                await forceSaveNow();
+                showToast('Data saved to cloud', 'success');
+              } catch {
+                showToast('Failed to save data', 'error');
+              } finally {
+                setForceSaving(false);
+              }
+            }}
+            disabled={forceSaving}
+            className={`w-full px-4 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+              darkMode
+                ? 'bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 disabled:opacity-50'
+                : 'bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 disabled:opacity-50'
+            }`}
+          >
+            <span>{forceSaving ? '⏳' : '☁️'}</span>
+            {forceSaving ? 'Saving...' : 'Force Save Now'}
+          </button>
+
+          <p className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+            Data auto-saves 1.5 seconds after each change. Changes sync in real-time across all open tabs and devices.
+          </p>
         </div>
       </div>
 

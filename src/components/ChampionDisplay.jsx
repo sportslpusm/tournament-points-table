@@ -52,7 +52,7 @@ export default function ChampionDisplay({ gameId }) {
         <div className="text-4xl mb-2 animate-floatUp">🏆</div>
         <h2 className="text-xl font-black text-gold mb-1 tracking-wide">CHAMPION</h2>
         <div className="flex items-center justify-center gap-3">
-          <div className="ring-4 ring-gold/30 rounded-full shadow-lg shadow-gold/20">
+          <div className="ring-4 ring-gold/30 rounded-lg shadow-lg shadow-gold/20">
             <TeamLogo team={firstTeam} size={56} />
           </div>
           <span className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>{firstTeam?.name}</span>

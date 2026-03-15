@@ -227,7 +227,7 @@ export default function MatchManagement() {
   const isEditingKnockout = editMatch?.matchType === 'knockout';
 
   const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${
-    darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+    darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
   }`;
 
   const selectCls = inputCls;
@@ -554,7 +554,7 @@ export default function MatchManagement() {
                   }));
                 }}
                 className={`px-2 py-1.5 rounded text-xs border ${
-                  darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+                  darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
                 }`}
               >
                 <option value="">-- Select --</option>
@@ -571,7 +571,7 @@ export default function MatchManagement() {
                     [m.id]: { ...prev[m.id], absentTeamId: e.target.value },
                   }))}
                   className={`px-2 py-1.5 rounded text-xs border ${
-                    darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+                    darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
                   }`}
                 >
                   <option value="">Absent?</option>

@@ -29,7 +29,7 @@ export default function TeamLogo({ team, size = 40, className = '' }) {
       <img
         src={team.logo}
         alt={team.name}
-        className={`rounded-full object-cover flex-shrink-0 shadow-sm ${sizeClass} ${className}`}
+        className={`rounded-lg object-contain flex-shrink-0 ${sizeClass} ${className}`}
         style={style}
       />
     );

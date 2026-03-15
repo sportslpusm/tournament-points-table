@@ -10,6 +10,10 @@ export const LIMITS = {
   MAX_POOLS: 40,
   MAX_MATCHES: 500,
   MAX_KNOCKOUT_MATCHES: 200,
+  MAX_ATHLETES: 500,
+  MAX_CATEGORIES: 100,
+  MAX_INDIVIDUAL_RESULTS: 500,
+  MAX_REG_NUMBER_LENGTH: 8,
   MAX_NAME_LENGTH: 100,
   MAX_SHORT_CODE_LENGTH: 4,
   MAX_TOURNAMENT_NAME_LENGTH: 200,
@@ -48,6 +52,35 @@ export function validateGameName(name, existingGames = [], editId = null) {
   if (trimmed.length > LIMITS.MAX_NAME_LENGTH) return `Game name cannot exceed ${LIMITS.MAX_NAME_LENGTH} characters`;
   const isDup = existingGames.some(g => g.name.toLowerCase() === trimmed.toLowerCase() && g.id !== editId);
   if (isDup) return 'A game with this name already exists';
+  return null;
+}
+
+// Validate athlete registration number — exactly 8 digits
+export function validateRegNumber(regNumber) {
+  if (!regNumber || typeof regNumber !== 'string') return 'Registration number is required';
+  if (!/^\d{8}$/.test(regNumber)) return 'Registration number must be exactly 8 digits';
+  return null;
+}
+
+// Check registration number uniqueness across tournament
+export function isRegNumberUnique(regNumber, athletes = [], editId = null) {
+  const existing = athletes.find(a => a.regNumber === regNumber && a.id !== editId);
+  if (existing) return existing; // return the conflicting athlete
+  return null; // unique
+}
+
+// Validate category name — unique within game
+export function validateCategoryName(name, categories = [], gameId = null, editId = null) {
+  if (!name || typeof name !== 'string') return 'Category name is required';
+  const trimmed = name.trim();
+  if (trimmed.length === 0) return 'Category name cannot be empty';
+  if (trimmed.length > LIMITS.MAX_NAME_LENGTH) return `Category name cannot exceed ${LIMITS.MAX_NAME_LENGTH} characters`;
+  const isDup = categories.some(c =>
+    c.gameId === gameId &&
+    c.name.toLowerCase() === trimmed.toLowerCase() &&
+    c.id !== editId
+  );
+  if (isDup) return 'A category with this name already exists in this game';
   return null;
 }
 
@@ -196,6 +229,46 @@ export function validateImportData(jsonString) {
   // Validate qualifiedTeams if present
   if (data.qualifiedTeams && typeof data.qualifiedTeams !== 'object') {
     data.qualifiedTeams = {};
+  }
+
+  // Validate athletes if present (individual games)
+  if (data.athletes) {
+    if (!Array.isArray(data.athletes)) {
+      data.athletes = [];
+    } else if (data.athletes.length > LIMITS.MAX_ATHLETES) {
+      return { valid: false, error: `Too many athletes. Maximum is ${LIMITS.MAX_ATHLETES}` };
+    } else {
+      for (let i = 0; i < data.athletes.length; i++) {
+        const a = data.athletes[i];
+        if (!a || typeof a !== 'object' || !a.id || !a.name || !a.regNumber || !a.teamId || !a.gameId) {
+          return { valid: false, error: `Invalid athlete at index ${i}` };
+        }
+        a.name = sanitizeString(a.name, LIMITS.MAX_NAME_LENGTH);
+      }
+    }
+  }
+
+  // Validate categories if present
+  if (data.categories) {
+    if (!Array.isArray(data.categories)) {
+      data.categories = [];
+    } else if (data.categories.length > LIMITS.MAX_CATEGORIES) {
+      return { valid: false, error: `Too many categories. Maximum is ${LIMITS.MAX_CATEGORIES}` };
+    }
+  }
+
+  // Validate individualResults if present
+  if (data.individualResults) {
+    if (!Array.isArray(data.individualResults)) {
+      data.individualResults = [];
+    } else if (data.individualResults.length > LIMITS.MAX_INDIVIDUAL_RESULTS) {
+      return { valid: false, error: `Too many individual results. Maximum is ${LIMITS.MAX_INDIVIDUAL_RESULTS}` };
+    }
+  }
+
+  // Validate individualPointsConfig if present
+  if (data.individualPointsConfig && typeof data.individualPointsConfig !== 'object') {
+    data.individualPointsConfig = {};
   }
 
   // Sanitize tournament

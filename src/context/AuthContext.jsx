@@ -5,6 +5,7 @@ import {
   getLockoutData, incrementLockoutAttempts, clearLockout, isLockedOut, getLockoutRemainingMs,
   MAX_PASSWORD_LENGTH,
 } from '../utils/auth';
+import { loadAuthData, saveAuthData, loadTournamentData } from '../utils/database';
 
 const AuthContext = createContext(null);
 
@@ -18,13 +19,66 @@ export function AuthProvider({ children }) {
 
   const [authData, setAuthDataState] = useState(() => getAuthData());
   const [lockout, setLockout] = useState(() => getLockoutData());
+  const [authLoaded, setAuthLoaded] = useState(false);
+  const [hasExistingTournament, setHasExistingTournament] = useState(false);
   const inactivityTimerRef = useRef(null);
   const onLogoutCallbackRef = useRef(null);
   // In-memory lockout ref to prevent bypass via clearing localStorage
   const lockoutRef = useRef(getLockoutData());
 
-  // Whether first-time setup is needed (no password set yet)
-  const needsSetup = !authData?.passwordHash;
+  // Whether first-time setup is needed (no password set yet AND no existing tournament)
+  const needsSetup = !authData?.passwordHash && !hasExistingTournament;
+
+  // ── Load auth from Firestore on mount ───────────────
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAuth() {
+      try {
+        const cloudAuth = await loadAuthData();
+        if (cancelled) return;
+        if (cloudAuth?.passwordHash) {
+          // Cloud auth exists — use it and sync to localStorage
+          const { _updatedAt, ...authOnly } = cloudAuth;
+          setAuthData(authOnly);
+          setAuthDataState(authOnly);
+          // Check if user had an active session
+          if (getAdminSession() && !isSessionExpired()) {
+            setIsAdmin(true);
+          }
+        } else {
+          // Cloud auth missing — check if localStorage has it and sync up
+          const localAuth = getAuthData();
+          if (localAuth?.passwordHash) {
+            // localStorage has auth but Firestore doesn't — push to cloud
+            try {
+              await saveAuthData(localAuth);
+              console.log('Synced local auth to Firestore');
+            } catch (syncErr) {
+              console.warn('Failed to sync local auth to Firestore:', syncErr);
+            }
+          } else {
+            // Neither cloud nor local has auth — check if tournament data exists
+            // If it does, this isn't a fresh install — auth was lost
+            try {
+              const tournamentData = await loadTournamentData();
+              if (tournamentData && (tournamentData.teams?.length > 0 || tournamentData.games?.length > 0)) {
+                setHasExistingTournament(true);
+              }
+            } catch {
+              // Ignore — tournament check is best-effort
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load auth from Firestore:', err);
+        // Fall back to localStorage auth (already loaded in useState init)
+      } finally {
+        if (!cancelled) setAuthLoaded(true);
+      }
+    }
+    loadAuth();
+    return () => { cancelled = true; };
+  }, []);
 
   // Refresh lockout state periodically when locked
   useEffect(() => {
@@ -71,7 +125,6 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (password) => {
     // Check BOTH localStorage AND React state for lockout (defense-in-depth)
-    // Even if user clears localStorage, React state retains the lockout
     if (isLockedOut() || (lockoutRef.current.lockedUntil && Date.now() < lockoutRef.current.lockedUntil)) {
       return { success: false, error: 'Account locked. Try again later.', locked: true };
     }
@@ -99,7 +152,7 @@ export function AuthProvider({ children }) {
 
     const lockData = incrementLockoutAttempts();
     setLockout(lockData);
-    lockoutRef.current = lockData; // Also store in ref for bypass resistance
+    lockoutRef.current = lockData;
     const remaining = 5 - lockData.attempts;
     if (lockData.lockedUntil) {
       return { success: false, error: 'Too many attempts. Locked for 5 minutes.', locked: true };
@@ -118,8 +171,15 @@ export function AuthProvider({ children }) {
   const setupPassword = useCallback(async (password, recoveryKeyHash) => {
     const pwHash = await hashPassword(password);
     const data = { passwordHash: pwHash, recoveryKeyHash };
+    // Save to localStorage
     setAuthData(data);
     setAuthDataState(data);
+    // Save to Firestore
+    try {
+      await saveAuthData(data);
+    } catch (err) {
+      console.error('Failed to save auth to Firestore:', err);
+    }
     setAdminSession(true);
     updateActivity();
     setIsAdmin(true);
@@ -138,6 +198,12 @@ export function AuthProvider({ children }) {
     const updated = { ...auth, passwordHash: newHash };
     setAuthData(updated);
     setAuthDataState(updated);
+    // Sync to Firestore
+    try {
+      await saveAuthData(updated);
+    } catch (err) {
+      console.error('Failed to sync password change to Firestore:', err);
+    }
     return { success: true };
   }, []);
 
@@ -156,6 +222,12 @@ export function AuthProvider({ children }) {
     setAuthDataState(updated);
     clearLockout();
     setLockout({ attempts: 0, lockedUntil: null });
+    // Sync to Firestore
+    try {
+      await saveAuthData(updated);
+    } catch (err) {
+      console.error('Failed to sync password recovery to Firestore:', err);
+    }
     return { success: true };
   }, []);
 
@@ -164,6 +236,10 @@ export function AuthProvider({ children }) {
     if (importedAuth?.passwordHash) {
       setAuthData(importedAuth);
       setAuthDataState(importedAuth);
+      // Sync to Firestore
+      saveAuthData(importedAuth).catch(err => {
+        console.error('Failed to sync imported auth to Firestore:', err);
+      });
     }
   }, []);
 
@@ -180,7 +256,9 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       isAdmin,
       needsSetup,
+      hasExistingTournament,
       authData,
+      authLoaded,
       lockout,
       login,
       logout,
