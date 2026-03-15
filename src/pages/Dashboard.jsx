@@ -1,0 +1,606 @@
+import { useState, useMemo, useRef } from 'react';
+import { useTournament, useDispatch } from '../context/TournamentContext';
+import { getTeamStatsForMatches, sortTeamsByTiebreaker, getTeamCombinedStats } from '../utils/points';
+import { getTeamFurthestRound, getChampion } from '../utils/knockout';
+import TeamLogo from '../components/TeamLogo';
+import EmptyState from '../components/EmptyState';
+
+export default function Dashboard() {
+  const state = useTournament();
+  const { dispatch } = useDispatch();
+  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches } = state;
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('table');
+  const [compareTeams, setCompareTeams] = useState([null, null]);
+  const [showCompare, setShowCompare] = useState(false);
+  const tableRef = useRef(null);
+
+  const totalMatches = matches.filter(m => m.status === 'completed').length;
+  const upcomingMatches = matches.filter(m => m.status === 'upcoming').length;
+  const totalKoMatches = knockoutMatches.filter(m => m.status === 'completed').length;
+
+  // Compute overall standings with knockout points
+  const standings = useMemo(() => {
+    const teamStats = teams.map(team => {
+      const teamPoolMatches = matches.filter(m => m.teamAId === team.id || m.teamBId === team.id);
+      const teamKoMatches = knockoutMatches.filter(m => m.teamAId === team.id || m.teamBId === team.id);
+
+      // Get bonus configs for each game the team is in
+      const teamGames = games.filter(g => {
+        const gamePools = pools.filter(p => p.gameId === g.id);
+        return gamePools.some(p => p.teamIds.includes(team.id));
+      });
+
+      // Also check knockout matches for games
+      const koGameIds = new Set(teamKoMatches.map(m => m.gameId));
+      const allGameIds = new Set([...teamGames.map(g => g.id), ...koGameIds]);
+
+      // Calculate combined stats
+      let totalPlayed = 0, totalWins = 0, totalLosses = 0, totalDraws = 0, totalByes = 0, totalPoints = 0;
+      let poolPts = 0, koPts = 0;
+
+      // Pool stats
+      const poolStats = getTeamStatsForMatches(teamPoolMatches, team.id);
+      totalPlayed += poolStats.played;
+      totalWins += poolStats.wins;
+      totalLosses += poolStats.losses;
+      totalDraws += poolStats.draws;
+      totalByes += poolStats.byes;
+      totalPoints += poolStats.points;
+      poolPts = poolStats.points;
+
+      // Knockout stats with bonus per game
+      for (const gid of koGameIds) {
+        const cfg = knockoutConfig[gid];
+        const bonus = cfg?.bonusPoints;
+        const gameKo = teamKoMatches.filter(m => m.gameId === gid);
+        for (const m of gameKo) {
+          if (m.status !== 'completed') continue;
+          if (m.teamAId !== team.id && m.teamBId !== team.id) continue;
+
+          if (m.result === 'bye') {
+            totalByes++;
+            if (m.absentTeamId !== team.id) {
+              totalPlayed++;
+              totalPoints += 2;
+              koPts += 2;
+            }
+            continue;
+          }
+
+          totalPlayed++;
+          totalPoints += 1; // participation
+          koPts += 1;
+
+          const isWinner =
+            (m.result === 'teamA' && m.teamAId === team.id) ||
+            (m.result === 'teamB' && m.teamBId === team.id);
+          if (isWinner) {
+            totalWins++;
+            totalPoints += 3;
+            koPts += 3;
+            if (bonus?.enabled) {
+              const b = m.round === 'qf' ? (bonus.qf || 0) :
+                        m.round === 'sf' ? (bonus.sf || 0) :
+                        m.round === 'final' ? (bonus.final || 0) :
+                        m.round === 'third' ? (bonus.third || 0) : 0;
+              totalPoints += b;
+              koPts += b;
+            }
+          } else {
+            totalLosses++;
+          }
+        }
+      }
+
+      // Get furthest round across all games
+      let bestAdvancement = 'Pool Stage';
+      for (const gid of allGameIds) {
+        const adv = getTeamFurthestRound(knockoutMatches, team.id, gid);
+        if (adv) {
+          const priority = { 'Champion': 7, 'Finalist': 6, '3rd Place': 5, '4th Place': 4, 'Semi-Finalist': 3, 'Quarter-Finalist': 2, 'Round of 16': 1, 'Round of 32': 0.5, 'Pool Stage': 0 };
+          if ((priority[adv] || 0) > (priority[bestAdvancement] || 0)) {
+            bestAdvancement = adv;
+          }
+        }
+      }
+
+      // Get champion badges per game
+      const championOf = [];
+      for (const gid of allGameIds) {
+        const champ = getChampion(knockoutMatches, gid);
+        if (champ === team.id) {
+          const game = games.find(g => g.id === gid);
+          if (game) championOf.push(game);
+        }
+      }
+
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        team,
+        gameIds: [...allGameIds],
+        played: totalPlayed,
+        wins: totalWins,
+        losses: totalLosses,
+        draws: totalDraws,
+        byes: totalByes,
+        points: totalPoints,
+        poolPoints: poolPts,
+        knockoutPoints: koPts,
+        advancement: bestAdvancement,
+        championOf,
+      };
+    });
+    return sortTeamsByTiebreaker(teamStats, matches);
+  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig]);
+
+  const filtered = standings.filter(s =>
+    s.teamName.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Tournament Progress
+  const gameProgress = useMemo(() => {
+    return games.map(g => {
+      const cfg = knockoutConfig[g.id];
+      const stage = cfg?.stage || 'pool';
+      const champ = getChampion(knockoutMatches, g.id);
+      const champTeam = champ ? teams.find(t => t.id === champ) : null;
+      return { game: g, stage, champTeam };
+    });
+  }, [games, knockoutConfig, knockoutMatches, teams]);
+
+  // Recent results (pool + knockout)
+  const recentResults = useMemo(() => {
+    const poolResults = matches
+      .filter(m => m.status === 'completed')
+      .slice(-5)
+      .reverse()
+      .map(m => {
+        const teamA = teams.find(t => t.id === m.teamAId);
+        const teamB = teams.find(t => t.id === m.teamBId);
+        const pool = pools.find(p => p.id === m.poolId);
+        const game = pool ? games.find(g => g.id === pool.gameId) : null;
+        return { ...m, teamA, teamB, pool, game, isKnockout: false };
+      });
+
+    const koResults = knockoutMatches
+      .filter(m => m.status === 'completed')
+      .slice(-5)
+      .reverse()
+      .map(m => {
+        const teamA = teams.find(t => t.id === m.teamAId);
+        const teamB = teams.find(t => t.id === m.teamBId);
+        const game = games.find(g => g.id === m.gameId);
+        return { ...m, teamA, teamB, game, isKnockout: true };
+      });
+
+    return [...koResults, ...poolResults].slice(0, 10);
+  }, [matches, knockoutMatches, teams, pools, games]);
+
+  function getRankBadge(rank) {
+    if (rank === 1) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-navy-900 font-bold text-sm shadow-lg shadow-yellow-500/20">1</span>;
+    if (rank === 2) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-navy-900 font-bold text-sm shadow-lg shadow-gray-400/20">2</span>;
+    if (rank === 3) return <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-500/20">3</span>;
+    return <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-mono text-sm ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>{rank}</span>;
+  }
+
+  function getRowBg(rank) {
+    if (rank === 1) return darkMode ? 'bg-yellow-500/5 hover:bg-yellow-500/10' : 'bg-yellow-50/50 hover:bg-yellow-50';
+    if (rank === 2) return darkMode ? 'bg-gray-400/5 hover:bg-gray-400/10' : 'bg-gray-50/50 hover:bg-gray-50';
+    if (rank === 3) return darkMode ? 'bg-orange-500/5 hover:bg-orange-500/10' : 'bg-orange-50/50 hover:bg-orange-50';
+    return darkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-gray-50';
+  }
+
+  function getRowLeftBorder(rank) {
+    if (rank === 1) return 'border-l-[3px] border-l-gold';
+    if (rank === 2) return 'border-l-[3px] border-l-silver';
+    if (rank === 3) return 'border-l-[3px] border-l-bronze';
+    return 'border-l-[3px] border-l-transparent';
+  }
+
+  function getAdvancementBadge(adv) {
+    const colors = {
+      'Champion': 'bg-gold/20 text-gold',
+      'Finalist': 'bg-silver/20 text-gray-300',
+      '3rd Place': 'bg-bronze/20 text-bronze',
+      '4th Place': darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500',
+      'Semi-Finalist': 'bg-accent/10 text-accent',
+      'Quarter-Finalist': darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500',
+    };
+    if (!adv || adv === 'Pool Stage') return null;
+    return (
+      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${colors[adv] || (darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500')}`}>
+        {adv}
+      </span>
+    );
+  }
+
+  function handleScreenshot() {
+    if (!tableRef.current) return;
+    import('html2canvas').then(({ default: html2canvas }) => {
+      html2canvas(tableRef.current, {
+        backgroundColor: darkMode ? '#0c1229' : '#ffffff',
+        scale: 2,
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${state.tournament.name.replace(/\s+/g, '_')}_leaderboard.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    });
+  }
+
+  // Compare mode
+  const compareData = useMemo(() => {
+    if (!compareTeams[0] || !compareTeams[1]) return null;
+    const a = standings.find(s => s.teamId === compareTeams[0]);
+    const b = standings.find(s => s.teamId === compareTeams[1]);
+    if (!a || !b) return null;
+    return { a, b };
+  }, [compareTeams, standings]);
+
+  if (teams.length === 0) {
+    return (
+      <EmptyState
+        icon="🏆"
+        title="No teams yet"
+        description="Add teams to get started with your tournament leaderboard."
+        action={{ label: 'Go to Teams', onClick: () => dispatch({ type: 'SET_VIEW', payload: { view: 'teams' } }) }}
+      />
+    );
+  }
+
+  return (
+    <div className="animate-slideUp">
+      {/* Hero Tournament Name */}
+      <div className="mb-6">
+        <h1 className={`text-3xl md:text-4xl font-black tracking-tight ${darkMode ? 'gradient-text' : 'text-gray-900'}`}>
+          {state.tournament.name}
+        </h1>
+        <p className={`text-sm mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+          Master Leaderboard
+        </p>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {[
+          { label: 'Teams', value: teams.length, icon: '👥' },
+          { label: 'Games', value: games.length, icon: '🎮' },
+          { label: 'Pool Played', value: totalMatches, icon: '✔' },
+          { label: 'KO Played', value: totalKoMatches, icon: '⚔️' },
+        ].map((stat, i) => (
+          <div
+            key={stat.label}
+            className={`rounded-xl p-4 border transition-all hover:scale-[1.02] hover:shadow-lg ${
+              darkMode
+                ? 'bg-navy-800/60 backdrop-blur border-white/5 hover:border-white/10'
+                : 'bg-white/80 backdrop-blur border-gray-200 hover:border-gray-300'
+            }`}
+            style={{ animationDelay: `${i * 50}ms` }}
+          >
+            <div className={`accent-top-border -mx-4 -mt-4 mb-3 rounded-t-xl`} />
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xl">{stat.icon}</span>
+              <span className={`section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{stat.label}</span>
+            </div>
+            <div className="stat-number">{stat.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tournament Progress */}
+      {gameProgress.length > 0 && (
+        <div className={`rounded-xl p-4 mb-6 border ${
+          darkMode
+            ? 'bg-navy-800/40 backdrop-blur border-white/5'
+            : 'bg-white/80 backdrop-blur border-gray-200'
+        }`}>
+          <h3 className={`section-heading mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Tournament Progress</h3>
+          <div className="flex flex-wrap gap-2">
+            {gameProgress.map(({ game, stage, champTeam }) => {
+              const stageColors = {
+                pool: darkMode ? 'bg-white/5 text-gray-300 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200',
+                knockout: 'bg-accent/10 text-accent border-accent/20',
+                completed: 'bg-win/10 text-win border-win/20',
+              };
+              const stageLabels = { pool: 'Pool', knockout: 'Knockout', completed: 'Completed' };
+
+              return (
+                <button
+                  key={game.id}
+                  onClick={() => dispatch({ type: 'SELECT_GAME', payload: game.id })}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:scale-[1.02] border ${stageColors[stage]}`}
+                >
+                  <span>{game.emoji}</span>
+                  <span className="font-medium">{game.name}</span>
+                  <span className="text-[10px] opacity-70">{stageLabels[stage]}</span>
+                  {champTeam && (
+                    <span className="flex items-center gap-1 text-xs">
+                      🏆 <TeamLogo team={champTeam} size={16} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Header Controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <h2 className="text-lg font-bold">Standings</h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            placeholder="Search teams..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+              darkMode
+                ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-accent/50'
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'
+            }`}
+          />
+          <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-white/10' : 'border-gray-300'}`}>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/5 text-gray-300' : 'bg-white text-gray-600'}`}
+            >
+              Table
+            </button>
+            <button
+              onClick={() => setViewMode('card')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'card' ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/5 text-gray-300' : 'bg-white text-gray-600'}`}
+            >
+              Cards
+            </button>
+          </div>
+          <button onClick={handleScreenshot} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} title="Screenshot">
+            📷
+          </button>
+          <button
+            onClick={() => setShowCompare(!showCompare)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${showCompare ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+          >
+            Compare
+          </button>
+        </div>
+      </div>
+
+      {/* Compare Panel */}
+      {showCompare && (
+        <div className={`rounded-xl p-4 mb-4 border animate-slideUp ${
+          darkMode
+            ? 'bg-navy-800/60 backdrop-blur border-white/5'
+            : 'bg-white/80 backdrop-blur border-gray-200'
+        }`}>
+          <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
+            <select
+              value={compareTeams[0] || ''}
+              onChange={e => setCompareTeams([e.target.value || null, compareTeams[1]])}
+              className={`px-3 py-2 rounded-lg border text-sm flex-1 w-full sm:w-auto ${
+                darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-300'
+              }`}
+            >
+              <option value="">Select Team A</option>
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <span className="font-bold text-accent text-lg">VS</span>
+            <select
+              value={compareTeams[1] || ''}
+              onChange={e => setCompareTeams([compareTeams[0], e.target.value || null])}
+              className={`px-3 py-2 rounded-lg border text-sm flex-1 w-full sm:w-auto ${
+                darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-gray-50 border-gray-300'
+              }`}
+            >
+              <option value="">Select Team B</option>
+              {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          {compareData && (
+            <div className="grid grid-cols-3 gap-2 text-center text-sm">
+              {['played', 'wins', 'losses', 'draws', 'byes', 'points'].map(key => (
+                <div key={key} className="contents">
+                  <div className={`py-2 font-mono font-bold text-lg ${compareData.a[key] > compareData.b[key] ? 'text-win' : compareData.a[key] < compareData.b[key] ? 'text-loss' : ''}`}>
+                    {compareData.a[key]}
+                  </div>
+                  <div className={`py-2 font-medium capitalize ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{key}</div>
+                  <div className={`py-2 font-mono font-bold text-lg ${compareData.b[key] > compareData.a[key] ? 'text-win' : compareData.b[key] < compareData.a[key] ? 'text-loss' : ''}`}>
+                    {compareData.b[key]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      <div ref={tableRef}>
+        {viewMode === 'table' ? (
+          <div className={`overflow-x-auto rounded-xl border ${
+            darkMode
+              ? 'bg-navy-800/40 backdrop-blur border-white/5'
+              : 'bg-white/80 backdrop-blur border-gray-200'
+          }`}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className={darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}>
+                  <th className={`px-3 py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                  <th className={`px-3 py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team</th>
+                  <th className={`px-3 py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GP</th>
+                  <th className="px-3 py-3 text-center section-heading text-win">W</th>
+                  <th className="px-3 py-3 text-center section-heading text-loss">L</th>
+                  <th className="px-3 py-3 text-center section-heading text-draw">D</th>
+                  <th className="px-3 py-3 text-center section-heading text-bye">B</th>
+                  <th className={`px-3 py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>PTS</th>
+                  <th className={`px-3 py-3 text-left section-heading hidden md:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((row, i) => {
+                  const rank = i + 1;
+                  return (
+                    <tr key={row.teamId} className={`border-b transition-colors ${darkMode ? 'border-white/5' : 'border-gray-100'} ${getRowBg(rank)} ${getRowLeftBorder(rank)}`}>
+                      <td className="px-3 py-3">{getRankBadge(rank)}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <TeamLogo team={row.team} size={32} />
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold whitespace-nowrap">{row.teamName}</span>
+                              {row.championOf.map(g => (
+                                <span key={g.id} className="text-xs" title={`${g.name} Champion`}>🏆</span>
+                              ))}
+                            </div>
+                            <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{row.team.shortCode}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-center font-mono">{row.played}</td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-win">{row.wins}</td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-loss">{row.losses}</td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-draw">{row.draws}</td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-bye">{row.byes}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className="font-mono font-black text-lg">{row.points}</span>
+                        {row.knockoutPoints > 0 && (
+                          <div className="text-[10px] text-accent">+{row.knockoutPoints} KO</div>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 hidden md:table-cell">
+                        <div className="flex gap-1 flex-wrap items-center">
+                          {getAdvancementBadge(row.advancement)}
+                          {row.gameIds.map(gid => {
+                            const game = games.find(g => g.id === gid);
+                            return game ? (
+                              <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                                {game.emoji}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filtered.map((row, i) => {
+              const rank = i + 1;
+              return (
+                <div key={row.teamId} className={`rounded-xl p-4 border transition-all hover:scale-[1.01] hover:shadow-lg ${getRowLeftBorder(rank)} ${
+                  darkMode
+                    ? 'bg-navy-800/60 backdrop-blur border-white/5 hover:border-white/10'
+                    : 'bg-white/80 backdrop-blur border-gray-200 hover:border-gray-300'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    {getRankBadge(rank)}
+                    <div className="text-right">
+                      <span className="font-mono font-black text-2xl text-accent">{row.points}<span className="text-xs font-normal text-gray-500 ml-1">pts</span></span>
+                      {row.knockoutPoints > 0 && (
+                        <div className="text-[10px] text-accent">+{row.knockoutPoints} KO</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <TeamLogo team={row.team} size={48} />
+                    <div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold">{row.teamName}</span>
+                        {row.championOf.map(g => (
+                          <span key={g.id} className="text-sm" title={`${g.name} Champion`}>🏆</span>
+                        ))}
+                      </div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{row.team.shortCode}</div>
+                      {getAdvancementBadge(row.advancement)}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1 text-center text-xs">
+                    {[
+                      { label: 'GP', value: row.played },
+                      { label: 'W', value: row.wins, cls: 'text-win' },
+                      { label: 'L', value: row.losses, cls: 'text-loss' },
+                      { label: 'D', value: row.draws, cls: 'text-draw' },
+                      { label: 'B', value: row.byes, cls: 'text-bye' },
+                    ].map(s => (
+                      <div key={s.label}>
+                        <div className={`font-mono font-bold text-sm ${s.cls || ''}`}>{s.value}</div>
+                        <div className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-1 flex-wrap mt-3">
+                    {row.gameIds.map(gid => {
+                      const game = games.find(g => g.id === gid);
+                      return game ? (
+                        <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                          {game.emoji}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Recent Results */}
+      {recentResults.length > 0 && (
+        <div className="mt-6">
+          <h3 className={`section-heading mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Recent Results</h3>
+          <div className="space-y-2">
+            {recentResults.map(m => {
+              const resultStripe = m.result === 'draw' ? 'border-l-draw' :
+                m.result === 'bye' ? 'border-l-bye' :
+                m.isKnockout ? 'border-l-accent' : 'border-l-win';
+
+              return (
+                <div key={m.id} className={`rounded-lg p-3 flex items-center gap-3 border-l-[3px] ${resultStripe} ${
+                  darkMode
+                    ? 'bg-navy-800/40 backdrop-blur border border-white/5 border-l-[3px]'
+                    : 'bg-white/80 backdrop-blur border border-gray-200 border-l-[3px]'
+                }`}>
+                  {m.game && <span className="text-lg">{m.game.emoji}</span>}
+                  {m.isKnockout && <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent font-bold">KO</span>}
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <TeamLogo team={m.teamA} size={24} />
+                    <span className={`text-sm font-medium truncate ${m.result === 'teamA' ? 'text-win font-bold' : m.result === 'bye' && m.absentTeamId === m.teamAId ? 'text-gray-500 line-through' : ''}`}>
+                      {m.teamA?.shortCode || '?'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                      m.result === 'draw' ? 'bg-draw/20 text-draw' :
+                      m.result === 'bye' ? 'bg-bye/20 text-bye' :
+                      darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {m.result === 'draw' ? 'DRAW' : m.result === 'bye' ? 'BYE' : 'vs'}
+                    </span>
+                    <span className={`text-sm font-medium truncate ${m.result === 'teamB' ? 'text-win font-bold' : m.result === 'bye' && m.absentTeamId === m.teamBId ? 'text-gray-500 line-through' : ''}`}>
+                      {m.teamB?.shortCode || '?'}
+                    </span>
+                    <TeamLogo team={m.teamB} size={24} />
+                  </div>
+                  {m.pool && (
+                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{m.pool.name}</span>
+                  )}
+                  {m.isKnockout && m.round && (
+                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {m.round === 'qf' ? 'QF' : m.round === 'sf' ? 'SF' : m.round === 'final' ? 'Final' : m.round === 'third' ? '3rd' : m.round.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

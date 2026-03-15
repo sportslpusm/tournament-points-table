@@ -1,0 +1,266 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-navy-50: #f0f4ff;
+  --color-navy-100: #dbe3ff;
+  --color-navy-200: #b8c7ff;
+  --color-navy-300: #8ba3ff;
+  --color-navy-400: #5c7cff;
+  --color-navy-500: #3b5bdb;
+  --color-navy-600: #2b44a8;
+  --color-navy-700: #1e3175;
+  --color-navy-800: #141f4d;
+  --color-navy-825: #111a40;
+  --color-navy-850: #0e1633;
+  --color-navy-900: #0c1229;
+  --color-navy-925: #0a0f20;
+  --color-navy-950: #060911;
+  --color-accent: #00d4ff;
+  --color-accent-dark: #00a8cc;
+  --color-accent-glow: rgba(0, 212, 255, 0.15);
+  --color-glass-bg: rgba(12, 18, 41, 0.6);
+  --color-glass-bg-light: rgba(255, 255, 255, 0.7);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-border-light: rgba(0, 0, 0, 0.08);
+  --color-gold: #ffd700;
+  --color-gold-glow: rgba(255, 215, 0, 0.15);
+  --color-silver: #c0c0c0;
+  --color-bronze: #cd7f32;
+  --color-win: #22c55e;
+  --color-loss: #ef4444;
+  --color-draw: #f59e0b;
+  --color-bye: #8b5cf6;
+}
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulseLive {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 212, 255, 0.3); }
+  50%      { box-shadow: 0 0 20px rgba(0, 212, 255, 0.6); }
+}
+
+@keyframes confettiFall {
+  0%   { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* ── Base styles ───────────────────────────────────────────── */
+
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: theme(--color-navy-600) transparent;
+  }
+
+  ::selection {
+    background-color: rgba(0, 212, 255, 0.3);
+    color: white;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus outlines */
+  :focus-visible {
+    outline: 2px solid theme(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Button press effect */
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  /* Respect motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* ── Utility classes ───────────────────────────────────────── */
+
+@utility glass {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+}
+
+@utility glass-light {
+  background: var(--color-glass-bg-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border-light);
+}
+
+@utility glass-card {
+  background: var(--color-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+@utility glass-card-light {
+  background: var(--color-glass-bg-light);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-glass-border-light);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+@utility section-heading {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+@utility stat-number {
+  font-family: var(--font-mono);
+  font-weight: 900;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+@utility animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@utility animate-slideUp {
+  animation: slideUp 0.35s ease-out;
+}
+
+@utility animate-slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@utility animate-scaleIn {
+  animation: scaleIn 0.2s ease-out;
+}
+
+@utility animate-shimmer {
+  animation: shimmer 2s infinite linear;
+  background-size: 200% 100%;
+}
+
+@utility animate-pulseLive {
+  animation: pulseLive 2s infinite ease-in-out;
+}
+
+@utility animate-glowPulse {
+  animation: glowPulse 2s infinite ease-in-out;
+}
+
+@utility animate-confettiFall {
+  animation: confettiFall linear forwards;
+}
+
+@utility animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+@utility animate-floatUp {
+  animation: floatUp 3s infinite ease-in-out;
+}
+
+@utility gradient-text {
+  background: linear-gradient(to right, #ffffff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility gradient-text-accent {
+  background: linear-gradient(135deg, #00d4ff, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@utility gradient-gold {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+}
+
+@utility accent-top-border {
+  border-top: 2px solid theme(--color-accent);
+}
+
+@utility gold-left-border {
+  border-left: 3px solid theme(--color-gold);
+}
+
+@utility silver-left-border {
+  border-left: 3px solid theme(--color-silver);
+}
+
+@utility bronze-left-border {
+  border-left: 3px solid theme(--color-bronze);
+}
+
+@utility print-only {
+  @media not print {
+    display: none !important;
+  }
+}
+
+@utility no-print {
+  @media print {
+    display: none !important;
+  }
+}
