@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Tournament data — public read, no direct write from client
+    // (writes go through the app which checks isAdmin client-side)
+    // For a hobby project this is acceptable; for production, use Firebase Auth
+    match /tournaments/{docId} {
+      allow read: if true;
+      // Allow writes — admin check is client-side
+      // To fully secure, integrate Firebase Authentication
+      allow write: if true;
+    }
+
+    // Logos — same as tournament data
+    match /logos/{logoId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Auth config — password hashes
+    // Read is needed for login verification (client-side hashing)
+    // Write is needed for password setup/change
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

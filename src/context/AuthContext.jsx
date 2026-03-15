@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
             // localStorage has auth but Firestore doesn't — push to cloud
             try {
               await saveAuthData(localAuth);
-              console.log('Synced local auth to Firestore');
+              // Synced successfully
             } catch (syncErr) {
               console.warn('Failed to sync local auth to Firestore:', syncErr);
             }

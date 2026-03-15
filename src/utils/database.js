@@ -38,7 +38,7 @@ async function recoverIfNeeded(err) {
     hasRecovered = true;
     try {
       currentDb = await clearAndReinit();
-      console.log('Firestore cache cleared. Retrying...');
+      // Cache cleared, retrying
       return true; // signal caller to retry
     } catch (reinitErr) {
       console.error('Recovery failed:', reinitErr);

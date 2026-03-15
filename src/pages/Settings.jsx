@@ -55,7 +55,7 @@ export default function Settings() {
       categories: state.categories || [],
       individualResults: state.individualResults || [],
       individualPointsConfig: state.individualPointsConfig || {},
-      auth: authData || undefined,
+      // Note: auth data intentionally excluded from exports for security
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
