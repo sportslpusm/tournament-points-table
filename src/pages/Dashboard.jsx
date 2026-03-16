@@ -272,12 +272,23 @@ export default function Dashboard() {
     <div className="animate-slideUp">
       {/* Hero Tournament Name */}
       <div className="mb-6">
-        <h1 className={`text-3xl md:text-4xl font-black tracking-tight ${darkMode ? 'gradient-text' : 'text-gray-900'}`}>
-          {state.tournament.name}
-        </h1>
-        <p className={`text-sm mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-          Master Leaderboard
-        </p>
+        <div className="flex items-center gap-3 md:gap-4">
+          {state.tournament.logo && (
+            <img
+              src={state.tournament.logo}
+              alt="Event Logo"
+              className="h-24 w-24 md:h-28 md:w-28 object-contain rounded-xl flex-shrink-0"
+            />
+          )}
+          <div>
+            <h1 className={`text-3xl md:text-4xl font-black tracking-tight ${darkMode ? 'gradient-text' : 'text-gray-900'}`}>
+              {state.tournament.name}
+            </h1>
+            <p className={`text-sm mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              Master Leaderboard
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -472,11 +483,11 @@ export default function Dashboard() {
                       <td className="px-1.5 sm:px-3 py-2 sm:py-3">
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <TeamLogo team={row.team} size={24} className="sm:!w-8 sm:!h-8" />
-                          <div className="min-w-0">
+                          <div className="min-w-0 max-w-[140px] sm:max-w-[220px] md:max-w-xs">
                             {/* Mobile: show short code, Desktop: show full name */}
                             <div className="flex items-center gap-1">
-                              <span className="font-semibold whitespace-nowrap text-xs sm:text-sm hidden sm:inline">{row.teamName}</span>
-                              <span className="font-semibold whitespace-nowrap text-xs sm:hidden">{row.team.shortCode || row.teamName}</span>
+                              <span className="font-semibold truncate text-xs sm:text-sm hidden sm:inline">{row.teamName}</span>
+                              <span className="font-semibold truncate text-xs sm:hidden">{row.team.shortCode || row.teamName}</span>
                               {row.championOf.map(g => (
                                 <span key={g.id} className="text-xs" title={`${g.name} Champion`}>🏆</span>
                               ))}

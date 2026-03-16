@@ -34,18 +34,8 @@ export default function Layout({ children }) {
         {/* Accent gradient line at top */}
         <div className="h-0.5 bg-gradient-to-r from-accent via-blue-500 to-accent/0" />
 
-        <div className={`p-4 flex items-center gap-3 border-b ${darkMode ? 'border-white/5' : 'border-gray-200'}`}>
-          {tournament.logo ? (
-            <img src={tournament.logo} alt="" className="w-10 h-10 rounded-lg object-contain ring-1 ring-white/10" />
-          ) : (
-            <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center text-accent font-bold text-lg">
-              T
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h1 className="font-bold text-sm truncate">{tournament.name}</h1>
-            <SaveIndicator darkMode={darkMode} />
-          </div>
+        <div className={`p-4 flex items-center justify-center border-b ${darkMode ? 'border-white/5' : 'border-gray-200'}`}>
+          <img src="/SWW and USC.png" alt="SWW & USC" className="h-12 object-contain" />
         </div>
 
         {/* Admin Badge */}
@@ -106,7 +96,7 @@ export default function Layout({ children }) {
           )}
           {/* USC Branding */}
           <div className={`flex items-center gap-2 px-3 pt-2 ${darkMode ? 'opacity-30' : 'opacity-40'}`}>
-            <img src="/USC.png" alt="USC" className="w-4 h-4 object-contain" />
+            <img src="/SWW and USC.png" alt="SWW & USC" className="w-4 h-4 object-contain" />
             <span className="text-[9px] text-gray-500 tracking-wide">Uni Sports Council, LPU</span>
           </div>
         </div>
@@ -124,24 +114,12 @@ export default function Layout({ children }) {
             : 'bg-white/90 backdrop-blur-xl border-gray-200'
         }`}>
           <div className="flex items-center gap-2 min-w-0">
-            {tournament.logo ? (
-              <img src={tournament.logo} alt="" className="w-8 h-8 rounded-lg object-contain flex-shrink-0" />
-            ) : (
-              <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent font-bold text-sm flex-shrink-0">
-                T
-              </div>
+            <img src="/SWW and USC.png" alt="SWW & USC" className="h-8 object-contain flex-shrink-0" />
+            {isAdmin && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold flex-shrink-0">
+                ADMIN
+              </span>
             )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h1 className="font-bold text-sm truncate max-w-[120px]">{tournament.name}</h1>
-                {isAdmin && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold flex-shrink-0">
-                    ADMIN
-                  </span>
-                )}
-              </div>
-              <SaveIndicator darkMode={darkMode} />
-            </div>
           </div>
           <div className="flex items-center gap-1">
             {isAdmin && (
