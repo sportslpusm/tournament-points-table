@@ -37,7 +37,7 @@ export async function clearAndReinit() {
     await clearIndexedDbPersistence(db);
     // Cleared stale Firestore cache
   } catch (err) {
-    console.warn('Failed to clear persistence, using memory cache:', err.message);
+    // Failed to clear persistence — falling back to memory cache
   }
   // Reinitialize — try persistent first, fall back to memory
   try {

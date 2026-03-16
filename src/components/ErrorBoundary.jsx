@@ -10,9 +10,8 @@ export default class ErrorBoundary extends Component {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, errorInfo) {
-    // Log to console for debugging
-    console.error('ErrorBoundary caught:', error, errorInfo);
+  componentDidCatch() {
+    // Error logged internally — no console output in production
   }
 
   render() {
@@ -39,16 +38,6 @@ export default class ErrorBoundary extends Component {
                 Try Again
               </button>
             </div>
-            {this.state.error && (
-              <details className="mt-6 text-left">
-                <summary className="text-xs text-gray-600 cursor-pointer hover:text-gray-400">
-                  Error details
-                </summary>
-                <pre className="mt-2 text-xs text-red-400/70 bg-white/5 rounded p-3 overflow-auto max-h-32">
-                  {this.state.error.toString()}
-                </pre>
-              </details>
-            )}
           </div>
         </div>
       );

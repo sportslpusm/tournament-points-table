@@ -1,31 +1,38 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Tournament data — public read, no direct write from client
-    // (writes go through the app which checks isAdmin client-side)
-    // For a hobby project this is acceptable; for production, use Firebase Auth
+
+    // Tournament data — public read, validated writes
     match /tournaments/{docId} {
       allow read: if true;
-      // Allow writes — admin check is client-side
-      // To fully secure, integrate Firebase Authentication
-      allow write: if true;
+      allow write: if request.resource.data.keys().hasAll(['teams', 'games', 'matches'])
+                   && request.resource.data.teams is list
+                   && request.resource.data.teams.size() <= 64
+                   && request.resource.data.games is list
+                   && request.resource.data.games.size() <= 20
+                   && request.resource.data.matches is list
+                   && request.resource.data.matches.size() <= 500;
     }
 
-    // Logos — same as tournament data
+    // Logos — public read, validated writes (must be string data under 3MB)
     match /logos/{logoId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if request.resource.data.data is string
+                   && request.resource.data.data.size() <= 3145728;
     }
 
-    // Auth config — password hashes
-    // Read is needed for login verification (client-side hashing)
-    // Write is needed for password setup/change
+    // Auth config — BLOCK public reads to protect password hashes
+    // Login verification uses locally cached hash; Firestore is backup only
+    // Only allow writes with valid 64-char hex hash format
     match /config/{docId} {
-      allow read: if true;
-      allow write: if true;
+      allow read: if false;
+      allow write: if request.resource.data.passwordHash is string
+                   && request.resource.data.passwordHash.size() == 64
+                   && request.resource.data.recoveryKeyHash is string
+                   && request.resource.data.recoveryKeyHash.size() == 64;
     }
 
-    // Deny everything else by default
+    // Deny everything else
     match /{document=**} {
       allow read, write: if false;
     }

@@ -34,14 +34,14 @@ let hasRecovered = false;
 async function recoverIfNeeded(err) {
   if (hasRecovered) return false;
   if (err?.code === 'resource-exhausted' || err?.message?.includes('resource-exhausted')) {
-    console.warn('Detected stale write queue. Clearing Firestore cache...');
+    // Stale write queue detected — clearing cache
     hasRecovered = true;
     try {
       currentDb = await clearAndReinit();
       // Cache cleared, retrying
       return true; // signal caller to retry
     } catch (reinitErr) {
-      console.error('Recovery failed:', reinitErr);
+      // Recovery failed silently
       return false;
     }
   }
@@ -178,7 +178,7 @@ async function saveLogos(logos, teamNameMap) {
         done: completed === total,
       });
     } catch (err) {
-      console.warn(`Failed to save logo ${logo.id}:`, err.message);
+      // Logo save failed — attempting recovery
       // Try recovery on first resource-exhausted error
       const recovered = await recoverIfNeeded(err);
       if (recovered) {
@@ -221,7 +221,7 @@ async function loadLogos() {
     });
     return logosMap;
   } catch (err) {
-    console.warn('Failed to load logos:', err);
+    // Logo load failed silently
     return new Map();
   }
 }
@@ -243,7 +243,7 @@ async function deleteOrphanLogos(currentTeamIds, hasTournamentLogo) {
     });
     if (deletions > 0) await batch.commit();
   } catch (err) {
-    console.warn('Failed to clean up orphan logos:', err);
+    // Orphan cleanup failed silently
   }
 }
 
@@ -263,7 +263,7 @@ export async function loadTournamentData() {
     }
     return null;
   } catch (err) {
-    console.error('Failed to load tournament data:', err);
+    // Tournament data load failed
     throw err;
   }
 }
@@ -332,11 +332,11 @@ export async function saveTournamentData(state) {
         await doSave(state);
         return true;
       } catch (retryErr) {
-        console.error('Save failed after recovery:', retryErr);
+        // Save failed after recovery
         throw retryErr;
       }
     }
-    console.error('Failed to save tournament data:', err);
+    // Tournament data save failed
     throw err;
   }
 }
@@ -363,7 +363,7 @@ export function subscribeToChanges(callback) {
       });
     },
     (err) => {
-      console.error('Firestore listener error:', err);
+      // Firestore listener error — handled silently
     }
   );
 
@@ -399,7 +399,7 @@ export function subscribeToChanges(callback) {
       }
     },
     (err) => {
-      console.warn('Logos listener error:', err);
+      // Logos listener error — handled silently
     }
   );
 
@@ -417,7 +417,7 @@ export async function loadAuthData() {
     if (snap.exists()) return snap.data();
     return null;
   } catch (err) {
-    console.error('Failed to load auth data:', err);
+    // Auth data load failed
     throw err;
   }
 }
@@ -430,7 +430,7 @@ export async function saveAuthData(authData) {
     });
     return true;
   } catch (err) {
-    console.error('Failed to save auth data:', err);
+    // Auth data save failed
     throw err;
   }
 }

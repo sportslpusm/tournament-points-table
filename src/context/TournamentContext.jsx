@@ -78,23 +78,30 @@ function shiftPlacementsHelper(placements, deletedId) {
 
 function tournamentReducer(state, action) {
   switch (action.type) {
-    // ── Firestore sync (internal) ─────────────────────
+    // ── Firestore sync (internal) — validate incoming data ──
     case '_SYNC_FROM_FIRESTORE': {
       const incoming = action.payload;
+      if (!incoming || typeof incoming !== 'object') return state;
+      // Validate arrays and enforce size limits
+      const safeArr = (val, limit) => Array.isArray(val) ? val.slice(0, limit) : undefined;
+      const safeObj = (val) => (val && typeof val === 'object' && !Array.isArray(val)) ? val : undefined;
+      const safeTournament = safeObj(incoming.tournament)
+        ? { ...incoming.tournament, name: sanitizeString(incoming.tournament.name || '', LIMITS.MAX_TOURNAMENT_NAME_LENGTH) }
+        : undefined;
       return {
         ...state,
-        tournament: incoming.tournament || state.tournament,
-        teams: incoming.teams || state.teams,
-        games: incoming.games || state.games,
-        pools: incoming.pools || state.pools,
-        matches: incoming.matches || state.matches,
-        knockoutConfig: incoming.knockoutConfig || state.knockoutConfig,
-        knockoutMatches: incoming.knockoutMatches || state.knockoutMatches,
-        qualifiedTeams: incoming.qualifiedTeams || state.qualifiedTeams,
-        athletes: incoming.athletes || state.athletes,
-        categories: incoming.categories || state.categories,
-        individualResults: incoming.individualResults || state.individualResults,
-        individualPointsConfig: incoming.individualPointsConfig || state.individualPointsConfig,
+        tournament: safeTournament || state.tournament,
+        teams: safeArr(incoming.teams, LIMITS.MAX_TEAMS) || state.teams,
+        games: safeArr(incoming.games, LIMITS.MAX_GAMES) || state.games,
+        pools: safeArr(incoming.pools, LIMITS.MAX_POOLS) || state.pools,
+        matches: safeArr(incoming.matches, LIMITS.MAX_MATCHES) || state.matches,
+        knockoutConfig: safeObj(incoming.knockoutConfig) || state.knockoutConfig,
+        knockoutMatches: safeArr(incoming.knockoutMatches, LIMITS.MAX_KNOCKOUT_MATCHES) || state.knockoutMatches,
+        qualifiedTeams: safeObj(incoming.qualifiedTeams) || state.qualifiedTeams,
+        athletes: safeArr(incoming.athletes, LIMITS.MAX_ATHLETES) || state.athletes,
+        categories: safeArr(incoming.categories, LIMITS.MAX_CATEGORIES) || state.categories,
+        individualResults: safeArr(incoming.individualResults, LIMITS.MAX_INDIVIDUAL_RESULTS) || state.individualResults,
+        individualPointsConfig: safeObj(incoming.individualPointsConfig) || state.individualPointsConfig,
       };
     }
 
@@ -675,7 +682,7 @@ export function TournamentProvider({ children }) {
         setDataLoaded(true);
       } catch (err) {
         if (!cancelled) {
-          console.error('Failed to load data from Firestore:', err);
+          // Failed to load data from Firestore
           setLoadError(err.message || 'Failed to load data');
           // CRITICAL: Do NOT set dataLoaded=true on load failure if we don't know
           // whether Firestore has data. This prevents the empty state from being
@@ -696,7 +703,7 @@ export function TournamentProvider({ children }) {
             } catch {
               // Second attempt failed — allow app to work but block saves
               // until user makes an explicit change
-              console.warn('Firestore load failed after retry. Saves blocked until user acts.');
+              // Firestore load failed after retry — saves blocked until user acts
               setDataLoaded(true);
             }
           }, 3000);
@@ -732,7 +739,7 @@ export function TournamentProvider({ children }) {
     if (stateIsEmpty && firestoreHadDataRef.current && !userHasActedRef.current) {
       // Firestore had data, state is empty, and user hasn't done anything.
       // This is likely a load failure or race condition — DON'T save.
-      console.warn('Blocked saving empty state over existing Firestore data.');
+      // Blocked saving empty state over existing Firestore data
       return;
     }
 
