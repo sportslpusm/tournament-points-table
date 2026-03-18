@@ -96,15 +96,22 @@ export default function Dashboard() {
         }
       }
 
-      // Get furthest round across all games
+      // Get furthest round across all games + per-game advancements
       let bestAdvancement = 'Pool Stage';
+      const gameAdvancements = [];
       for (const gid of allGameIds) {
+        const game = games.find(g => g.id === gid);
+        const cfg = knockoutConfig[gid];
+        const gameStage = cfg?.stage || 'pool';
         const adv = getTeamFurthestRound(knockoutMatches, team.id, gid);
         if (adv) {
           const priority = { 'Champion': 7, 'Finalist': 6, '3rd Place': 5, '4th Place': 4, 'Semi-Finalist': 3, 'Quarter-Finalist': 2, 'Round of 16': 1, 'Round of 32': 0.5, 'Pool Stage': 0 };
           if ((priority[adv] || 0) > (priority[bestAdvancement] || 0)) {
             bestAdvancement = adv;
           }
+          if (game) gameAdvancements.push({ game, status: adv });
+        } else if (game && (gameStage === 'pool' || gameStage === 'knockout')) {
+          gameAdvancements.push({ game, status: 'Participation' });
         }
       }
 
@@ -139,6 +146,7 @@ export default function Dashboard() {
         individualPoints: indPts,
         medals,
         advancement: bestAdvancement,
+        gameAdvancements,
         championOf,
       };
     });
@@ -563,15 +571,29 @@ export default function Dashboard() {
                       </td>
                       <td className="px-3 py-3 hidden md:table-cell">
                         <div className="flex gap-1 flex-wrap items-center">
-                          {getAdvancementBadge(row.advancement)}
-                          {row.gameIds.map(gid => {
-                            const game = games.find(g => g.id === gid);
-                            return game ? (
-                              <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
-                                {game.emoji}
-                              </span>
-                            ) : null;
-                          })}
+                          {row.gameAdvancements.length > 0 ? row.gameAdvancements.map(ga => (
+                            <span key={ga.game.id} className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${
+                              ga.status === 'Champion' ? 'bg-gold/20 text-gold border border-gold/30' :
+                              ga.status === 'Finalist' ? 'bg-silver/20 text-silver border border-silver/30' :
+                              ga.status === '3rd Place' ? 'bg-bronze/20 text-bronze border border-bronze/30' :
+                              ga.status === '4th Place' ? (darkMode ? 'bg-white/[0.04] text-text-secondary border border-white/[0.06]' : 'bg-gray-100 text-gray-500 border border-gray-200') :
+                              ga.status === 'Semi-Finalist' ? 'bg-accent/10 text-accent border border-accent/20' :
+                              (darkMode ? 'bg-white/[0.04] text-text-secondary border border-white/[0.06]' : 'bg-gray-100 text-gray-500 border border-gray-200')
+                            }`} title={`${ga.game.name}: ${ga.status}`}>
+                              {ga.status} {ga.game.emoji}
+                            </span>
+                          )) : (
+                            <>
+                              {row.gameIds.map(gid => {
+                                const game = games.find(g => g.id === gid);
+                                return game ? (
+                                  <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                                    {game.emoji}
+                                  </span>
+                                ) : null;
+                              })}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -635,7 +657,18 @@ export default function Dashboard() {
                         ))}
                       </div>
                       <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{row.team.shortCode}</div>
-                      {getAdvancementBadge(row.advancement)}
+                      <div className="flex gap-1 flex-wrap mt-1">
+                        {row.gameAdvancements.map(ga => (
+                          <span key={ga.game.id} className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider ${
+                            ga.status === 'Champion' ? 'bg-gold/20 text-gold border border-gold/30' :
+                            ga.status === 'Finalist' ? 'bg-silver/20 text-silver border border-silver/30' :
+                            ga.status === '3rd Place' ? 'bg-bronze/20 text-bronze border border-bronze/30' :
+                            (darkMode ? 'bg-white/[0.04] text-text-secondary border border-white/[0.06]' : 'bg-gray-100 text-gray-500 border border-gray-200')
+                          }`} title={`${ga.game.name}: ${ga.status}`}>
+                            {ga.status} {ga.game.emoji}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-5 gap-1 text-center text-xs">
