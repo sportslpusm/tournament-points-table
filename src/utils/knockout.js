@@ -305,10 +305,60 @@ function crossPoolSeed(poolMap, poolIds, teamCount, startRound) {
     return teams;
   }
 
-  // Multi-pool: interleave by rank
+  // Multi-pool: cross-pool seeding
+  // For 4 pools [A,B,C,D]: pair A vs C, B vs D (not A vs B)
+  // For QF with 2 per pool: 1st seeds play 2nd seeds from opposite pools
+  if (poolIds.length === 4) {
+    const pA = poolMap[poolIds[0]] || [];
+    const pB = poolMap[poolIds[1]] || [];
+    const pC = poolMap[poolIds[2]] || [];
+    const pD = poolMap[poolIds[3]] || [];
+
+    if (startRound === 'sf' || teamCount <= 4) {
+      // Semi-finals: A1 vs C1, B1 vs D1
+      if (pA[0]) teams.push(pA[0]);
+      if (pC[0]) teams.push(pC[0]);
+      if (pB[0]) teams.push(pB[0]);
+      if (pD[0]) teams.push(pD[0]);
+    } else if (startRound === 'qf' || teamCount <= 8) {
+      // Quarter-finals: A1 vs D2, C1 vs B2, B1 vs C2, D1 vs A2
+      if (pA[0]) teams.push(pA[0]);
+      if (pD[1]) teams.push(pD[1]);
+      if (pC[0]) teams.push(pC[0]);
+      if (pB[1]) teams.push(pB[1]);
+      if (pB[0]) teams.push(pB[0]);
+      if (pC[1]) teams.push(pC[1]);
+      if (pD[0]) teams.push(pD[0]);
+      if (pA[1]) teams.push(pA[1]);
+    } else {
+      // Larger brackets: interleave with cross-pool reordering
+      const reordered = [poolIds[0], poolIds[2], poolIds[1], poolIds[3]];
+      const maxRank = Math.max(...poolIds.map(pid => (poolMap[pid] || []).length));
+      for (let rank = 0; rank < maxRank; rank++) {
+        for (const pid of reordered) {
+          const poolTeams = poolMap[pid] || [];
+          if (poolTeams[rank]) teams.push(poolTeams[rank]);
+        }
+      }
+    }
+    return teams;
+  }
+
+  // For 3 or other pool counts: pair first with last
+  const reorderedPoolIds = [];
+  if (poolIds.length >= 3) {
+    const half = Math.ceil(poolIds.length / 2);
+    for (let i = 0; i < half; i++) {
+      reorderedPoolIds.push(poolIds[i]);
+      if (poolIds[half + i]) reorderedPoolIds.push(poolIds[half + i]);
+    }
+  } else {
+    reorderedPoolIds.push(...poolIds);
+  }
+
   const maxRank = Math.max(...poolIds.map(pid => (poolMap[pid] || []).length));
   for (let rank = 0; rank < maxRank; rank++) {
-    for (const pid of poolIds) {
+    for (const pid of reorderedPoolIds) {
       const poolTeams = poolMap[pid] || [];
       if (poolTeams[rank]) teams.push(poolTeams[rank]);
     }
