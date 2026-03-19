@@ -106,7 +106,8 @@ export function getTeamGameKnockoutBreakdown(teamId, game, allKnockoutMatches, k
     detail.roundLabel = getRoundLabel(m.round);
     detail.bonusPoints = 0;
 
-    if (detail.isWin && bonus?.enabled) {
+    // Knockout bonus — ONLY for contested wins (not byes/walkovers)
+    if (detail.isWin && !detail.isBye && bonus?.enabled) {
       const b = m.round === 'qf' ? (bonus.qf || 0) :
                 m.round === 'sf' ? (bonus.sf || 0) :
                 m.round === 'final' ? (bonus.final || 0) :
@@ -208,11 +209,11 @@ function getMatchDetail(match, teamId, opponent) {
       result: 'bye',
       isBye: true,
       isAbsent,
-      isWin: false,
-      basePoints: isAbsent ? 0 : 2,
+      isWin: !isAbsent,
+      basePoints: isAbsent ? 0 : 4,
       participationPoints: 0,
-      totalPoints: isAbsent ? 0 : 2,
-      label: isAbsent ? 'Bye (Absent)' : 'Bye (Present)',
+      totalPoints: isAbsent ? 0 : 4,
+      label: isAbsent ? 'Bye (Absent)' : 'Bye (Win)',
     };
   }
 

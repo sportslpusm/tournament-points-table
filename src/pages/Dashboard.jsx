@@ -64,9 +64,12 @@ export default function Dashboard() {
           if (m.result === 'bye') {
             totalByes++;
             if (m.absentTeamId !== team.id) {
+              // Bye = Win = 4 pts (structural fairness)
               totalPlayed++;
-              totalPoints += 2;
-              koPts += 2;
+              totalWins++;
+              totalPoints += 4;
+              koPts += 4;
+              // NO knockout bonus for byes/walkovers
             }
             continue;
           }
@@ -82,6 +85,7 @@ export default function Dashboard() {
             totalWins++;
             totalPoints += 3;
             koPts += 3;
+            // Knockout bonus — ONLY for contested wins
             if (bonus?.enabled) {
               const b = m.round === 'qf' ? (bonus.qf || 0) :
                         m.round === 'sf' ? (bonus.sf || 0) :
@@ -145,12 +149,17 @@ export default function Dashboard() {
         knockoutPoints: koPts,
         individualPoints: indPts,
         medals,
+        // Expose medal counts for tiebreaker: wins+golds → silvers → bronzes
+        golds: medals.golds || 0,
+        silvers: medals.silvers || 0,
+        bronzes: medals.bronzes || 0,
         advancement: bestAdvancement,
         gameAdvancements,
         championOf,
       };
     });
-    return sortTeamsByTiebreaker(teamStats, matches);
+    // New tiebreaker: points → wins+golds → silvers → bronzes (no H2H, no alphabetical)
+    return sortTeamsByTiebreaker(teamStats);
   }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig]);
 
   const filtered = standings.filter(s =>

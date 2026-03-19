@@ -1,17 +1,32 @@
-// Points System:
-// Participation = 1pt (both teams, if not bye-absent)
-// Win = 3pts (+ 1 participation = 4 total)
-// Loss = 0pts (+ 1 participation = 1 total)
-// Draw = 1pt each (+ 1 participation = 2 total each)
-// Bye = 2pts to present team, 0pts to absent team (no participation for absent)
+// ═══════════════════════════════════════════════════════════════
+// TOURNAMENT SCORING RULES — Single Source of Truth
+// ═══════════════════════════════════════════════════════════════
+//
+// TEAM GAME SCORING (Cricket, Badminton, Kabaddi, Football, ESports-BGMI):
+//   Win (contested):     3 base + 1 participation = 4 pts
+//   Loss (contested):    0 base + 1 participation = 1 pt
+//   Draw:                1 base + 1 participation = 2 pts
+//   Bye / Walkover win:  4 pts (equal to a contested win — structural fairness)
+//   No-show/Forfeit:     0 pts (absent team)
+//
+// KNOCKOUT BONUS (only for contested wins, NOT walkovers):
+//   QF Win: +1 | SF Win: +2 | Final Win: +3 | 3rd Place Win: +1
+//
+// MASTER TIEBREAKER (for overall leaderboard):
+//   1. Total Overall Points (descending)
+//   2. Most Total Tournament Wins (team game wins + individual 1st places) (descending)
+//   3. Most 2nd Place / Runner-Up finishes (descending)
+//   4. Most 3rd Place finishes (descending)
+//   NEVER Head-to-Head. NEVER Alphabetical.
+// ═══════════════════════════════════════════════════════════════
 
 export function getMatchPoints(match, teamId) {
   if (match.status !== 'completed') return 0;
 
+  // Bye / Walkover — present team gets 4 pts (equal to a win)
   if (match.result === 'bye') {
     if (match.absentTeamId === teamId) return 0;
-    // Present team
-    return 2;
+    return 4;
   }
 
   // Participation point
@@ -41,10 +56,11 @@ export function getTeamStatsForMatches(matches, teamId) {
         // Absent: no points, no played, but count as bye
         byes += 1;
       } else {
-        // Present: gets 2 points
+        // Present: gets 4 points (equal to a win)
         byes += 1;
         played += 1;
-        points += 2;
+        wins += 1;
+        points += 4;
       }
       continue;
     }
@@ -71,36 +87,45 @@ export function getTeamStatsForMatches(matches, teamId) {
   return { played, wins, losses, draws, byes, points };
 }
 
-export function getHeadToHead(matches, teamAId, teamBId) {
-  let aWins = 0, bWins = 0;
-  for (const m of matches) {
-    if (m.status !== 'completed') continue;
-    const involves = (m.teamAId === teamAId && m.teamBId === teamBId) ||
-                     (m.teamAId === teamBId && m.teamBId === teamAId);
-    if (!involves) continue;
-
-    if (m.result === 'teamA') {
-      if (m.teamAId === teamAId) aWins++;
-      else bWins++;
-    } else if (m.result === 'teamB') {
-      if (m.teamBId === teamAId) aWins++;
-      else bWins++;
-    }
-  }
-  return { aWins, bWins };
-}
-
-export function sortTeamsByTiebreaker(teamStats, allMatches) {
+/**
+ * Master tiebreaker for the overall tournament leaderboard.
+ *
+ * Each team stat object must include:
+ *   - points: total tournament points
+ *   - wins: total team game wins (including bye/walkover wins)
+ *   - golds: total individual 1st-place finishes
+ *   - silvers: total individual 2nd-place finishes
+ *   - bronzes: total individual 3rd-place finishes
+ *
+ * Hierarchy:
+ *   1. Total Overall Points (desc)
+ *   2. Total Tournament Wins = team wins + individual golds (desc)
+ *   3. Most 2nd Place / Runner-Up finishes (desc)
+ *   4. Most 3rd Place finishes (desc)
+ *   NEVER Head-to-Head. NEVER Alphabetical.
+ */
+export function sortTeamsByTiebreaker(teamStats) {
   return [...teamStats].sort((a, b) => {
-    // 1. Points descending
+    // 1. Total Overall Points (descending)
     if (b.points !== a.points) return b.points - a.points;
-    // 2. Most wins
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    // 3. Head-to-head
-    const h2h = getHeadToHead(allMatches, a.teamId, b.teamId);
-    if (h2h.aWins !== h2h.bWins) return h2h.bWins - h2h.aWins; // b has more h2h wins = b ranks higher
-    // 4. Alphabetical
-    return a.teamName.localeCompare(b.teamName);
+
+    // 2. Most Total Tournament Wins (team game wins + individual golds)
+    const aTotalWins = (a.wins || 0) + (a.golds || 0);
+    const bTotalWins = (b.wins || 0) + (b.golds || 0);
+    if (bTotalWins !== aTotalWins) return bTotalWins - aTotalWins;
+
+    // 3. Most 2nd Place / Runner-Up finishes (descending)
+    const aSilvers = a.silvers || 0;
+    const bSilvers = b.silvers || 0;
+    if (bSilvers !== aSilvers) return bSilvers - aSilvers;
+
+    // 4. Most 3rd Place finishes (descending)
+    const aBronzes = a.bronzes || 0;
+    const bBronzes = b.bronzes || 0;
+    if (bBronzes !== aBronzes) return bBronzes - aBronzes;
+
+    // Tie remains — manual resolution (coin toss / playoff)
+    return 0;
   });
 }
 
@@ -119,7 +144,9 @@ export function getTeamCombinedStats(poolMatches, knockoutMatches, teamId, bonus
       koByes++;
       if (m.absentTeamId !== teamId) {
         koPlayed++;
-        koPoints += 2;
+        koWins++;
+        koPoints += 4; // Bye = Win = 4 pts
+        // NO knockout bonus for walkovers/byes
       }
       continue;
     }
@@ -135,7 +162,7 @@ export function getTeamCombinedStats(poolMatches, knockoutMatches, teamId, bonus
       koWins++;
       koPoints += 3;
 
-      // Bonus points
+      // Knockout bonus — ONLY for contested wins
       if (bonusConfig?.enabled) {
         if (m.round === 'qf') koPoints += bonusConfig.qf || 0;
         else if (m.round === 'sf') koPoints += bonusConfig.sf || 0;

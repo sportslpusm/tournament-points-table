@@ -404,6 +404,7 @@ export function advanceLoserToThird(match, allMatches) {
 }
 
 // Get knockout match points for a team (includes bonus)
+// RULE: Bye = 4 pts (equal to a win). Knockout bonus ONLY for contested wins.
 export function getKnockoutMatchPoints(match, teamId, bonusConfig) {
   if (match.status !== 'completed') return { base: 0, bonus: 0, total: 0 };
 
@@ -411,32 +412,27 @@ export function getKnockoutMatchPoints(match, teamId, bonusConfig) {
 
   if (match.result === 'bye') {
     if (match.absentTeamId === teamId) return { base: 0, bonus: 0, total: 0 };
-    base = 2; // bye points
-  } else {
-    base = 1; // participation
-    const isWinner =
-      (match.result === 'teamA' && match.teamAId === teamId) ||
-      (match.result === 'teamB' && match.teamBId === teamId);
-    if (isWinner) {
-      base += 3; // win
-    }
-    // Loss: just participation (1)
+    base = 4; // bye = win = 4 pts (structural fairness)
+    // NO knockout bonus for byes/walkovers
+    return { base, bonus: 0, total: base };
   }
 
-  // Bonus points for knockout advancement (only for winners)
-  let bonus = 0;
-  if (bonusConfig?.enabled) {
-    const isWinner =
-      (match.result === 'teamA' && match.teamAId === teamId) ||
-      (match.result === 'teamB' && match.teamBId === teamId) ||
-      (match.result === 'bye' && match.absentTeamId !== teamId);
+  base = 1; // participation
+  const isWinner =
+    (match.result === 'teamA' && match.teamAId === teamId) ||
+    (match.result === 'teamB' && match.teamBId === teamId);
+  if (isWinner) {
+    base += 3; // win
+  }
+  // Loss: just participation (1)
 
-    if (isWinner) {
-      if (match.round === 'qf') bonus = bonusConfig.qf || 0;
-      else if (match.round === 'sf') bonus = bonusConfig.sf || 0;
-      else if (match.round === 'final') bonus = bonusConfig.final || 0;
-      else if (match.round === 'third') bonus = bonusConfig.third || 0;
-    }
+  // Knockout bonus — ONLY for contested wins, NOT walkovers/byes
+  let bonus = 0;
+  if (bonusConfig?.enabled && isWinner) {
+    if (match.round === 'qf') bonus = bonusConfig.qf || 0;
+    else if (match.round === 'sf') bonus = bonusConfig.sf || 0;
+    else if (match.round === 'final') bonus = bonusConfig.final || 0;
+    else if (match.round === 'third') bonus = bonusConfig.third || 0;
   }
 
   return { base, bonus, total: base + bonus };
@@ -459,7 +455,7 @@ export function getTeamKnockoutPoints(knockoutMatches, teamId, bonusConfig) {
 
     if (m.result === 'bye') {
       byes++;
-      if (m.absentTeamId !== teamId) played++;
+      if (m.absentTeamId !== teamId) { played++; wins++; }
     } else {
       played++;
       const isWinner =
