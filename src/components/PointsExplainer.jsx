@@ -28,7 +28,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
   const lossPts = 0;
   const drawPts = 1;
   const participationPts = 1;
-  const byePresentPts = 2;
+  const byePresentPts = 4;
 
   // Gather all unique knockout bonus configs
   const teamGames = games.filter(g => g.type !== 'individual');
@@ -104,7 +104,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                         { label: 'Win', detail: `${winPts} pts + ${participationPts} participation = ${winPts + participationPts} total`, color: 'text-win' },
                         { label: 'Loss', detail: `${lossPts} pts + ${participationPts} participation = ${lossPts + participationPts} total`, color: 'text-loss' },
                         { label: 'Draw', detail: `${drawPts} pt + ${participationPts} participation = ${drawPts + participationPts} total`, color: 'text-draw' },
-                        { label: 'Bye (present)', detail: `${byePresentPts} pts (no participation added)`, color: 'text-bye' },
+                        { label: 'Bye / Walkover', detail: `${byePresentPts} pts (equal to a win — structural fairness)`, color: 'text-bye' },
                         { label: 'Bye (absent)', detail: `0 pts (not present = no points)`, color: darkMode ? 'text-gray-500' : 'text-gray-400' },
                       ].map((row, i) => (
                         <tr key={i} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
@@ -214,7 +214,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                 )}
 
                 <p className={`text-[11px] mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                  Note: Each athlete earns points for their school. Multiple athletes from the same school = points stack.
+                  Note: Each athlete earns points for their school. Participation points per team may be capped per event to prevent point farming. Medal/placement bonuses are never capped.
                 </p>
               </div>
             )}
@@ -230,7 +230,8 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                 </h4>
                 <div className={`text-xs leading-relaxed space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                   <p>A team's total tournament points = sum of ALL points earned across ALL games (team games + individual games).</p>
-                  <p><span className="font-semibold text-accent">Tiebreaker:</span> Most wins → Head-to-head → Alphabetical</p>
+                  <p><span className="font-semibold text-accent">Tiebreaker:</span> Total Points → Total Wins + 🥇 Golds → 🥈 Silvers → 🥉 Bronzes</p>
+                  <p>Knockout bonuses only apply to contested wins (not walkovers/byes).</p>
                   <p>Teams competing in more games have more opportunities to earn points.</p>
                 </div>
               </div>
