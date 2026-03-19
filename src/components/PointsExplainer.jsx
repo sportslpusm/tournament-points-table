@@ -4,6 +4,37 @@ import { DEFAULT_INDIVIDUAL_POINTS } from '../utils/individualPoints';
 
 const SESSION_KEY = 'points_explainer_open';
 
+function WhyGoldSixPoints({ darkMode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`mt-3 rounded-lg border ${darkMode ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50/50'}`}>
+      <button
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold transition-colors ${
+          darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+        }`}
+      >
+        <span>Why are Individual Medals worth 6 Points?</span>
+        <svg
+          className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className={`px-3 pb-3 text-[11px] leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          Team sports accrue points per match (4 pts per win) as they advance through a bracket.
+          Individual sports, however, only award points for final placements.
+          Awarding 6 points for an Individual Gold ensures Individual disciplines remain mathematically
+          competitive against Team sports on the master leaderboard. It follows a balanced 6-4-2 standard
+          that heavily rewards championship excellence over sheer registration numbers.
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * PointsExplainer — "How Points Work" expandable panel.
  *
@@ -216,6 +247,9 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                 <p className={`text-[11px] mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                   Note: Each athlete earns points for their school. Participation points per team may be capped per event to prevent point farming. Medal/placement bonuses are never capped.
                 </p>
+
+                {/* Why 6 Points accordion */}
+                <WhyGoldSixPoints darkMode={darkMode} />
               </div>
             )}
 
