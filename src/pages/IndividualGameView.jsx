@@ -54,6 +54,7 @@ export default function IndividualGameView() {
   const [ptSecond, setPtSecond] = useState(pointsConfig.second);
   const [ptThird, setPtThird] = useState(pointsConfig.third);
   const [ptParticipation, setPtParticipation] = useState(pointsConfig.participation);
+  const [ptMaxCap, setPtMaxCap] = useState(pointsConfig.maxParticipationCap ?? '');
 
   const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${
     darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
@@ -184,7 +185,14 @@ export default function IndividualGameView() {
   function handleSavePointsConfig() {
     dispatch({
       type: 'UPDATE_INDIVIDUAL_POINTS_CONFIG',
-      payload: { gameId: selectedGameId, first: Math.max(0, Math.min(100, Math.round(Number(ptFirst) || 0))), second: Math.max(0, Math.min(100, Math.round(Number(ptSecond) || 0))), third: Math.max(0, Math.min(100, Math.round(Number(ptThird) || 0))), participation: Math.max(0, Math.min(100, Math.round(Number(ptParticipation) || 0))) },
+      payload: {
+        gameId: selectedGameId,
+        first: Math.max(0, Math.min(100, Math.round(Number(ptFirst) || 0))),
+        second: Math.max(0, Math.min(100, Math.round(Number(ptSecond) || 0))),
+        third: Math.max(0, Math.min(100, Math.round(Number(ptThird) || 0))),
+        participation: Math.max(0, Math.min(100, Math.round(Number(ptParticipation) || 0))),
+        maxParticipationCap: ptMaxCap === '' || ptMaxCap === Infinity ? Infinity : Math.max(1, Math.round(Number(ptMaxCap) || Infinity)),
+      },
     });
     showToast('Points configuration saved');
   }
@@ -599,6 +607,33 @@ export default function IndividualGameView() {
                 />
               </div>
             ))}
+          </div>
+
+          {/* Participation Cap */}
+          <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-white/10' : 'border-gray-200'}`}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>🛡️ Max Participation Cap</label>
+                <p className={`text-[11px] mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Max participation points a single team can earn per event. Leave empty for no limit. Medal bonuses are never capped.
+                </p>
+              </div>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                placeholder="∞"
+                value={ptMaxCap === Infinity || ptMaxCap === '' ? '' : ptMaxCap}
+                onChange={e => setPtMaxCap(e.target.value === '' ? '' : Number(e.target.value))}
+                onBlur={e => {
+                  if (e.target.value === '') setPtMaxCap('');
+                  else setPtMaxCap(Math.max(1, Math.min(100, Math.round(Number(e.target.value) || 1))));
+                }}
+                className={`w-20 px-3 py-2 rounded-lg text-sm border text-center ${
+                  darkMode ? 'bg-navy-800 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+            </div>
           </div>
           <button
             onClick={handleSavePointsConfig}

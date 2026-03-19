@@ -586,6 +586,9 @@ function tournamentReducer(state, action) {
       if (pcConfig.second != null) safeConfig.second = clamp(pcConfig.second);
       if (pcConfig.third != null) safeConfig.third = clamp(pcConfig.third);
       if (pcConfig.participation != null) safeConfig.participation = clamp(pcConfig.participation);
+      if (pcConfig.maxParticipationCap !== undefined) {
+        safeConfig.maxParticipationCap = pcConfig.maxParticipationCap === Infinity ? Infinity : Math.max(1, Math.min(100, Math.round(Number(pcConfig.maxParticipationCap) || Infinity)));
+      }
       return {
         ...state,
         individualPointsConfig: {
