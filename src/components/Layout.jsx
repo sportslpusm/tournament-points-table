@@ -110,10 +110,10 @@ export default function Layout({ children }) {
         <OfflineBanner darkMode={darkMode} />
 
         {/* Mobile Header */}
-        <div className={`lg:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 border-b no-print ${
+        <div className={`lg:hidden sticky top-0 z-50 flex items-center justify-between px-4 py-3 border-b no-print ${
           darkMode
-            ? 'bg-navy-900/90 backdrop-blur-xl border-white/5'
-            : 'bg-white/90 backdrop-blur-xl border-gray-200'
+            ? 'bg-navy-900 backdrop-blur-xl border-white/5'
+            : 'bg-white backdrop-blur-xl border-gray-200'
         }`}>
           <div className="flex items-center gap-2 min-w-0">
             <a href="https://www.unisportscouncil.in/" target="_top">
@@ -160,10 +160,10 @@ export default function Layout({ children }) {
       </main>
 
       {/* Mobile Bottom Tab Bar */}
-      <nav aria-label="Mobile navigation" className={`lg:hidden fixed bottom-0 left-0 right-0 flex z-40 no-print border-t ${
+      <nav aria-label="Mobile navigation" className={`lg:hidden fixed bottom-0 left-0 right-0 flex z-50 no-print border-t ${
         darkMode
-          ? 'bg-navy-900/90 backdrop-blur-xl border-white/5'
-          : 'bg-white/90 backdrop-blur-xl border-gray-200'
+          ? 'bg-navy-900 backdrop-blur-xl border-white/5'
+          : 'bg-white backdrop-blur-xl border-gray-200'
       }`} style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {navItems.map(item => (
           <button

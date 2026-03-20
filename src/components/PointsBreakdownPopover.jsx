@@ -79,31 +79,35 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
 
   // Render the modal via Portal so it's always on top of everything
   const modal = open && breakdownContent ? createPortal(
+    <>
+    {/* Full-screen dim backdrop (behind header/footer) */}
     <div
-      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center"
-      style={{ pointerEvents: 'auto' }}
+      className={`fixed inset-0 z-[39] transition-opacity duration-200 ${darkMode ? 'bg-black/60' : 'bg-black/40'}`}
       onClick={close}
+      style={{ pointerEvents: 'auto' }}
+    />
+    {/* Panel container — between header and footer */}
+    <div
+      className="fixed left-0 right-0 z-[45] flex items-end lg:items-center justify-center"
+      style={{
+        pointerEvents: 'none',
+        top: 'var(--popover-top, 52px)',
+        bottom: 'var(--popover-bottom, 56px)',
+      }}
     >
-      {/* Backdrop */}
-      <div
-        className={`absolute inset-0 transition-opacity duration-200 ${darkMode ? 'bg-black/70' : 'bg-black/50'}`}
-      />
 
-      {/* Panel — bottom sheet on mobile, centered on desktop */}
+      {/* Panel — fills between header and footer on mobile, centered on desktop */}
       <div
-        className={`relative w-full sm:max-w-md sm:mx-4 sm:rounded-2xl rounded-t-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
+        className={`relative w-full sm:max-w-md sm:mx-4 rounded-t-2xl sm:rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
           darkMode
             ? 'bg-navy-850 border-white/10 text-white'
             : 'bg-white border-gray-200 text-gray-900'
         }`}
-        style={{
-          maxHeight: '80vh',
-          maxHeight: '80dvh',
-        }}
+        style={{ maxHeight: '100%', pointerEvents: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle (mobile) */}
-        <div className="sm:hidden flex justify-center pt-2 pb-1 shrink-0">
+        <div className="lg:hidden flex justify-center pt-2 pb-1 shrink-0">
           <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
         </div>
 
@@ -130,7 +134,8 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
           {breakdownContent.body}
         </div>
       </div>
-    </div>,
+    </div>
+    </>,
     document.body
   ) : null;
 
