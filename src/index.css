@@ -107,17 +107,6 @@
     height: 100dvh;
   }
 
-  :root {
-    --popover-top: 52px;
-    --popover-bottom: 56px;
-  }
-
-  @media (min-width: 1024px) {
-    :root {
-      --popover-top: 0px;
-      --popover-bottom: 0px;
-    }
-  }
 
   body {
     font-family: var(--font-sans);

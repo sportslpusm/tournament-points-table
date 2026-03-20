@@ -79,31 +79,24 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
 
   // Render the modal via Portal so it's always on top of everything
   const modal = open && breakdownContent ? createPortal(
-    <>
-    {/* Full-screen dim backdrop (behind header/footer) */}
     <div
-      className={`fixed inset-0 z-[39] transition-opacity duration-200 ${darkMode ? 'bg-black/60' : 'bg-black/40'}`}
-      onClick={close}
+      className="fixed inset-0 z-[9999] flex items-end lg:items-center justify-center"
       style={{ pointerEvents: 'auto' }}
-    />
-    {/* Panel container — between header and footer */}
-    <div
-      className="fixed left-0 right-0 z-[45] flex items-end lg:items-center justify-center"
-      style={{
-        pointerEvents: 'none',
-        top: 'var(--popover-top, 52px)',
-        bottom: 'var(--popover-bottom, 56px)',
-      }}
+      onClick={close}
     >
-
-      {/* Panel — fills between header and footer on mobile, centered on desktop */}
+      {/* Backdrop */}
       <div
-        className={`relative w-full sm:max-w-md sm:mx-4 rounded-t-2xl sm:rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
+        className={`absolute inset-0 transition-opacity duration-200 ${darkMode ? 'bg-black/70' : 'bg-black/50'}`}
+      />
+
+      {/* Panel */}
+      <div
+        className={`relative w-full lg:max-w-md lg:mx-4 rounded-t-2xl lg:rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
           darkMode
             ? 'bg-navy-850 border-white/10 text-white'
             : 'bg-white border-gray-200 text-gray-900'
         }`}
-        style={{ maxHeight: '100%', pointerEvents: 'auto' }}
+        style={{ maxHeight: '85vh', maxHeight: '85dvh' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle (mobile) */}
@@ -134,8 +127,7 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
           {breakdownContent.body}
         </div>
       </div>
-    </div>
-    </>,
+    </div>,
     document.body
   ) : null;
 

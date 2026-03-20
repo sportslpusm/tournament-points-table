@@ -24,9 +24,9 @@ export default function Layout({ children }) {
   const navItems = isAdmin ? ALL_NAV_ITEMS : ALL_NAV_ITEMS.filter(i => !i.adminOnly);
 
   return (
-    <div className={`min-h-screen min-h-[100dvh] flex flex-col lg:flex-row ${darkMode ? 'bg-navy-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`h-screen h-[100dvh] flex flex-col lg:flex-row overflow-hidden ${darkMode ? 'bg-navy-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Desktop Sidebar */}
-      <aside className={`hidden lg:flex flex-col w-64 flex-shrink-0 no-print h-screen sticky top-0 border-r ${
+      <aside className={`hidden lg:flex flex-col w-64 flex-shrink-0 no-print h-full sticky top-0 border-r ${
         darkMode
           ? 'bg-navy-900/80 backdrop-blur-xl border-white/5'
           : 'bg-white/80 backdrop-blur-xl border-gray-200'
@@ -104,16 +104,13 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 min-w-0 lg:pb-0" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
-        {/* Offline Banner */}
-        <OfflineBanner darkMode={darkMode} />
-
-        {/* Mobile Header */}
-        <div className={`lg:hidden sticky top-0 z-50 flex items-center justify-between px-4 py-3 border-b no-print ${
+      {/* Main Content Area — flex column: header, scrollable content, footer */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+        {/* Mobile Header — fixed at top */}
+        <div className={`lg:hidden shrink-0 z-50 flex items-center justify-between px-4 py-3 border-b no-print ${
           darkMode
-            ? 'bg-navy-900 backdrop-blur-xl border-white/5'
-            : 'bg-white backdrop-blur-xl border-gray-200'
+            ? 'bg-navy-900 border-white/5'
+            : 'bg-white border-gray-200'
         }`}>
           <div className="flex items-center gap-2 min-w-0">
             <a href="https://www.unisportscouncil.in/" target="_top">
@@ -154,35 +151,40 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        <div className="p-4 lg:p-6 max-w-7xl mx-auto animate-fadeIn">
-          {children}
-        </div>
-      </main>
+        {/* Scrollable content */}
+        <main className="flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {/* Offline Banner */}
+          <OfflineBanner darkMode={darkMode} />
+          <div className="p-4 lg:p-6 max-w-7xl mx-auto animate-fadeIn">
+            {children}
+          </div>
+        </main>
 
-      {/* Mobile Bottom Tab Bar */}
-      <nav aria-label="Mobile navigation" className={`lg:hidden fixed bottom-0 left-0 right-0 flex z-50 no-print border-t ${
-        darkMode
-          ? 'bg-navy-900 backdrop-blur-xl border-white/5'
-          : 'bg-white backdrop-blur-xl border-gray-200'
-      }`} style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        {navItems.map(item => (
-          <button
-            key={item.view}
-            onClick={() => dispatch({ type: 'SET_VIEW', payload: { view: item.view } })}
-            className={`flex-1 flex flex-col items-center py-2 text-[10px] font-medium transition-all relative ${
-              currentView === item.view
-                ? 'text-accent'
-                : darkMode ? 'text-gray-500' : 'text-gray-400'
-            }`}
-          >
-            {currentView === item.view && (
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-accent" />
-            )}
-            <span className={`text-lg mb-0.5 transition-transform ${currentView === item.view ? 'scale-110' : ''}`}>{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </nav>
+        {/* Mobile Bottom Tab Bar — fixed at bottom, never hidden */}
+        <nav aria-label="Mobile navigation" className={`lg:hidden shrink-0 flex z-50 no-print border-t ${
+          darkMode
+            ? 'bg-navy-900 border-white/5'
+            : 'bg-white border-gray-200'
+        }`} style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+          {navItems.map(item => (
+            <button
+              key={item.view}
+              onClick={() => dispatch({ type: 'SET_VIEW', payload: { view: item.view } })}
+              className={`flex-1 flex flex-col items-center py-2 text-[10px] font-medium transition-all relative ${
+                currentView === item.view
+                  ? 'text-accent'
+                  : darkMode ? 'text-gray-500' : 'text-gray-400'
+              }`}
+            >
+              {currentView === item.view && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-accent" />
+              )}
+              <span className={`text-lg mb-0.5 transition-transform ${currentView === item.view ? 'scale-110' : ''}`}>{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
       {/* Login Modal */}
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
