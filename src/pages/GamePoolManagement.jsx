@@ -7,7 +7,8 @@ import EmptyState from '../components/EmptyState';
 export default function GamePoolManagement() {
   const state = useTournament();
   const { dispatch, showToast } = useDispatch();
-  const { games, pools, teams, matches, darkMode, knockoutConfig, athletes, categories } = state;
+  const { games, pools, teams, matches, darkMode, knockoutConfig, athletes, categories, lobbyEntries: rawLobbyEntries, lobbyResults } = state;
+  const lobbyEntries = Array.isArray(rawLobbyEntries) ? rawLobbyEntries : [];
 
   const [showGameModal, setShowGameModal] = useState(false);
   const [editGame, setEditGame] = useState(null);
@@ -60,7 +61,7 @@ export default function GamePoolManagement() {
     }
 
     if (editGame) {
-      dispatch({ type: 'UPDATE_GAME', payload: { id: editGame.id, name: gameName.trim(), emoji: gameEmoji } });
+      dispatch({ type: 'UPDATE_GAME', payload: { id: editGame.id, name: gameName.trim(), emoji: gameEmoji, type: gameType } });
       showToast('Game updated');
     } else {
       dispatch({ type: 'ADD_GAME', payload: { name: gameName.trim(), emoji: gameEmoji, type: gameType } });
@@ -145,11 +146,13 @@ export default function GamePoolManagement() {
         <div className="space-y-6">
           {games.map(game => {
             const isIndividual = game.type === 'individual';
+            const isLobby = game.type === 'lobby';
             const gamePools = pools.filter(p => p.gameId === game.id);
             const cfg = knockoutConfig[game.id] || {};
             const gameAthletes = athletes.filter(a => a.gameId === game.id);
             const gameCategories = categories.filter(c => c.gameId === game.id);
-            const stageLabel = isIndividual ? 'Individual' : cfg.stage === 'knockout' ? 'Knockout' : cfg.stage === 'completed' ? 'Completed' : 'Pool';
+            const gameLobbyEntries = lobbyEntries.filter(e => e.gameId === game.id);
+            const stageLabel = isIndividual ? 'Individual' : isLobby ? 'Lobby' : cfg.stage === 'knockout' ? 'Knockout' : cfg.stage === 'completed' ? 'Completed' : 'Pool';
 
             return (
               <div key={game.id} className={`rounded-xl border overflow-hidden ${
@@ -166,6 +169,10 @@ export default function GamePoolManagement() {
                       <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                         ({gameCategories.length} categories · {gameAthletes.length} athletes)
                       </span>
+                    ) : isLobby ? (
+                      <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        ({gameLobbyEntries.length} {gameLobbyEntries.length === 1 ? 'entry' : 'entries'})
+                      </span>
                     ) : (
                       <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                         ({gamePools.length} pool{gamePools.length !== 1 ? 's' : ''})
@@ -173,6 +180,7 @@ export default function GamePoolManagement() {
                     )}
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                       isIndividual ? 'bg-purple-500/10 text-purple-400' :
+                      isLobby ? 'bg-emerald-500/10 text-emerald-400' :
                       stageLabel === 'Knockout' ? 'bg-accent/10 text-accent' :
                       stageLabel === 'Completed' ? 'bg-win/10 text-win' :
                       darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
@@ -181,7 +189,7 @@ export default function GamePoolManagement() {
                     </span>
                   </div>
                   <div className="flex gap-1 items-center">
-                    {!isIndividual && (
+                    {!isIndividual && !isLobby && (
                       <button
                         onClick={() => setShowKoSettings(game.id)}
                         className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
@@ -193,10 +201,12 @@ export default function GamePoolManagement() {
                         ⚔️ KO
                       </button>
                     )}
-                    {isIndividual && (
+                    {(isIndividual || isLobby) && (
                       <button
                         onClick={() => dispatch({ type: 'SELECT_GAME', payload: game.id })}
-                        className="px-2 py-1 rounded text-xs font-medium bg-purple-500/10 text-purple-400 transition-colors hover:bg-purple-500/20"
+                        className={`px-2 py-1 rounded text-xs font-medium transition-colors hover:opacity-80 ${
+                          isLobby ? 'bg-emerald-500/10 text-emerald-400' : 'bg-purple-500/10 text-purple-400'
+                        }`}
                       >
                         Manage →
                       </button>
@@ -207,7 +217,7 @@ export default function GamePoolManagement() {
                     <button onClick={() => setDeleteGameId(game.id)} className="p-1.5 rounded-lg hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-colors" aria-label="Delete game">
                       🗑
                     </button>
-                    {!isIndividual && (
+                    {!isIndividual && !isLobby && (
                       <button onClick={() => openAddPool(game.id)} className={`px-3 py-1 rounded-lg text-xs font-medium ml-2 transition-colors ${
                         darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}>
@@ -217,8 +227,30 @@ export default function GamePoolManagement() {
                   </div>
                 </div>
 
-                {/* Content: Pools for team games, summary for individual games */}
-                {isIndividual ? (
+                {/* Content: Pools for team games, summary for individual/lobby games */}
+                {isLobby ? (
+                  <div className="p-4">
+                    <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {gameLobbyEntries.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {gameLobbyEntries.map(entry => {
+                            const team = teams.find(t => t.id === entry.teamId);
+                            return (
+                              <span key={entry.id} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${
+                                darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {team && <TeamLogo team={team} size={14} />}
+                                {entry.entryName ? `${team?.shortCode || team?.name} – ${entry.entryName}` : (team?.shortCode || team?.name || '?')}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p>No entries yet. Click "Manage" to add schools and entries.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : isIndividual ? (
                   <div className="p-4">
                     <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       {gameCategories.length > 0 ? (
@@ -314,7 +346,9 @@ export default function GamePoolManagement() {
             const hasData = editGame && (
               pools.some(p => p.gameId === editGame.id) ||
               athletes.some(a => a.gameId === editGame.id) ||
-              categories.some(c => c.gameId === editGame.id)
+              categories.some(c => c.gameId === editGame.id) ||
+              lobbyEntries.some(e => e.gameId === editGame.id) ||
+              (lobbyResults || []).some(r => r.gameId === editGame.id)
             );
             return (
               <div>
@@ -597,7 +631,7 @@ export default function GamePoolManagement() {
               disabled={!!editPool}
             >
               <option value="">Select Game</option>
-              {games.filter(g => g.type !== 'individual').map(g => <option key={g.id} value={g.id}>{g.emoji} {g.name}</option>)}
+              {games.filter(g => g.type !== 'individual' && g.type !== 'lobby').map(g => <option key={g.id} value={g.id}>{g.emoji} {g.name}</option>)}
             </select>
           </div>
           <div className="flex gap-3 pt-2">

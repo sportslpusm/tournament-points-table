@@ -253,6 +253,7 @@ function tournamentReducer(state, action) {
         ...ug,
         ...(ug.name != null && { name: sanitizeString(ug.name, LIMITS.MAX_NAME_LENGTH) }),
         ...(ug.emoji != null && { emoji: typeof ug.emoji === 'string' ? ug.emoji.slice(0, 4) : undefined }),
+        ...(ug.type != null && ['team', 'individual', 'lobby'].includes(ug.type) && { type: ug.type }),
       };
       return {
         ...state,
@@ -706,6 +707,9 @@ function tournamentReducer(state, action) {
       if (lpConfig.participation != null) safeLpConfig.participation = clampLp(lpConfig.participation);
       if (lpConfig.maxParticipationCap !== undefined) {
         safeLpConfig.maxParticipationCap = lpConfig.maxParticipationCap === Infinity ? Infinity : Math.max(1, Math.min(100, Math.round(Number(lpConfig.maxParticipationCap) || Infinity)));
+      }
+      if (lpConfig.maxEntriesPerSchool != null) {
+        safeLpConfig.maxEntriesPerSchool = Math.max(1, Math.min(20, Math.round(Number(lpConfig.maxEntriesPerSchool) || 1)));
       }
       return {
         ...state,

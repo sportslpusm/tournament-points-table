@@ -51,8 +51,10 @@ export default function LobbyGameView() {
   const [cfgThird, setCfgThird] = useState(config.third);
   const [cfgParticipation, setCfgParticipation] = useState(config.participation);
   const [cfgCap, setCfgCap] = useState(config.maxParticipationCap === Infinity ? '' : config.maxParticipationCap);
+  const [cfgMaxEntries, setCfgMaxEntries] = useState(config.maxEntriesPerSchool || 1);
 
   // ── Entry helpers ──
+  const maxEntries = config.maxEntriesPerSchool || 1;
   function getEntryDisplayName(entryId) {
     const entry = gameEntries.find(e => e.id === entryId);
     if (!entry) return '?';
@@ -84,6 +86,18 @@ export default function LobbyGameView() {
 
   function handleSaveEntry() {
     if (!entryTeamId) return;
+    const schoolEntries = gameEntries.filter(e => e.teamId === entryTeamId && e.id !== editEntryObj?.id);
+    // Check cap
+    if (!editEntryObj && schoolEntries.length >= maxEntries) {
+      alert(`This school already has ${maxEntries} ${maxEntries === 1 ? 'entry' : 'entries'} (max per school for this game).`);
+      return;
+    }
+    // If school will have >1 entry, name is mandatory
+    const willHaveMultiple = schoolEntries.length >= 1;
+    if (willHaveMultiple && !entryName.trim()) {
+      alert('Team name is required when a school has more than one entry.');
+      return;
+    }
     if (editEntryObj) {
       dispatch({ type: 'UPDATE_LOBBY_ENTRY', payload: { id: editEntryObj.id, teamId: entryTeamId, entryName: entryName.trim() } });
     } else {
@@ -152,6 +166,7 @@ export default function LobbyGameView() {
         third: cfgThird,
         participation: cfgParticipation,
         maxParticipationCap: cfgCap === '' ? Infinity : Number(cfgCap),
+        maxEntriesPerSchool: Math.max(1, Number(cfgMaxEntries) || 1),
       },
     });
     setShowConfig(false);
@@ -218,7 +233,7 @@ export default function LobbyGameView() {
       {showConfig && isAdmin && (
         <div className={`${cardCls} p-4 space-y-4`}>
           <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Lobby Points Configuration</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
               { label: '🥇 1st Place', value: cfgFirst, set: setCfgFirst },
               { label: '🥈 2nd Place', value: cfgSecond, set: setCfgSecond },
@@ -239,6 +254,17 @@ export default function LobbyGameView() {
               />
               <p className={`text-[10px] mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                 Caps +1 attendance pts per school. Medal pts never capped.
+              </p>
+            </div>
+            <div>
+              <label className={labelCls}>👥 Max Entries / School</label>
+              <input
+                type="number" min={1} max={20}
+                value={cfgMaxEntries} onChange={e => setCfgMaxEntries(Number(e.target.value) || 1)}
+                className={inputCls}
+              />
+              <p className={`text-[10px] mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                How many teams each school can register. If &gt;1, team names are mandatory.
               </p>
             </div>
           </div>
