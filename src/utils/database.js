@@ -300,6 +300,7 @@ async function doSave(state) {
     lobbyEntries: state.lobbyEntries || [],
     lobbyResults: state.lobbyResults || [],
     lobbyPointsConfig: state.lobbyPointsConfig || {},
+    lobbyGameStatus: state.lobbyGameStatus || {},
     _updatedAt: serverTimestamp(),
   };
 
