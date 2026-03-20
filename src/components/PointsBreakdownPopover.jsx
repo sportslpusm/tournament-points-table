@@ -7,6 +7,8 @@ import {
   getPoolPointsBreakdown,
   getSpecificMatchesForStat,
   getGamePointsBreakdown,
+  getTeamLobbyGameBreakdown,
+  getTeamIndividualGameBreakdown,
   getRoundLabel,
   getPlacementEmoji,
   getPlacementLabel,
@@ -30,7 +32,7 @@ export function closeAllPopovers() {
  *
  * Props:
  *  - teamId: string
- *  - type: 'total' | 'knockout' | 'pool' | 'game' | 'wins' | 'losses' | 'draws' | 'byes'
+ *  - type: 'total' | 'knockout' | 'pool' | 'game' | 'lobby' | 'individual' | 'wins' | 'losses' | 'draws' | 'byes'
  *  - gameId?: string (for type='game')
  *  - value: number (displayed value)
  *  - label?: string (suffix like 'pts', 'KO', etc.)
@@ -160,6 +162,10 @@ function getBreakdownContent(type, teamId, gameId, state) {
       return getKnockoutBreakdownContent(teamId, team, state);
     case 'pool':
       return getPoolBreakdownContent(teamId, team, state);
+    case 'lobby':
+      return getLobbyBreakdownContent(teamId, team, state);
+    case 'individual':
+      return getIndividualBreakdownContent(teamId, team, state);
     case 'game':
       return getGameBreakdownContent(teamId, team, gameId, state);
     case 'wins':
@@ -280,6 +286,81 @@ function getPoolBreakdownContent(teamId, team, state) {
 
   return {
     title: `${team.name} — Pool Stage (${breakdown.total} pts)`,
+    body,
+  };
+}
+
+// ── Lobby-Only Breakdown ────────────────────────────
+
+function getLobbyBreakdownContent(teamId, team, state) {
+  const { games, darkMode } = state;
+  const lobbyEntries = Array.isArray(state.lobbyEntries) ? state.lobbyEntries : [];
+  const lobbyResults = Array.isArray(state.lobbyResults) ? state.lobbyResults : [];
+  const lobbyPointsConfig = state.lobbyPointsConfig || {};
+  const lobbyGames = games.filter(g => g.type === 'lobby');
+
+  let grandTotal = 0;
+  const sections = [];
+
+  for (const game of lobbyGames) {
+    const section = getTeamLobbyGameBreakdown(teamId, game, lobbyEntries, lobbyResults, lobbyPointsConfig, state.teams);
+    if (!section || (section.sessions.length === 0 && section.subtotal === 0)) continue;
+    grandTotal += section.subtotal;
+    sections.push({ type: 'lobby', game, lobby: section, gameTotal: section.subtotal });
+  }
+
+  const body = (
+    <div className="space-y-4">
+      {sections.length === 0 && (
+        <p className={`text-sm italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No lobby games played</p>
+      )}
+      {sections.map((section, i) => (
+        <LobbyGameDetailSection key={i} section={section} lobbyEntries={lobbyEntries} darkMode={darkMode} />
+      ))}
+      {sections.length > 0 && (
+        <GrandTotal total={grandTotal} label="TOTAL LOBBY POINTS" darkMode={darkMode} />
+      )}
+    </div>
+  );
+
+  return {
+    title: `${team.name} — Lobby Events (${grandTotal} pts)`,
+    body,
+  };
+}
+
+// ── Individual-Only Breakdown ───────────────────────
+
+function getIndividualBreakdownContent(teamId, team, state) {
+  const { games, athletes, individualResults, individualPointsConfig, categories, teams, darkMode } = state;
+  const indGames = games.filter(g => g.type === 'individual');
+
+  let grandTotal = 0;
+  const sections = [];
+
+  for (const game of indGames) {
+    const section = getTeamIndividualGameBreakdown(teamId, game, athletes, individualResults, individualPointsConfig, categories, teams);
+    if (!section || (section.categories.length === 0 && section.subtotal === 0)) continue;
+    grandTotal += section.subtotal;
+    sections.push({ type: 'individual', game, individual: section, gameTotal: section.subtotal });
+  }
+
+  const body = (
+    <div className="space-y-4">
+      {sections.length === 0 && (
+        <p className={`text-sm italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No individual results</p>
+      )}
+      {sections.map((section, i) => (
+        <GameSection key={i} section={section} darkMode={darkMode} />
+      ))}
+      {sections.length > 0 && (
+        <GrandTotal total={grandTotal} label="TOTAL INDIVIDUAL POINTS" darkMode={darkMode} />
+      )}
+    </div>
+  );
+
+  return {
+    title: `${team.name} — Individual Events (${grandTotal} pts)`,
     body,
   };
 }
@@ -459,21 +540,38 @@ function GameSection({ section, darkMode }) {
           <p className={`text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No sessions recorded</p>
         ) : (
           lobby.sessions.map((s, i) => (
-            <div key={i} className={`flex items-center justify-between text-[11px] py-0.5 pl-2 ${
+            <div key={i} className={`pl-2 py-0.5 ${
               i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-50'}` : ''
             }`}>
-              <span className="flex items-center gap-1 min-w-0">
+              <div className="flex items-center justify-between text-[11px]">
                 <span className="font-medium">{s.sessionName}</span>
+                <span className="font-mono font-bold text-accent whitespace-nowrap ml-2">{s.sessionTotal}</span>
+              </div>
+              <div className="pl-2 space-y-0">
                 {s.medals.map((m, j) => (
-                  <span key={j} className={`${
-                    m.placement === 'first' ? 'text-gold' : m.placement === 'second' ? 'text-silver' : 'text-bronze'
-                  }`}>
-                    {m.placement === 'first' ? '\u{1F947}' : m.placement === 'second' ? '\u{1F948}' : '\u{1F949}'}
-                    {m.entryName ? ` ${m.entryName}` : ''}
-                  </span>
+                  <div key={`m-${j}`} className="flex items-center justify-between text-[10px]">
+                    <span className="flex items-center gap-1">
+                      <span className={
+                        m.placement === 'first' ? 'text-gold' : m.placement === 'second' ? 'text-silver' : 'text-bronze'
+                      }>
+                        {m.placement === 'first' ? '\u{1F947}' : m.placement === 'second' ? '\u{1F948}' : '\u{1F949}'}
+                      </span>
+                      <span>{m.entryName || 'Entry'}</span>
+                    </span>
+                    <span className="font-mono text-accent text-[10px]">
+                      +{m.placement === 'first' ? (lobby.config?.first || 5) : m.placement === 'second' ? (lobby.config?.second || 3) : (lobby.config?.third || 1)}
+                    </span>
+                  </div>
                 ))}
-              </span>
-              <span className="font-mono font-bold text-accent whitespace-nowrap ml-2">{s.sessionTotal}</span>
+                {s.participationPts > 0 && (
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>
+                      Participation ({s.participationPts}×)
+                    </span>
+                    <span className="font-mono text-accent text-[10px]">+{s.participationPts}</span>
+                  </div>
+                )}
+              </div>
             </div>
           ))
         )}
@@ -534,6 +632,61 @@ function GameSection({ section, darkMode }) {
       )}
       {!pool.hasData && !knockout.hasData && (
         <p className={`text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No matches played</p>
+      )}
+      <Subtotal value={gameTotal} darkMode={darkMode} />
+    </div>
+  );
+}
+
+function LobbyGameDetailSection({ section, lobbyEntries, darkMode }) {
+  const { game, lobby, gameTotal } = section;
+  const gameEntries = lobbyEntries.filter(e => e.gameId === game.id);
+
+  return (
+    <div>
+      <GameHeader game={game} subtitle={`(${gameTotal} pts)`} darkMode={darkMode} />
+      {lobby.sessions.length === 0 ? (
+        <p className={`text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No sessions recorded</p>
+      ) : (
+        lobby.sessions.map((s, i) => (
+          <div key={i} className={`pl-2 py-1 ${
+            i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-50'}` : ''
+          }`}>
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-semibold">{s.sessionName}</span>
+              <span className="font-mono font-bold text-accent">{s.sessionTotal}</span>
+            </div>
+            {/* Per-entry detail */}
+            <div className="pl-2 mt-0.5 space-y-0">
+              {s.medals.map((m, j) => (
+                <div key={`medal-${j}`} className="flex items-center justify-between text-[10px]">
+                  <span className="flex items-center gap-1">
+                    <span className={
+                      m.placement === 'first' ? 'text-gold' : m.placement === 'second' ? 'text-silver' : 'text-bronze'
+                    }>
+                      {m.placement === 'first' ? '\u{1F947}' : m.placement === 'second' ? '\u{1F948}' : '\u{1F949}'}
+                    </span>
+                    <span className="font-medium">{m.entryName || 'Entry'}</span>
+                    <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>
+                      — {m.placement === 'first' ? '1st Place' : m.placement === 'second' ? '2nd Place' : '3rd Place'}
+                    </span>
+                  </span>
+                  <span className="font-mono text-accent">
+                    +{m.placement === 'first' ? (lobby.config?.first || 5) : m.placement === 'second' ? (lobby.config?.second || 3) : (lobby.config?.third || 1)}
+                  </span>
+                </div>
+              ))}
+              {s.participationPts > 0 && (
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>
+                    Participation ({s.participationPts}× entry)
+                  </span>
+                  <span className="font-mono text-accent">+{s.participationPts}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))
       )}
       <Subtotal value={gameTotal} darkMode={darkMode} />
     </div>

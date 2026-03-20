@@ -655,7 +655,7 @@ export default function Dashboard() {
                           {row.individualPoints > 0 && (
                             <PointsBreakdownPopover
                               teamId={row.teamId}
-                              type="pool"
+                              type="individual"
                               value={row.individualPoints}
                               className="text-[10px] text-purple-400"
                             >
@@ -665,7 +665,7 @@ export default function Dashboard() {
                           {row.lobbyPoints > 0 && (
                             <PointsBreakdownPopover
                               teamId={row.teamId}
-                              type="pool"
+                              type="lobby"
                               value={row.lobbyPoints}
                               className="text-[10px] text-emerald-400"
                             >
@@ -743,7 +743,7 @@ export default function Dashboard() {
                       {row.individualPoints > 0 && (
                         <PointsBreakdownPopover
                           teamId={row.teamId}
-                          type="pool"
+                          type="individual"
                           value={row.individualPoints}
                           className="text-[10px] text-purple-400 block"
                         >
@@ -753,7 +753,7 @@ export default function Dashboard() {
                       {row.lobbyPoints > 0 && (
                         <PointsBreakdownPopover
                           teamId={row.teamId}
-                          type="pool"
+                          type="lobby"
                           value={row.lobbyPoints}
                           className="text-[10px] text-emerald-400 block"
                         >
