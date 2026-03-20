@@ -72,8 +72,8 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
   // Render the modal via Portal so it's always on top of everything
   const modal = open && breakdownContent ? createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
-      style={{ pointerEvents: 'auto' }}
+      className="fixed inset-0 z-[99999] flex items-center justify-center"
+      style={{ pointerEvents: 'auto', padding: 'max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))' }}
     >
       {/* Backdrop */}
       <div
@@ -83,18 +83,14 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
 
       {/* Panel */}
       <div
-        className={`relative w-full max-w-md max-h-[85vh] rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
+        className={`relative w-full max-w-md rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
           darkMode
             ? 'bg-navy-850 border-white/10 text-white'
             : 'bg-white border-gray-200 text-gray-900'
         }`}
+        style={{ maxHeight: 'calc(100% - 8px)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Drag Handle — mobile only */}
-        <div className="flex justify-center pt-2 pb-1 sm:hidden">
-          <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
-        </div>
-
         {/* Header */}
         <div className={`flex items-center justify-between px-4 py-3 border-b shrink-0 ${
           darkMode ? 'border-white/10' : 'border-gray-200'
@@ -111,7 +107,7 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
         </div>
 
         {/* Scrollable Body */}
-        <div className="overflow-y-auto flex-1 p-4">
+        <div className="overflow-y-auto flex-1 p-4 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {breakdownContent.body}
         </div>
       </div>
