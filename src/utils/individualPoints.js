@@ -47,7 +47,13 @@ export function resolvePointsConfig(individualPointsConfig, gameId, categoryId) 
       maxParticipationCap: override.maxParticipationCap ?? gameConfig.maxParticipationCap ?? Infinity,
     };
   }
-  return gameConfig;
+  return {
+    first: gameConfig.first ?? DEFAULT_INDIVIDUAL_POINTS.first,
+    second: gameConfig.second ?? DEFAULT_INDIVIDUAL_POINTS.second,
+    third: gameConfig.third ?? DEFAULT_INDIVIDUAL_POINTS.third,
+    participation: gameConfig.participation ?? DEFAULT_INDIVIDUAL_POINTS.participation,
+    maxParticipationCap: gameConfig.maxParticipationCap ?? DEFAULT_INDIVIDUAL_POINTS.maxParticipationCap,
+  };
 }
 
 /**
@@ -135,7 +141,7 @@ export function getIndividualPointsForTeam(teamId, athletes, individualResults, 
 
   for (const gameId in resultsByGame) {
     const gameResults = resultsByGame[gameId];
-    const gameConfig = individualPointsConfig[gameId] || DEFAULT_INDIVIDUAL_POINTS;
+    const gameConfig = resolvePointsConfig(individualPointsConfig, gameId, null);
     const cap = gameConfig.maxParticipationCap ?? Infinity;
 
     let gameParticipationCount = 0; // track participation slots used

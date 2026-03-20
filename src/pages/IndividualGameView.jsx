@@ -25,7 +25,7 @@ export default function IndividualGameView() {
   const gameCategories = categories.filter(c => c.gameId === selectedGameId);
   const gameAthletes = athletes.filter(a => a.gameId === selectedGameId);
   const gameResults = individualResults.filter(r => r.gameId === selectedGameId);
-  const pointsConfig = individualPointsConfig[selectedGameId] || DEFAULT_INDIVIDUAL_POINTS;
+  const pointsConfig = resolvePointsConfig(individualPointsConfig, selectedGameId, null);
 
   const [activeTab, setActiveTab] = useState('categories');
   const [expandedCat, setExpandedCat] = useState(null);
