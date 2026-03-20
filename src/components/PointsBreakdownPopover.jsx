@@ -66,31 +66,47 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
     return () => document.removeEventListener('keydown', onKey);
   }, [open, close]);
 
+  // Lock body scroll when open (prevents iOS rubber-band bleed-through)
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
   // Build breakdown content
   const breakdownContent = open ? getBreakdownContent(type, teamId, gameId, state) : null;
 
   // Render the modal via Portal so it's always on top of everything
   const modal = open && breakdownContent ? createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center"
-      style={{ pointerEvents: 'auto', padding: 'max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))' }}
+      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center"
+      style={{ pointerEvents: 'auto' }}
+      onClick={close}
     >
       {/* Backdrop */}
       <div
         className={`absolute inset-0 transition-opacity duration-200 ${darkMode ? 'bg-black/70' : 'bg-black/50'}`}
-        onClick={close}
       />
 
-      {/* Panel */}
+      {/* Panel — bottom sheet on mobile, centered on desktop */}
       <div
-        className={`relative w-full max-w-md rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
+        className={`relative w-full sm:max-w-md sm:mx-4 sm:rounded-2xl rounded-t-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
           darkMode
             ? 'bg-navy-850 border-white/10 text-white'
             : 'bg-white border-gray-200 text-gray-900'
         }`}
-        style={{ maxHeight: 'calc(100% - 8px)' }}
+        style={{
+          maxHeight: '80vh',
+          maxHeight: '80dvh',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Drag handle (mobile) */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1 shrink-0">
+          <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
+        </div>
+
         {/* Header */}
         <div className={`flex items-center justify-between px-4 py-3 border-b shrink-0 ${
           darkMode ? 'border-white/10' : 'border-gray-200'
@@ -107,7 +123,10 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
         </div>
 
         {/* Scrollable Body */}
-        <div className="overflow-y-auto flex-1 p-4 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div
+          className="overflow-y-auto flex-1 p-4 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {breakdownContent.body}
         </div>
       </div>

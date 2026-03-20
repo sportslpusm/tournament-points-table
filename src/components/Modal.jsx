@@ -75,7 +75,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-md"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
       role="dialog"
       aria-modal="true"
@@ -84,13 +84,18 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
     >
       <div
         ref={modalRef}
-        className={`animate-scaleIn w-full ${sizeClass} max-h-[90vh] flex flex-col rounded-2xl shadow-2xl border ${
+        className={`animate-scaleIn w-full sm:mx-4 ${sizeClass} flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl border ${
           darkMode
             ? 'bg-navy-800/90 backdrop-blur-2xl border-white/10'
             : 'bg-white/95 backdrop-blur-2xl border-gray-200'
         }`}
+        style={{ maxHeight: '85vh', maxHeight: '85dvh' }}
       >
-        <div className={`flex items-center justify-between px-6 py-4 border-b ${
+        {/* Drag handle (mobile) */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1 shrink-0">
+          <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
+        </div>
+        <div className={`flex items-center justify-between px-6 py-4 border-b shrink-0 ${
           darkMode ? 'border-white/10' : 'border-gray-200'
         }`}>
           <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{title}</h2>
@@ -104,7 +109,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
             ✕
           </button>
         </div>
-        <div className="px-6 py-4 overflow-y-auto">
+        <div className="px-6 py-4 overflow-y-auto flex-1 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {children}
         </div>
       </div>

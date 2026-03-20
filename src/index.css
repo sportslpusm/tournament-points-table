@@ -102,11 +102,17 @@
     color: white;
   }
 
+  html, body {
+    height: 100%;
+    height: 100dvh;
+  }
+
   body {
     font-family: var(--font-sans);
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-text-size-adjust: 100%;
   }
 
   /* Focus outlines */

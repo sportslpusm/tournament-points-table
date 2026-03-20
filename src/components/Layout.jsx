@@ -24,7 +24,7 @@ export default function Layout({ children }) {
   const navItems = isAdmin ? ALL_NAV_ITEMS : ALL_NAV_ITEMS.filter(i => !i.adminOnly);
 
   return (
-    <div className={`min-h-screen flex flex-col lg:flex-row ${darkMode ? 'bg-navy-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+    <div className={`min-h-screen min-h-[100dvh] flex flex-col lg:flex-row ${darkMode ? 'bg-navy-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
       {/* Desktop Sidebar */}
       <aside className={`hidden lg:flex flex-col w-64 flex-shrink-0 no-print h-screen sticky top-0 border-r ${
         darkMode
@@ -105,7 +105,7 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 pb-20 lg:pb-0">
+      <main className="flex-1 min-w-0 lg:pb-0" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
         {/* Offline Banner */}
         <OfflineBanner darkMode={darkMode} />
 
