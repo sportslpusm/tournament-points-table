@@ -35,7 +35,9 @@ export default function Layout({ children }) {
         <div className="h-0.5 bg-gradient-to-r from-accent via-blue-500 to-accent/0" />
 
         <div className={`p-4 flex items-center justify-center border-b ${darkMode ? 'border-white/5' : 'border-gray-200'}`}>
-          <img src="/SWW and USC.png" alt="SWW & USC" className="h-12 object-contain" />
+          <a href="https://www.unisportscouncil.in/" target="_blank" rel="noopener noreferrer">
+            <img src="/SWW and USC.png" alt="SWW & USC" className="h-12 object-contain" />
+          </a>
         </div>
 
         {/* Admin Badge */}
@@ -114,7 +116,9 @@ export default function Layout({ children }) {
             : 'bg-white/90 backdrop-blur-xl border-gray-200'
         }`}>
           <div className="flex items-center gap-2 min-w-0">
-            <img src="/SWW and USC.png" alt="SWW & USC" className="h-8 object-contain flex-shrink-0" />
+            <a href="https://www.unisportscouncil.in/" target="_blank" rel="noopener noreferrer">
+              <img src="/SWW and USC.png" alt="SWW & USC" className="h-8 object-contain flex-shrink-0" />
+            </a>
             {isAdmin && (
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-bold flex-shrink-0">
                 ADMIN
