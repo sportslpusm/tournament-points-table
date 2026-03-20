@@ -176,8 +176,8 @@ export default function Dashboard() {
     s.teamName.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ── Shared Ranking: teams deadlocked after ALL tiebreakers share the same rank ──
-  // E.g. if #1 and #2 are perfectly tied → both get rank 1, next team is rank 3.
+  // ── Dense Shared Ranking: tied teams share a rank, next team gets the very next number ──
+  // E.g. two teams tied at #1 → both rank 1, next team is rank 2 (not 3).
   const rankMap = useMemo(() => {
     const map = new Map(); // teamId → display rank
     if (filtered.length === 0) return map;
@@ -186,14 +186,13 @@ export default function Dashboard() {
     for (let i = 1; i < filtered.length; i++) {
       const prev = filtered[i - 1];
       const curr = filtered[i];
-      // Check if perfectly tied on ALL tiebreaker criteria
       const prevTotalWins = (prev.wins || 0) + (prev.golds || 0);
       const currTotalWins = (curr.wins || 0) + (curr.golds || 0);
       const isTied = curr.points === prev.points
         && currTotalWins === prevTotalWins
         && (curr.silvers || 0) === (prev.silvers || 0)
         && (curr.bronzes || 0) === (prev.bronzes || 0);
-      if (!isTied) currentRank = i + 1;
+      if (!isTied) currentRank++;
       map.set(curr.teamId, currentRank);
     }
     return map;

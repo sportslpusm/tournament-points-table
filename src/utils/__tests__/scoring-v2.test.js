@@ -30,14 +30,14 @@ describe('Test D: Shared Ranking / Absolute Deadlock', () => {
     expect(sorted[1].teamId).toBe('schoolB');
   });
 
-  test('Shared ranking logic: tied teams get same rank, next team skips', () => {
+  test('Dense ranking: tied teams share rank, next team gets next number (no skip)', () => {
     const standings = [
       { teamId: 'a', points: 58, wins: 8, golds: 1, silvers: 1, bronzes: 1 },
       { teamId: 'b', points: 58, wins: 8, golds: 1, silvers: 1, bronzes: 1 },
       { teamId: 'c', points: 40, wins: 5, golds: 0, silvers: 2, bronzes: 0 },
     ];
 
-    // Simulate the Dashboard shared ranking logic
+    // Simulate the Dashboard dense ranking logic
     const rankMap = new Map();
     let currentRank = 1;
     rankMap.set(standings[0].teamId, currentRank);
@@ -50,16 +50,16 @@ describe('Test D: Shared Ranking / Absolute Deadlock', () => {
         && currTotalWins === prevTotalWins
         && (curr.silvers || 0) === (prev.silvers || 0)
         && (curr.bronzes || 0) === (prev.bronzes || 0);
-      if (!isTied) currentRank = i + 1;
+      if (!isTied) currentRank++;
       rankMap.set(curr.teamId, currentRank);
     }
 
     expect(rankMap.get('a')).toBe(1);
     expect(rankMap.get('b')).toBe(1);  // Same rank as 'a' — shared!
-    expect(rankMap.get('c')).toBe(3);  // Skips rank 2
+    expect(rankMap.get('c')).toBe(2);  // Dense: next number, no skip
   });
 
-  test('Three-way tie all share rank', () => {
+  test('Three-way tie: all share rank, next team gets rank 2', () => {
     const standings = [
       { teamId: 'x', points: 30, wins: 5, golds: 2, silvers: 1, bronzes: 1 },
       { teamId: 'y', points: 30, wins: 5, golds: 2, silvers: 1, bronzes: 1 },
@@ -77,14 +77,14 @@ describe('Test D: Shared Ranking / Absolute Deadlock', () => {
         && ((curr.wins || 0) + (curr.golds || 0)) === ((prev.wins || 0) + (prev.golds || 0))
         && (curr.silvers || 0) === (prev.silvers || 0)
         && (curr.bronzes || 0) === (prev.bronzes || 0);
-      if (!isTied) currentRank = i + 1;
+      if (!isTied) currentRank++;
       rankMap.set(curr.teamId, currentRank);
     }
 
     expect(rankMap.get('x')).toBe(1);
     expect(rankMap.get('y')).toBe(1);
     expect(rankMap.get('z')).toBe(1);
-    expect(rankMap.get('w')).toBe(4); // Skips 2 and 3
+    expect(rankMap.get('w')).toBe(2); // Dense: 2, not 4
   });
 });
 
