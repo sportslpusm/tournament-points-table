@@ -264,10 +264,48 @@ export default function LobbyGameView() {
         )}
       </div>
 
-      {isCompleted && (
+      {isCompleted && standings.length > 0 && (
+        <div className={`rounded-xl overflow-hidden border ${darkMode ? 'border-white/10' : 'border-gray-200'}`}>
+          {/* Champion Banner */}
+          <div className={`text-center py-4 px-4 ${darkMode ? 'bg-gradient-to-b from-gold/20 to-navy-800/80' : 'bg-gradient-to-b from-yellow-50 to-white'}`}>
+            <div className="text-3xl mb-1">🏆</div>
+            <div className="text-xs font-black tracking-widest text-gold mb-2">CHAMPION</div>
+            <div className="flex items-center justify-center gap-2">
+              <TeamLogo team={standings[0].team} size={36} />
+              <span className="font-bold text-base">{standings[0].team.name}</span>
+            </div>
+          </div>
+          {/* Podium */}
+          <div className={`flex justify-center items-end gap-4 px-4 py-3 ${darkMode ? 'bg-navy-800/60' : 'bg-gray-50'}`}>
+            {standings.length > 1 && (
+              <div className="text-center">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-navy-900 font-bold text-xs mb-1">2</span>
+                <div><TeamLogo team={standings[1].team} size={28} /></div>
+                <div className="text-[10px] font-medium mt-0.5">{standings[1].team.shortCode}</div>
+                <div className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Finalist</div>
+              </div>
+            )}
+            <div className="text-center">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-navy-900 font-bold text-sm mb-1">1</span>
+              <div><TeamLogo team={standings[0].team} size={32} /></div>
+              <div className="text-[10px] font-bold mt-0.5">{standings[0].team.shortCode}</div>
+              <div className="text-[10px] text-gold font-medium">Champion</div>
+            </div>
+            {standings.length > 2 && (
+              <div className="text-center">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-xs mb-1">3</span>
+                <div><TeamLogo team={standings[2].team} size={28} /></div>
+                <div className="text-[10px] font-medium mt-0.5">{standings[2].team.shortCode}</div>
+                <div className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>3rd Place</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {isCompleted && standings.length === 0 && (
         <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-win/10 border border-win/20">
           <span className="text-win font-bold text-sm">Completed</span>
-          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>— Standings are finalized.</span>
+          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>— No results recorded.</span>
         </div>
       )}
 

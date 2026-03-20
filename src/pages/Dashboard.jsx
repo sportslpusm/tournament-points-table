@@ -3,7 +3,7 @@ import { useTournament, useDispatch } from '../context/TournamentContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker, getTeamCombinedStats } from '../utils/points';
 import { getTeamFurthestRound, getChampion } from '../utils/knockout';
 import { getIndividualPointsForTeam, getTeamMedals } from '../utils/individualPoints';
-import { getLobbyPointsForTeam } from '../utils/lobbyPoints';
+import { getLobbyPointsForTeam, getLobbyGameStandings } from '../utils/lobbyPoints';
 import TeamLogo from '../components/TeamLogo';
 import EmptyState from '../components/EmptyState';
 import PointsExplainer, { TableLegend } from '../components/PointsExplainer';
@@ -176,6 +176,17 @@ export default function Dashboard() {
       const lobbyPts = getLobbyPointsForTeam(team.id, lobbyResults, lobbyEntries, lobbyPointsConfig);
       totalPoints += lobbyPts.total;
 
+      // Count lobby sessions as games played
+      const teamLobbyEntryIds = new Set(
+        lobbyEntries.filter(e => e.teamId === team.id).map(e => e.id)
+      );
+      if (teamLobbyEntryIds.size > 0) {
+        for (const session of lobbyResults) {
+          const participated = (session.participantEntryIds || []).some(id => teamLobbyEntryIds.has(id));
+          if (participated) totalPlayed++;
+        }
+      }
+
       // Combined medal counts (individual + lobby)
       const totalGolds = (medals.golds || 0) + (lobbyPts.golds || 0);
       const totalSilvers = (medals.silvers || 0) + (lobbyPts.silvers || 0);
@@ -251,7 +262,15 @@ export default function Dashboard() {
         const entryCount = lobbyEntries.filter(e => e.gameId === g.id).length;
         const lStatus = lobbyGameStatus?.[g.id];
         const lobbyStage = lStatus === 'completed' ? 'completed' : sessions.length > 0 ? 'active' : 'pool';
-        return { game: g, stage: lobbyStage, champTeam: null, isIndividual: false, isLobby: true, lobbySessions: sessions.length, lobbyEntries: entryCount };
+        // Find lobby champion (top of standings)
+        let lobbyChampTeam = null;
+        if (lobbyStage === 'completed' && sessions.length > 0) {
+          const lobbyStandings = getLobbyGameStandings(g.id, lobbyResults, lobbyEntries, teams, lobbyPointsConfig);
+          if (lobbyStandings.length > 0) {
+            lobbyChampTeam = lobbyStandings[0].team;
+          }
+        }
+        return { game: g, stage: lobbyStage, champTeam: lobbyChampTeam, isIndividual: false, isLobby: true, lobbySessions: sessions.length, lobbyEntries: entryCount };
       }
       const cfg = knockoutConfig[g.id];
       const stage = cfg?.stage || 'pool';
@@ -259,7 +278,7 @@ export default function Dashboard() {
       const champTeam = champ ? teams.find(t => t.id === champ) : null;
       return { game: g, stage, champTeam, isIndividual: false, isLobby: false };
     });
-  }, [games, knockoutConfig, knockoutMatches, teams, categories, lobbyResults, lobbyEntries, lobbyGameStatus]);
+  }, [games, knockoutConfig, knockoutMatches, teams, categories, lobbyResults, lobbyEntries, lobbyGameStatus, lobbyPointsConfig]);
 
   // Recent results (pool + knockout)
   const recentResults = useMemo(() => {
