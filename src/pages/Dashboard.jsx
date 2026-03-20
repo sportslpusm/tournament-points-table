@@ -3,6 +3,7 @@ import { useTournament, useDispatch } from '../context/TournamentContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker, getTeamCombinedStats } from '../utils/points';
 import { getTeamFurthestRound, getChampion } from '../utils/knockout';
 import { getIndividualPointsForTeam, getTeamMedals } from '../utils/individualPoints';
+import { getLobbyPointsForTeam } from '../utils/lobbyPoints';
 import TeamLogo from '../components/TeamLogo';
 import EmptyState from '../components/EmptyState';
 import PointsExplainer, { TableLegend } from '../components/PointsExplainer';
@@ -11,7 +12,7 @@ import PointsBreakdownPopover from '../components/PointsBreakdownPopover';
 export default function Dashboard() {
   const state = useTournament();
   const { dispatch } = useDispatch();
-  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories } = state;
+  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyResults, lobbyPointsConfig } = state;
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState('table');
   const [compareTeams, setCompareTeams] = useState([null, null]);
@@ -134,6 +135,15 @@ export default function Dashboard() {
       const medals = getTeamMedals(team.id, athletes, individualResults);
       totalPoints += indPts;
 
+      // Lobby game points
+      const lobbyPts = getLobbyPointsForTeam(team.id, lobbyResults, lobbyPointsConfig);
+      totalPoints += lobbyPts.total;
+
+      // Combined medal counts (individual + lobby)
+      const totalGolds = (medals.golds || 0) + (lobbyPts.golds || 0);
+      const totalSilvers = (medals.silvers || 0) + (lobbyPts.silvers || 0);
+      const totalBronzes = (medals.bronzes || 0) + (lobbyPts.bronzes || 0);
+
       return {
         teamId: team.id,
         teamName: team.name,
@@ -147,12 +157,12 @@ export default function Dashboard() {
         points: totalPoints,
         poolPoints: poolPts,
         knockoutPoints: koPts,
-        individualPoints: indPts,
+        individualPoints: indPts + lobbyPts.total,
         medals,
         // Expose medal counts for tiebreaker: wins+golds → silvers → bronzes
-        golds: medals.golds || 0,
-        silvers: medals.silvers || 0,
-        bronzes: medals.bronzes || 0,
+        golds: totalGolds,
+        silvers: totalSilvers,
+        bronzes: totalBronzes,
         advancement: bestAdvancement,
         gameAdvancements,
         championOf,
@@ -160,11 +170,34 @@ export default function Dashboard() {
     });
     // New tiebreaker: points → wins+golds → silvers → bronzes (no H2H, no alphabetical)
     return sortTeamsByTiebreaker(teamStats);
-  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig]);
+  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyResults, lobbyPointsConfig]);
 
   const filtered = standings.filter(s =>
     s.teamName.toLowerCase().includes(search.toLowerCase())
   );
+
+  // ── Shared Ranking: teams deadlocked after ALL tiebreakers share the same rank ──
+  // E.g. if #1 and #2 are perfectly tied → both get rank 1, next team is rank 3.
+  const rankMap = useMemo(() => {
+    const map = new Map(); // teamId → display rank
+    if (filtered.length === 0) return map;
+    let currentRank = 1;
+    map.set(filtered[0].teamId, currentRank);
+    for (let i = 1; i < filtered.length; i++) {
+      const prev = filtered[i - 1];
+      const curr = filtered[i];
+      // Check if perfectly tied on ALL tiebreaker criteria
+      const prevTotalWins = (prev.wins || 0) + (prev.golds || 0);
+      const currTotalWins = (curr.wins || 0) + (curr.golds || 0);
+      const isTied = curr.points === prev.points
+        && currTotalWins === prevTotalWins
+        && (curr.silvers || 0) === (prev.silvers || 0)
+        && (curr.bronzes || 0) === (prev.bronzes || 0);
+      if (!isTied) currentRank = i + 1;
+      map.set(curr.teamId, currentRank);
+    }
+    return map;
+  }, [filtered]);
 
   // Tournament Progress
   const gameProgress = useMemo(() => {
@@ -493,7 +526,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {filtered.map((row, i) => {
-                  const rank = i + 1;
+                  const rank = rankMap.get(row.teamId) || (i + 1);
                   return (
                     <tr key={row.teamId} className={`border-b transition-colors ${darkMode ? 'border-white/5' : 'border-gray-100'} ${getRowBg(rank)} ${getRowLeftBorder(rank)}`}>
                       <td className="px-1.5 sm:px-3 py-2 sm:py-3">{getRankBadge(rank)}</td>
@@ -616,7 +649,7 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filtered.map((row, i) => {
-              const rank = i + 1;
+              const rank = rankMap.get(row.teamId) || (i + 1);
               return (
                 <div key={row.teamId} className={`rounded-xl p-4 border transition-all hover:scale-[1.01] hover:shadow-lg ${getRowLeftBorder(rank)} ${
                   darkMode

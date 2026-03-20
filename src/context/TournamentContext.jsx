@@ -25,6 +25,9 @@ const initialState = {
   categories: [],
   individualResults: [],
   individualPointsConfig: {},
+  // Lobby game data
+  lobbyResults: [],
+  lobbyPointsConfig: {},
   darkMode: true,
   currentView: 'dashboard',
   selectedGameId: null,
@@ -57,6 +60,7 @@ const ADMIN_ACTIONS = new Set([
   'ADD_ATHLETE', 'UPDATE_ATHLETE', 'DELETE_ATHLETE',
   'ADD_CATEGORY', 'UPDATE_CATEGORY', 'DELETE_CATEGORY',
   'SET_INDIVIDUAL_RESULT', 'UPDATE_INDIVIDUAL_POINTS_CONFIG',
+  'ADD_LOBBY_RESULT', 'UPDATE_LOBBY_RESULT', 'DELETE_LOBBY_RESULT', 'UPDATE_LOBBY_POINTS_CONFIG',
   'IMPORT_DATA', 'LOAD_SAMPLE', 'RESET_DATA',
 ]);
 
@@ -102,6 +106,8 @@ function tournamentReducer(state, action) {
         categories: safeArr(incoming.categories, LIMITS.MAX_CATEGORIES) || state.categories,
         individualResults: safeArr(incoming.individualResults, LIMITS.MAX_INDIVIDUAL_RESULTS) || state.individualResults,
         individualPointsConfig: safeObj(incoming.individualPointsConfig) || state.individualPointsConfig,
+        lobbyResults: safeArr(incoming.lobbyResults, LIMITS.MAX_INDIVIDUAL_RESULTS) || state.lobbyResults,
+        lobbyPointsConfig: safeObj(incoming.lobbyPointsConfig) || state.lobbyPointsConfig,
       };
     }
 
@@ -594,6 +600,52 @@ function tournamentReducer(state, action) {
         individualPointsConfig: {
           ...state.individualPointsConfig,
           [pcGameId]: { ...(state.individualPointsConfig[pcGameId] || {}), ...safeConfig },
+        },
+      };
+    }
+
+    // ── Lobby Game: Results ──────────────────
+    case 'ADD_LOBBY_RESULT': {
+      const lr = action.payload;
+      const lrGame = state.games.find(g => g.id === lr.gameId);
+      if (!lrGame || lrGame.type !== 'lobby') return state;
+      const newLr = {
+        id: genId('lr'),
+        gameId: lr.gameId,
+        sessionName: sanitizeString(lr.sessionName || 'Session', LIMITS.MAX_NAME_LENGTH),
+        placements: lr.placements || { first: null, second: null, third: null },
+        participantTeamIds: Array.isArray(lr.participantTeamIds) ? lr.participantTeamIds : [],
+      };
+      return { ...state, lobbyResults: [...state.lobbyResults, newLr] };
+    }
+    case 'UPDATE_LOBBY_RESULT': {
+      const ulr = action.payload;
+      return {
+        ...state,
+        lobbyResults: state.lobbyResults.map(r => r.id === ulr.id ? { ...r, ...ulr } : r),
+      };
+    }
+    case 'DELETE_LOBBY_RESULT':
+      return { ...state, lobbyResults: state.lobbyResults.filter(r => r.id !== action.payload) };
+
+    case 'UPDATE_LOBBY_POINTS_CONFIG': {
+      const { gameId: lpGameId, ...lpConfig } = action.payload;
+      const lpGame = state.games.find(g => g.id === lpGameId);
+      if (!lpGame || lpGame.type !== 'lobby') return state;
+      const clampLp = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+      const safeLpConfig = {};
+      if (lpConfig.first != null) safeLpConfig.first = clampLp(lpConfig.first);
+      if (lpConfig.second != null) safeLpConfig.second = clampLp(lpConfig.second);
+      if (lpConfig.third != null) safeLpConfig.third = clampLp(lpConfig.third);
+      if (lpConfig.participation != null) safeLpConfig.participation = clampLp(lpConfig.participation);
+      if (lpConfig.maxParticipationCap !== undefined) {
+        safeLpConfig.maxParticipationCap = lpConfig.maxParticipationCap === Infinity ? Infinity : Math.max(1, Math.min(100, Math.round(Number(lpConfig.maxParticipationCap) || Infinity)));
+      }
+      return {
+        ...state,
+        lobbyPointsConfig: {
+          ...state.lobbyPointsConfig,
+          [lpGameId]: { ...(state.lobbyPointsConfig[lpGameId] || {}), ...safeLpConfig },
         },
       };
     }

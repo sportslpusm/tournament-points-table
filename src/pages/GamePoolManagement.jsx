@@ -319,7 +319,7 @@ export default function GamePoolManagement() {
             return (
               <div>
                 <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game Type *</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => !hasData && setGameType('team')}
                     disabled={hasData}
@@ -350,6 +350,21 @@ export default function GamePoolManagement() {
                     Individual Sport
                     <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Athletes in categories</div>
                   </button>
+                  <button
+                    onClick={() => !hasData && setGameType('lobby')}
+                    disabled={hasData}
+                    className={`px-3 py-3 rounded-lg text-sm font-medium border transition-all text-center ${
+                      gameType === 'lobby'
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-400'
+                        : hasData
+                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/5 border-white/10 text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
+                          : darkMode ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="text-xl mb-1">🎮</div>
+                    Lobby / Battle
+                    <div className={`text-[10px] mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Multi-team session</div>
+                  </button>
                 </div>
                 {hasData && (
                   <p className={`text-xs mt-1 ${darkMode ? 'text-yellow-400/70' : 'text-yellow-600'}`}>
@@ -365,7 +380,7 @@ export default function GamePoolManagement() {
               type="text"
               value={gameName}
               onChange={e => setGameName(e.target.value)}
-              placeholder={gameType === 'individual' ? 'e.g. Powerlifting' : 'e.g. Volleyball'}
+              placeholder={gameType === 'individual' ? 'e.g. Powerlifting' : gameType === 'lobby' ? 'e.g. ESports - BGMI' : 'e.g. Volleyball'}
               className={inputCls}
             />
           </div>

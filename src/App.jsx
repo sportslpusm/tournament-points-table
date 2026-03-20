@@ -10,6 +10,7 @@ import LoadingScreen from './components/LoadingScreen';
 import Dashboard from './pages/Dashboard';
 import GameView from './pages/GameView';
 import IndividualGameView from './pages/IndividualGameView';
+import LobbyGameView from './pages/LobbyGameView';
 import MatchManagement from './pages/MatchManagement';
 import TeamManagement from './pages/TeamManagement';
 import AthleteManagement from './pages/AthleteManagement';
@@ -19,6 +20,7 @@ import Settings from './pages/Settings';
 function GameRouter() {
   const { games, selectedGameId } = useTournament();
   const game = games.find(g => g.id === selectedGameId);
+  if (game?.type === 'lobby') return <LobbyGameView />;
   return game?.type === 'individual' ? <IndividualGameView /> : <GameView />;
 }
 
