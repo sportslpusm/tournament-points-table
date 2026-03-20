@@ -30,6 +30,34 @@ export default function LobbyGameView() {
     [selectedGameId, lobbyResults, lobbyEntries, teams, lobbyPointsConfig]
   );
 
+  // Derive podium from entry-level placements (allows same school in multiple positions)
+  const podiumTeams = useMemo(() => {
+    if (gameResults.length === 0) return [];
+    const entryMap = new Map(gameEntries.map(e => [e.id, e]));
+
+    // Aggregate placement points per entry across all sessions
+    const entryPoints = new Map();
+    for (const session of gameResults) {
+      const p = session.placements || {};
+      if (p.first) entryPoints.set(p.first, (entryPoints.get(p.first) || 0) + (config.first || 0));
+      if (p.second) entryPoints.set(p.second, (entryPoints.get(p.second) || 0) + (config.second || 0));
+      if (p.third) entryPoints.set(p.third, (entryPoints.get(p.third) || 0) + (config.third || 0));
+    }
+
+    // Sort entries by placement points (desc), then map to team
+    const sorted = [...entryPoints.entries()].sort((a, b) => b[1] - a[1]);
+    const result = [];
+    for (const [entryId] of sorted) {
+      const entry = entryMap.get(entryId);
+      if (!entry) continue;
+      const team = teams.find(t => t.id === entry.teamId);
+      if (!team) continue;
+      result.push({ team, entryName: entry.entryName || team.shortCode });
+      if (result.length >= 3) break;
+    }
+    return result;
+  }, [gameResults, gameEntries, teams, config]);
+
   // ── Entry form state ──
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [editEntryObj, setEditEntryObj] = useState(null);
@@ -281,7 +309,7 @@ export default function LobbyGameView() {
         )}
       </div>
 
-      {isCompleted && standings.length > 0 && (
+      {isCompleted && podiumTeams.length > 0 && (
         <div className={`rounded-xl border overflow-hidden mb-6 ${
           darkMode ? 'bg-navy-800/60 backdrop-blur border-gold/20' : 'bg-white border-gold/30'
         }`}>
@@ -291,20 +319,28 @@ export default function LobbyGameView() {
             <h2 className="text-xl font-black text-gold mb-1 tracking-wide">CHAMPION</h2>
             <div className="flex items-center justify-center gap-3">
               <div className="ring-4 ring-gold/30 rounded-lg shadow-lg shadow-gold/20">
-                <TeamLogo team={standings[0].team} size={56} />
+                <TeamLogo team={podiumTeams[0].team} size={56} />
               </div>
-              <span className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>{standings[0].team.name}</span>
+              <div className="text-left">
+                <span className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>{podiumTeams[0].team.name}</span>
+                {podiumTeams[0].entryName !== podiumTeams[0].team.shortCode && (
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{podiumTeams[0].entryName}</p>
+                )}
+              </div>
             </div>
           </div>
           {/* Podium */}
           <div className="p-4">
             <div className="flex items-end justify-center gap-4">
-              {standings.length > 1 && (
+              {podiumTeams.length > 1 && (
                 <div className="text-center flex-1">
                   <div className={`rounded-lg p-3 ${darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}`} style={{ minHeight: '80px' }}>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-navy-900 font-bold text-sm mx-auto mb-1 flex items-center justify-center shadow-md">2</div>
-                    <TeamLogo team={standings[1].team} size={36} className="mx-auto" />
-                    <p className="text-xs font-semibold mt-1">{standings[1].team.shortCode}</p>
+                    <TeamLogo team={podiumTeams[1].team} size={36} className="mx-auto" />
+                    <p className="text-xs font-semibold mt-1">{podiumTeams[1].team.shortCode}</p>
+                    {podiumTeams[1].entryName !== podiumTeams[1].team.shortCode && (
+                      <p className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{podiumTeams[1].entryName}</p>
+                    )}
                     <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Finalist</p>
                   </div>
                 </div>
@@ -312,17 +348,23 @@ export default function LobbyGameView() {
               <div className="text-center flex-1">
                 <div className={`rounded-lg p-3 border-2 border-gold/30 ${darkMode ? 'bg-gold/5' : 'bg-yellow-50'}`} style={{ minHeight: '100px' }}>
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-navy-900 font-bold text-lg mx-auto mb-1 flex items-center justify-center shadow-lg shadow-yellow-500/30">1</div>
-                  <TeamLogo team={standings[0].team} size={40} className="mx-auto" />
-                  <p className="text-sm font-bold mt-1">{standings[0].team.shortCode}</p>
+                  <TeamLogo team={podiumTeams[0].team} size={40} className="mx-auto" />
+                  <p className="text-sm font-bold mt-1">{podiumTeams[0].team.shortCode}</p>
+                  {podiumTeams[0].entryName !== podiumTeams[0].team.shortCode && (
+                    <p className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{podiumTeams[0].entryName}</p>
+                  )}
                   <p className="text-[10px] text-gold font-bold">Champion</p>
                 </div>
               </div>
-              {standings.length > 2 && (
+              {podiumTeams.length > 2 && (
                 <div className="text-center flex-1">
                   <div className={`rounded-lg p-3 ${darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}`} style={{ minHeight: '70px' }}>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-sm mx-auto mb-1 flex items-center justify-center shadow-md">3</div>
-                    <TeamLogo team={standings[2].team} size={32} className="mx-auto" />
-                    <p className="text-xs font-semibold mt-1">{standings[2].team.shortCode}</p>
+                    <TeamLogo team={podiumTeams[2].team} size={32} className="mx-auto" />
+                    <p className="text-xs font-semibold mt-1">{podiumTeams[2].team.shortCode}</p>
+                    {podiumTeams[2].entryName !== podiumTeams[2].team.shortCode && (
+                      <p className={`text-[10px] ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{podiumTeams[2].entryName}</p>
+                    )}
                     <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>3rd Place</p>
                   </div>
                 </div>
