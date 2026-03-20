@@ -12,7 +12,7 @@ import PointsBreakdownPopover from '../components/PointsBreakdownPopover';
 export default function Dashboard() {
   const state = useTournament();
   const { dispatch } = useDispatch();
-  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyEntries: rawLobbyEntries, lobbyResults, lobbyPointsConfig } = state;
+  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyEntries: rawLobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus } = state;
   const lobbyEntries = Array.isArray(rawLobbyEntries) ? rawLobbyEntries : [];
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState('table');
@@ -38,7 +38,11 @@ export default function Dashboard() {
 
       // Also check knockout matches for games
       const koGameIds = new Set(teamKoMatches.map(m => m.gameId));
-      const allGameIds = new Set([...teamGames.map(g => g.id), ...koGameIds]);
+      // Also check lobby entries for games
+      const lobbyGameIds = new Set(
+        lobbyEntries.filter(e => e.teamId === team.id).map(e => e.gameId)
+      );
+      const allGameIds = new Set([...teamGames.map(g => g.id), ...koGameIds, ...lobbyGameIds]);
 
       // Calculate combined stats
       let totalPlayed = 0, totalWins = 0, totalLosses = 0, totalDraws = 0, totalByes = 0, totalPoints = 0;
@@ -107,6 +111,38 @@ export default function Dashboard() {
       const gameAdvancements = [];
       for (const gid of allGameIds) {
         const game = games.find(g => g.id === gid);
+        if (!game) continue;
+
+        // Lobby games — derive status from standings
+        if (game.type === 'lobby') {
+          const lobbyStatus = lobbyGameStatus?.[gid];
+          const teamLobbyEntries = lobbyEntries.filter(e => e.gameId === gid && e.teamId === team.id);
+          if (teamLobbyEntries.length === 0) continue;
+          // Check if team has any participation in sessions
+          const teamEntryIds = new Set(teamLobbyEntries.map(e => e.id));
+          const participated = lobbyResults.some(r => r.gameId === gid && (r.participantEntryIds || []).some(id => teamEntryIds.has(id)));
+          if (!participated) {
+            gameAdvancements.push({ game, status: 'Registered' });
+            continue;
+          }
+          // Check placements
+          let lobbyAdv = 'Participation';
+          for (const r of lobbyResults.filter(r => r.gameId === gid)) {
+            const p = r.placements || {};
+            if (teamEntryIds.has(p.first)) lobbyAdv = 'Champion';
+            else if (teamEntryIds.has(p.second) && lobbyAdv !== 'Champion') lobbyAdv = 'Finalist';
+            else if (teamEntryIds.has(p.third) && lobbyAdv !== 'Champion' && lobbyAdv !== 'Finalist') lobbyAdv = '3rd Place';
+          }
+          if (lobbyStatus === 'completed') {
+            const priority = { 'Champion': 7, 'Finalist': 6, '3rd Place': 5, 'Participation': 0 };
+            if ((priority[lobbyAdv] || 0) > (priority[bestAdvancement] || 0)) {
+              bestAdvancement = lobbyAdv;
+            }
+          }
+          gameAdvancements.push({ game, status: lobbyAdv });
+          continue;
+        }
+
         const cfg = knockoutConfig[gid];
         const gameStage = cfg?.stage || 'pool';
         const adv = getTeamFurthestRound(knockoutMatches, team.id, gid);
@@ -115,8 +151,8 @@ export default function Dashboard() {
           if ((priority[adv] || 0) > (priority[bestAdvancement] || 0)) {
             bestAdvancement = adv;
           }
-          if (game) gameAdvancements.push({ game, status: adv });
-        } else if (game && (gameStage === 'pool' || gameStage === 'knockout')) {
+          gameAdvancements.push({ game, status: adv });
+        } else if (gameStage === 'pool' || gameStage === 'knockout') {
           gameAdvancements.push({ game, status: 'Participation' });
         }
       }
@@ -158,7 +194,8 @@ export default function Dashboard() {
         points: totalPoints,
         poolPoints: poolPts,
         knockoutPoints: koPts,
-        individualPoints: indPts + lobbyPts.total,
+        individualPoints: indPts,
+        lobbyPoints: lobbyPts.total,
         medals,
         // Expose medal counts for tiebreaker: wins+golds → silvers → bronzes
         golds: totalGolds,
@@ -171,7 +208,7 @@ export default function Dashboard() {
     });
     // New tiebreaker: points → wins+golds → silvers → bronzes (no H2H, no alphabetical)
     return sortTeamsByTiebreaker(teamStats);
-  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig]);
+  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus]);
 
   const filtered = standings.filter(s =>
     s.teamName.toLowerCase().includes(search.toLowerCase())
@@ -207,15 +244,22 @@ export default function Dashboard() {
         const completedCats = gameCats.filter(c => c.status === 'completed').length;
         const totalCats = gameCats.length;
         const stage = totalCats > 0 && completedCats === totalCats ? 'completed' : 'pool';
-        return { game: g, stage, champTeam: null, isIndividual: true, completedCats, totalCats };
+        return { game: g, stage, champTeam: null, isIndividual: true, isLobby: false, completedCats, totalCats };
+      }
+      if (g.type === 'lobby') {
+        const sessions = lobbyResults.filter(r => r.gameId === g.id);
+        const entryCount = lobbyEntries.filter(e => e.gameId === g.id).length;
+        const lStatus = lobbyGameStatus?.[g.id];
+        const lobbyStage = lStatus === 'completed' ? 'completed' : sessions.length > 0 ? 'active' : 'pool';
+        return { game: g, stage: lobbyStage, champTeam: null, isIndividual: false, isLobby: true, lobbySessions: sessions.length, lobbyEntries: entryCount };
       }
       const cfg = knockoutConfig[g.id];
       const stage = cfg?.stage || 'pool';
       const champ = getChampion(knockoutMatches, g.id);
       const champTeam = champ ? teams.find(t => t.id === champ) : null;
-      return { game: g, stage, champTeam, isIndividual: false };
+      return { game: g, stage, champTeam, isIndividual: false, isLobby: false };
     });
-  }, [games, knockoutConfig, knockoutMatches, teams, categories]);
+  }, [games, knockoutConfig, knockoutMatches, teams, categories, lobbyResults, lobbyEntries, lobbyGameStatus]);
 
   // Recent results (pool + knockout)
   const recentResults = useMemo(() => {
@@ -379,21 +423,30 @@ export default function Dashboard() {
           <h3 className={`section-heading mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Tournament Progress</h3>
           <div className="flex flex-wrap gap-2">
             {gameProgress.map((gp) => {
-              const { game, stage, champTeam, isIndividual, completedCats, totalCats } = gp;
+              const { game, stage, champTeam, isIndividual, isLobby, completedCats, totalCats, lobbySessions, lobbyEntries: lobbyEntryCount } = gp;
               const stageColors = {
                 pool: darkMode ? 'bg-white/5 text-gray-300 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200',
+                active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
                 knockout: 'bg-accent/10 text-accent border-accent/20',
                 completed: 'bg-win/10 text-win border-win/20',
               };
               const stageLabel = isIndividual
                 ? (totalCats > 0 ? `${completedCats}/${totalCats}` : 'Individual')
-                : (stage === 'pool' ? 'Pool' : stage === 'knockout' ? 'Knockout' : 'Completed');
+                : isLobby
+                  ? (stage === 'completed' ? 'Completed' : lobbySessions > 0 ? `${lobbySessions} sessions` : 'Lobby')
+                  : (stage === 'pool' ? 'Pool' : stage === 'knockout' ? 'Knockout' : 'Completed');
+
+              const colorCls = isIndividual
+                ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                : isLobby
+                  ? (stage === 'completed' ? stageColors.completed : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20')
+                  : stageColors[stage];
 
               return (
                 <button
                   key={game.id}
                   onClick={() => dispatch({ type: 'SELECT_GAME', payload: game.id })}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:scale-[1.02] border ${isIndividual ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : stageColors[stage]}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:scale-[1.02] border ${colorCls}`}
                 >
                   <span>{game.emoji}</span>
                   <span className="font-medium">{game.name}</span>
@@ -609,6 +662,16 @@ export default function Dashboard() {
                               <span className="text-[10px] text-purple-400">+{row.individualPoints} Ind</span>
                             </PointsBreakdownPopover>
                           )}
+                          {row.lobbyPoints > 0 && (
+                            <PointsBreakdownPopover
+                              teamId={row.teamId}
+                              type="pool"
+                              value={row.lobbyPoints}
+                              className="text-[10px] text-emerald-400"
+                            >
+                              <span className="text-[10px] text-emerald-400">+{row.lobbyPoints} Lobby</span>
+                            </PointsBreakdownPopover>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-3 hidden md:table-cell">
@@ -685,6 +748,16 @@ export default function Dashboard() {
                           className="text-[10px] text-purple-400 block"
                         >
                           <span className="text-[10px] text-purple-400">+{row.individualPoints} Ind</span>
+                        </PointsBreakdownPopover>
+                      )}
+                      {row.lobbyPoints > 0 && (
+                        <PointsBreakdownPopover
+                          teamId={row.teamId}
+                          type="pool"
+                          value={row.lobbyPoints}
+                          className="text-[10px] text-emerald-400 block"
+                        >
+                          <span className="text-[10px] text-emerald-400">+{row.lobbyPoints} Lobby</span>
                         </PointsBreakdownPopover>
                       )}
                     </div>

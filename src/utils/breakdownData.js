@@ -4,6 +4,7 @@
  */
 
 import { DEFAULT_INDIVIDUAL_POINTS } from './individualPoints';
+import { DEFAULT_LOBBY_POINTS } from './lobbyPoints';
 
 /**
  * Get the full breakdown of a team's total points across all games.
@@ -17,8 +18,8 @@ export function getTeamFullBreakdown(teamId, state) {
   const sections = [];
   let grandTotal = 0;
 
-  // Team games
-  const teamGames = games.filter(g => g.type !== 'individual');
+  // Team games (exclude lobby)
+  const teamGames = games.filter(g => g.type === 'team');
   for (const game of teamGames) {
     const gamePools = pools.filter(p => p.gameId === game.id);
     const teamInGame = gamePools.some(p => p.teamIds.includes(teamId));
@@ -54,6 +55,24 @@ export function getTeamFullBreakdown(teamId, state) {
       type: 'individual',
       game,
       individual: section,
+      gameTotal: section.subtotal,
+    });
+  }
+
+  // Lobby games
+  const lobbyGames = games.filter(g => g.type === 'lobby');
+  const lobbyEntries = Array.isArray(state.lobbyEntries) ? state.lobbyEntries : [];
+  const lobbyResults = Array.isArray(state.lobbyResults) ? state.lobbyResults : [];
+  const lobbyPointsConfig = state.lobbyPointsConfig || {};
+
+  for (const game of lobbyGames) {
+    const section = getTeamLobbyGameBreakdown(teamId, game, lobbyEntries, lobbyResults, lobbyPointsConfig, teams);
+    if (!section || (section.sessions.length === 0 && section.subtotal === 0)) continue;
+    grandTotal += section.subtotal;
+    sections.push({
+      type: 'lobby',
+      game,
+      lobby: section,
       gameTotal: section.subtotal,
     });
   }
@@ -198,6 +217,77 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
 }
 
 /**
+ * Lobby game breakdown for a team — per session, showing placements and participation.
+ */
+export function getTeamLobbyGameBreakdown(teamId, game, allLobbyEntries, allLobbyResults, allLobbyPointsConfig, teams) {
+  const entries = Array.isArray(allLobbyEntries) ? allLobbyEntries : [];
+  const results = Array.isArray(allLobbyResults) ? allLobbyResults : [];
+  const config = allLobbyPointsConfig[game.id] || DEFAULT_LOBBY_POINTS;
+  const cap = config.maxParticipationCap ?? Infinity;
+
+  // Entry IDs belonging to this school
+  const myEntryIds = new Set(
+    entries.filter(e => e.gameId === game.id && e.teamId === teamId).map(e => e.id)
+  );
+
+  const gameResults = results.filter(r => r.gameId === game.id);
+  const sessionDetails = [];
+  let subtotal = 0;
+  let golds = 0, silvers = 0, bronzes = 0;
+  let participationCount = 0;
+
+  for (const session of gameResults) {
+    const participantEntryIds = session.participantEntryIds || [];
+    const schoolParticipated = participantEntryIds.some(id => myEntryIds.has(id));
+    if (!schoolParticipated) continue;
+
+    const placements = session.placements || {};
+    let sessionPts = 0;
+    const medals = [];
+
+    if (myEntryIds.has(placements.first)) {
+      sessionPts += config.first;
+      golds++;
+      const entry = entries.find(e => e.id === placements.first);
+      medals.push({ placement: 'first', entryName: entry?.entryName || '' });
+    }
+    if (myEntryIds.has(placements.second)) {
+      sessionPts += config.second;
+      silvers++;
+      const entry = entries.find(e => e.id === placements.second);
+      medals.push({ placement: 'second', entryName: entry?.entryName || '' });
+    }
+    if (myEntryIds.has(placements.third)) {
+      sessionPts += config.third;
+      bronzes++;
+      const entry = entries.find(e => e.id === placements.third);
+      medals.push({ placement: 'third', entryName: entry?.entryName || '' });
+    }
+
+    // Participation — one per ENTRY per session, capped per game
+    let participationPts = 0;
+    for (const entryId of participantEntryIds) {
+      if (!myEntryIds.has(entryId)) continue;
+      if (participationCount < cap) {
+        participationPts += config.participation;
+        participationCount++;
+      }
+    }
+    sessionPts += participationPts;
+    subtotal += sessionPts;
+
+    sessionDetails.push({
+      sessionName: session.sessionName,
+      medals,
+      participationPts,
+      sessionTotal: sessionPts,
+    });
+  }
+
+  return { sessions: sessionDetails, subtotal, golds, silvers, bronzes, config };
+}
+
+/**
  * Get match detail for a single match result.
  */
 function getMatchDetail(match, teamId, opponent) {
@@ -309,7 +399,7 @@ export function getPoolPointsBreakdown(teamId, state) {
   const sections = [];
   let total = 0;
 
-  for (const game of games.filter(g => g.type !== 'individual')) {
+  for (const game of games.filter(g => g.type === 'team')) {
     const gamePools = pools.filter(p => p.gameId === game.id);
     const poolSection = getTeamGamePoolBreakdown(teamId, game, gamePools, matches, teams);
     if (poolSection.hasData) {
@@ -327,6 +417,18 @@ export function getPoolPointsBreakdown(teamId, state) {
     }
   }
 
+  // Lobby games count as "stage" points
+  const lobbyEntries = Array.isArray(state.lobbyEntries) ? state.lobbyEntries : [];
+  const lobbyResults = Array.isArray(state.lobbyResults) ? state.lobbyResults : [];
+  const lobbyPointsConfig = state.lobbyPointsConfig || {};
+  for (const game of games.filter(g => g.type === 'lobby')) {
+    const section = getTeamLobbyGameBreakdown(teamId, game, lobbyEntries, lobbyResults, lobbyPointsConfig, teams);
+    if (section && section.subtotal > 0) {
+      sections.push({ game, type: 'lobby', ...section });
+      total += section.subtotal;
+    }
+  }
+
   return { sections, total };
 }
 
@@ -338,7 +440,7 @@ export function getKnockoutPointsBreakdown(teamId, state) {
   const sections = [];
   let total = 0;
 
-  for (const game of games.filter(g => g.type !== 'individual')) {
+  for (const game of games.filter(g => g.type === 'team')) {
     const koSection = getTeamGameKnockoutBreakdown(teamId, game, knockoutMatches, knockoutConfig, teams);
     sections.push({ game, ...koSection });
     total += koSection.subtotal;
@@ -358,6 +460,14 @@ export function getGamePointsBreakdown(teamId, gameId, state) {
   if (game.type === 'individual') {
     const section = getTeamIndividualGameBreakdown(teamId, game, athletes, individualResults, individualPointsConfig, categories, teams);
     return { type: 'individual', game, ...section };
+  }
+
+  if (game.type === 'lobby') {
+    const lobbyEntries = Array.isArray(state.lobbyEntries) ? state.lobbyEntries : [];
+    const lobbyResults = Array.isArray(state.lobbyResults) ? state.lobbyResults : [];
+    const lobbyPointsConfig = state.lobbyPointsConfig || {};
+    const section = getTeamLobbyGameBreakdown(teamId, game, lobbyEntries, lobbyResults, lobbyPointsConfig, teams);
+    return { type: 'lobby', game, ...section };
   }
 
   const gamePools = pools.filter(p => p.gameId === game.id);

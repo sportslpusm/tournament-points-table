@@ -141,8 +141,8 @@ describe('Test E: Lobby Game Scoring (Entry-based)', () => {
     const config = { [gameId]: DEFAULT_LOBBY_POINTS };
 
     const ptsAlpha = getLobbyPointsForTeam('schoolAlpha', results, entries, config);
-    // Alpha gets: 5 (1st) + 3 (2nd) + 1 (participation) = 9
-    expect(ptsAlpha.total).toBe(9);
+    // Alpha gets: 5 (1st) + 3 (2nd) + 2 (participation for 2 entries) = 10
+    expect(ptsAlpha.total).toBe(10);
     expect(ptsAlpha.golds).toBe(1);
     expect(ptsAlpha.silvers).toBe(1);
   });
@@ -163,8 +163,8 @@ describe('Test E: Lobby Game Scoring (Entry-based)', () => {
     const config = { [gameId]: DEFAULT_LOBBY_POINTS };
 
     const ptsX = getLobbyPointsForTeam('teamX', results, entries, config);
-    // X gets: 5 (1st) + 3 (2nd) + 1 (3rd) + 1 (participation) = 10
-    expect(ptsX.total).toBe(10);
+    // X gets: 5 (1st) + 3 (2nd) + 1 (3rd) + 3 (participation for 3 entries) = 12
+    expect(ptsX.total).toBe(12);
     expect(ptsX.golds).toBe(1);
     expect(ptsX.silvers).toBe(1);
     expect(ptsX.bronzes).toBe(1);
@@ -201,6 +201,54 @@ describe('Test E: Lobby Game Scoring (Entry-based)', () => {
 
     const pts = getLobbyPointsForTeam('teamZ', results, entries, config);
     expect(pts.total).toBe(0);
+  });
+
+  test('CSE BGMI scenario: 4 entries, 1st + 2nd + 4 participation', () => {
+    // CSE school registers 4 entries in BGMI. All 4 play in Session 1.
+    // CSE Entry 1 gets 1st, CSE Entry 2 gets 2nd.
+    // Expected: 5 (1st) + 3 (2nd) + 4 (participation for 4 entries) = 12
+    const entries = [
+      { id: 'cse1', gameId, teamId: 'CSE', entryName: 'CSE Alpha' },
+      { id: 'cse2', gameId, teamId: 'CSE', entryName: 'CSE Beta' },
+      { id: 'cse3', gameId, teamId: 'CSE', entryName: 'CSE Gamma' },
+      { id: 'cse4', gameId, teamId: 'CSE', entryName: 'CSE Delta' },
+      { id: 'ece1', gameId, teamId: 'ECE', entryName: '' },
+      { id: 'mech1', gameId, teamId: 'MECH', entryName: '' },
+    ];
+    const results = [{
+      id: 'bgmi1', gameId,
+      sessionName: 'BGMI Round 1',
+      placements: { first: 'cse1', second: 'cse2', third: 'ece1' },
+      participantEntryIds: ['cse1', 'cse2', 'cse3', 'cse4', 'ece1', 'mech1'],
+    }];
+    const config = { [gameId]: DEFAULT_LOBBY_POINTS };
+
+    const csePts = getLobbyPointsForTeam('CSE', results, entries, config);
+    expect(csePts.total).toBe(12);  // 5 + 3 + 4×1 = 12
+    expect(csePts.golds).toBe(1);
+    expect(csePts.silvers).toBe(1);
+    expect(csePts.bronzes).toBe(0);
+
+    const ecePts = getLobbyPointsForTeam('ECE', results, entries, config);
+    expect(ecePts.total).toBe(2);   // 1 (3rd) + 1 (participation) = 2
+    expect(ecePts.bronzes).toBe(1);
+
+    const mechPts = getLobbyPointsForTeam('MECH', results, entries, config);
+    expect(mechPts.total).toBe(1);  // 0 + 1 (participation) = 1
+
+    // Also verify standings sort correctly
+    const teams = [
+      { id: 'CSE', name: 'CSE', shortCode: 'CSE' },
+      { id: 'ECE', name: 'ECE', shortCode: 'ECE' },
+      { id: 'MECH', name: 'MECH', shortCode: 'MECH' },
+    ];
+    const standings = getLobbyGameStandings(gameId, results, entries, teams, config);
+    expect(standings[0].teamId).toBe('CSE');
+    expect(standings[0].totalPoints).toBe(12);
+    expect(standings[1].teamId).toBe('ECE');
+    expect(standings[1].totalPoints).toBe(2);
+    expect(standings[2].teamId).toBe('MECH');
+    expect(standings[2].totalPoints).toBe(1);
   });
 
   test('getLobbyGameStandings sorts correctly', () => {

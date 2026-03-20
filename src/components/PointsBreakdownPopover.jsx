@@ -257,6 +257,15 @@ function getPoolBreakdownContent(teamId, team, state) {
             </div>
           );
         }
+        if (section.type === 'lobby') {
+          return (
+            <div key={i}>
+              <GameHeader game={section.game} subtitle={`Lobby (${section.subtotal} pts)`} darkMode={darkMode} />
+              <p className={`text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Lobby game — see game breakdown</p>
+              <Subtotal value={section.subtotal} darkMode={darkMode} />
+            </div>
+          );
+        }
         return (
           <div key={i}>
             <GameHeader game={section.game} subtitle={`Pool (${section.subtotal} pts)`} darkMode={darkMode} />
@@ -281,6 +290,42 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
   const breakdown = getGamePointsBreakdown(teamId, gameId, state);
   if (!breakdown) return null;
   const { darkMode } = state;
+
+  if (breakdown.type === 'lobby') {
+    const { sessions, subtotal, config } = breakdown;
+    const body = (
+      <div className="space-y-3">
+        {sessions.length === 0 && (
+          <p className={`text-sm italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No sessions recorded</p>
+        )}
+        {sessions.map((s, i) => (
+          <div key={i} className={`flex items-center justify-between text-xs py-1 ${
+            i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}` : ''
+          }`}>
+            <span className="flex items-center gap-1 min-w-0">
+              <span className="font-medium">{s.sessionName}</span>
+              {s.medals.map((m, j) => (
+                <span key={j} className={`${
+                  m.placement === 'first' ? 'text-gold' : m.placement === 'second' ? 'text-silver' : 'text-bronze'
+                }`}>
+                  {m.placement === 'first' ? '\u{1F947}' : m.placement === 'second' ? '\u{1F948}' : '\u{1F949}'}
+                  {m.entryName ? ` ${m.entryName}` : ''}
+                </span>
+              ))}
+            </span>
+            <span className="font-mono font-bold text-accent whitespace-nowrap ml-2">
+              {s.sessionTotal}
+            </span>
+          </div>
+        ))}
+        <GrandTotal total={subtotal} darkMode={darkMode} />
+      </div>
+    );
+    return {
+      title: `${team.name} — ${breakdown.game.emoji} ${breakdown.game.name} (${subtotal} pts)`,
+      body,
+    };
+  }
 
   if (breakdown.type === 'individual') {
     const { categories, subtotal, config } = breakdown;
@@ -405,6 +450,38 @@ function getStatBreakdownContent(teamId, team, statType, state) {
 // ── Shared Sub-components ───────────────────────────
 
 function GameSection({ section, darkMode }) {
+  if (section.type === 'lobby') {
+    const { lobby, game, gameTotal } = section;
+    return (
+      <div>
+        <GameHeader game={game} subtitle={`(${gameTotal} pts)`} darkMode={darkMode} />
+        {lobby.sessions.length === 0 ? (
+          <p className={`text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No sessions recorded</p>
+        ) : (
+          lobby.sessions.map((s, i) => (
+            <div key={i} className={`flex items-center justify-between text-[11px] py-0.5 pl-2 ${
+              i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-50'}` : ''
+            }`}>
+              <span className="flex items-center gap-1 min-w-0">
+                <span className="font-medium">{s.sessionName}</span>
+                {s.medals.map((m, j) => (
+                  <span key={j} className={`${
+                    m.placement === 'first' ? 'text-gold' : m.placement === 'second' ? 'text-silver' : 'text-bronze'
+                  }`}>
+                    {m.placement === 'first' ? '\u{1F947}' : m.placement === 'second' ? '\u{1F948}' : '\u{1F949}'}
+                    {m.entryName ? ` ${m.entryName}` : ''}
+                  </span>
+                ))}
+              </span>
+              <span className="font-mono font-bold text-accent whitespace-nowrap ml-2">{s.sessionTotal}</span>
+            </div>
+          ))
+        )}
+        <Subtotal value={gameTotal} darkMode={darkMode} />
+      </div>
+    );
+  }
+
   if (section.type === 'individual') {
     const { individual, game, gameTotal } = section;
     return (

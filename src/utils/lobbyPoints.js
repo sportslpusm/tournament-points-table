@@ -8,7 +8,8 @@
  *  - Uses SAME placement point scale as individual sports (6/4/2/1)
  *  - A single school CAN register multiple entries ("Team A", "Team B")
  *  - A single school CAN win multiple podium spots (podium stacking)
- *  - maxParticipationCap ONLY caps +1 attendance pts, NEVER placement pts
+ *  - Participation points are awarded PER ENTRY (not per school)
+ *  - maxParticipationCap caps total participation pts per school per game, NEVER placement pts
  *  - Points roll up from entries to their parent school
  *
  * Data model:
@@ -31,7 +32,7 @@ export const DEFAULT_LOBBY_POINTS = {
 /**
  * Get total lobby game points for a specific school (teamId).
  * Maps entries back to their parent school and aggregates.
- * Participation: one per session per school (not per entry), capped by maxParticipationCap.
+ * Participation: one per ENTRY per session (e.g. 4 entries = 4 participation pts), capped by maxParticipationCap per game.
  *
  * @param {string} teamId - The school's team ID
  * @param {Array} lobbyResults - All lobby session results
@@ -65,9 +66,6 @@ export function getLobbyPointsForTeam(teamId, lobbyResults, lobbyEntries, points
 
     for (const session of sessions) {
       const participantEntryIds = session.participantEntryIds || [];
-      // Check if any of this school's entries participated
-      const schoolParticipated = participantEntryIds.some(id => myEntryIds.has(id));
-      if (!schoolParticipated) continue;
 
       // Check placements
       const placements = session.placements || {};
@@ -75,10 +73,13 @@ export function getLobbyPointsForTeam(teamId, lobbyResults, lobbyEntries, points
       if (myEntryIds.has(placements.second)) { total += config.second; silvers++; }
       if (myEntryIds.has(placements.third)) { total += config.third; bronzes++; }
 
-      // Participation point — one per session per school, capped
-      if (gameParticipationCount < cap) {
-        total += config.participation;
-        gameParticipationCount++;
+      // Participation point — one per ENTRY per session, capped per game
+      for (const entryId of participantEntryIds) {
+        if (!myEntryIds.has(entryId)) continue;
+        if (gameParticipationCount < cap) {
+          total += config.participation;
+          gameParticipationCount++;
+        }
       }
     }
   }
@@ -129,14 +130,8 @@ export function getLobbyGameStandings(gameId, lobbyResults, lobbyEntries, teams,
     const placements = session.placements || {};
     const participantEntryIds = session.participantEntryIds || [];
 
-    // Track which schools participated in this session (for one participation point per school)
+    // Track which schools participated in this session (for session count)
     const schoolsInSession = new Set();
-
-    for (const entryId of participantEntryIds) {
-      const schoolId = entryToTeam.get(entryId);
-      if (!schoolId) continue;
-      schoolsInSession.add(schoolId);
-    }
 
     // Award placement bonuses
     const firstSchool = entryToTeam.get(placements.first);
@@ -156,15 +151,23 @@ export function getLobbyGameStandings(gameId, lobbyResults, lobbyEntries, teams,
       if (e) { e.totalPoints += config.third; e.bronzes++; }
     }
 
-    // Participation — one per school per session, capped
-    for (const schoolId of schoolsInSession) {
+    // Participation — one per ENTRY per session, capped per game per school
+    for (const entryId of participantEntryIds) {
+      const schoolId = entryToTeam.get(entryId);
+      if (!schoolId) continue;
+      schoolsInSession.add(schoolId);
       const e = getOrCreateTeamEntry(schoolId);
       if (!e) continue;
-      e.sessions++;
       if (e.participationCount < cap) {
         e.totalPoints += config.participation;
         e.participationCount++;
       }
+    }
+
+    // Update session count per school
+    for (const schoolId of schoolsInSession) {
+      const e = getOrCreateTeamEntry(schoolId);
+      if (e) e.sessions++;
     }
   }
 

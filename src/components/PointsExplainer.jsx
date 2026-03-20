@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTournament } from '../context/TournamentContext';
 import { DEFAULT_INDIVIDUAL_POINTS } from '../utils/individualPoints';
+import { DEFAULT_LOBBY_POINTS } from '../utils/lobbyPoints';
 
 const SESSION_KEY = 'points_explainer_open';
 
@@ -44,7 +45,7 @@ function WhyGoldSixPoints({ darkMode }) {
  */
 export default function PointsExplainer({ filterType = 'all', gameId = null }) {
   const state = useTournament();
-  const { darkMode, knockoutConfig, individualPointsConfig, games } = state;
+  const { darkMode, knockoutConfig, individualPointsConfig, lobbyPointsConfig, games } = state;
 
   const [isOpen, setIsOpen] = useState(() => {
     try { return sessionStorage.getItem(SESSION_KEY) === 'true'; } catch { return false; }
@@ -62,8 +63,9 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
   const byePresentPts = 4;
 
   // Gather all unique knockout bonus configs
-  const teamGames = games.filter(g => g.type !== 'individual');
+  const teamGames = games.filter(g => g.type === 'team');
   const individualGames = games.filter(g => g.type === 'individual');
+  const lobbyGames = games.filter(g => g.type === 'lobby');
 
   // For per-game explainer
   const specificGame = gameId ? games.find(g => g.id === gameId) : null;
@@ -72,6 +74,8 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
 
   const showTeam = filterType === 'all' || filterType === 'team';
   const showIndividual = filterType === 'all' || filterType === 'individual';
+  const showLobby = filterType === 'all' || filterType === 'lobby';
+  const specificLobbyConfig = gameId ? (lobbyPointsConfig[gameId] || DEFAULT_LOBBY_POINTS) : null;
 
   const cardCls = `rounded-xl border transition-all ${
     darkMode
@@ -253,6 +257,49 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
               </div>
             )}
 
+            {/* ── SECTION B2: Lobby Games ── */}
+            {showLobby && (
+              <div>
+                <h4 className={`flex items-center gap-2 text-xs font-black uppercase tracking-wider mb-3 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  <span className="w-5 h-0.5 bg-emerald-500 rounded" />
+                  Lobby Game Scoring
+                </h4>
+
+                {filterType === 'lobby' && specificLobbyConfig ? (
+                  <LobbyTable config={specificLobbyConfig} thCls={thCls} tdCls={tdCls} darkMode={darkMode} />
+                ) : (
+                  <>
+                    {lobbyGames.length === 0 ? (
+                      <p className={`text-xs italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No lobby games configured</p>
+                    ) : lobbyGames.length === 1 ? (
+                      <LobbyTable
+                        config={lobbyPointsConfig[lobbyGames[0].id] || DEFAULT_LOBBY_POINTS}
+                        thCls={thCls} tdCls={tdCls} darkMode={darkMode}
+                      />
+                    ) : (
+                      lobbyGames.map(g => {
+                        const cfg = lobbyPointsConfig[g.id] || DEFAULT_LOBBY_POINTS;
+                        return (
+                          <div key={g.id} className="mb-3">
+                            <div className={`text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {g.emoji} {g.name}
+                            </div>
+                            <LobbyTable config={cfg} thCls={thCls} tdCls={tdCls} darkMode={darkMode} />
+                          </div>
+                        );
+                      })
+                    )}
+                  </>
+                )}
+
+                <p className={`text-[11px] mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Note: Schools can register multiple entries. Points roll up to the parent school. Participation is counted per entry per session (e.g. 4 entries = 4 participation pts), and may be capped. Medal/placement bonuses are never capped.
+                </p>
+              </div>
+            )}
+
             {/* ── SECTION C: Overall Rules ── */}
             {filterType === 'all' && (
               <div>
@@ -263,7 +310,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                   How the Leaderboard Works
                 </h4>
                 <div className={`text-xs leading-relaxed space-y-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <p>A team's total tournament points = sum of ALL points earned across ALL games (team games + individual games).</p>
+                  <p>A team's total tournament points = sum of ALL points earned across ALL games (team games + individual games + lobby games).</p>
                   <p><span className="font-semibold text-accent">Tiebreaker:</span> Total Points → Total Wins + 🥇 Golds → 🥈 Silvers → 🥉 Bronzes</p>
                   <p>Knockout bonuses only apply to contested wins (not walkovers/byes).</p>
                   <p>Teams competing in more games have more opportunities to earn points.</p>
@@ -296,6 +343,35 @@ function IndividualTable({ config, thCls, tdCls, darkMode }) {
             { label: '🥉 3rd Place', detail: `${config.third} pts + ${p} participation = ${config.third + p} total`, color: 'text-bronze' },
             { label: 'Participated', detail: `0 pts + ${p} participation = ${p} total`, color: darkMode ? 'text-gray-300' : 'text-gray-600' },
             { label: 'Absent / DNS', detail: `0 pts (not present = no points)`, color: darkMode ? 'text-gray-500' : 'text-gray-400' },
+          ].map((row, i) => (
+            <tr key={i} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+              <td className={tdCls}><span className={`font-semibold ${row.color}`}>{row.label}</span></td>
+              <td className={tdCls}>{row.detail}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function LobbyTable({ config, thCls, tdCls, darkMode }) {
+  const p = config.participation;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left">
+        <thead>
+          <tr className={darkMode ? 'bg-white/[0.02]' : 'bg-gray-50/50'}>
+            <th className={thCls}>Placement</th>
+            <th className={thCls}>Points to School</th>
+          </tr>
+        </thead>
+        <tbody>
+          {[
+            { label: '\u{1F947} 1st Place', detail: `${config.first} pts + ${p} participation = ${config.first + p} total`, color: 'text-gold' },
+            { label: '\u{1F948} 2nd Place', detail: `${config.second} pts + ${p} participation = ${config.second + p} total`, color: 'text-silver' },
+            { label: '\u{1F949} 3rd Place', detail: `${config.third} pts + ${p} participation = ${config.third + p} total`, color: 'text-bronze' },
+            { label: 'Participated', detail: `0 pts + ${p} participation = ${p} total`, color: darkMode ? 'text-gray-300' : 'text-gray-600' },
           ].map((row, i) => (
             <tr key={i} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
               <td className={tdCls}><span className={`font-semibold ${row.color}`}>{row.label}</span></td>

@@ -9,7 +9,8 @@ export default function LobbyGameView() {
   const state = useTournament();
   const { dispatch } = useDispatch();
   const { isAdmin } = useAuth();
-  const { games, teams, selectedGameId, darkMode, lobbyEntries, lobbyResults, lobbyPointsConfig } = state;
+  const { games, teams, selectedGameId, darkMode, lobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus } = state;
+  const isCompleted = lobbyGameStatus[selectedGameId] === 'completed';
   const game = games.find(g => g.id === selectedGameId);
 
   const config = lobbyPointsConfig[selectedGameId] || DEFAULT_LOBBY_POINTS;
@@ -202,10 +203,17 @@ export default function LobbyGameView() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <button
-            onClick={() => dispatch({ type: 'SET_VIEW', payload: { view: 'dashboard' } })}
+            onClick={() => {
+              const firstNonLobby = games.find(g => g.type !== 'lobby');
+              if (firstNonLobby) {
+                dispatch({ type: 'SELECT_GAME', payload: firstNonLobby.id });
+              } else {
+                dispatch({ type: 'SET_VIEW', payload: { view: 'dashboard' } });
+              }
+            }}
             className={`text-xs mb-1 ${darkMode ? 'text-accent hover:text-accent/80' : 'text-blue-600 hover:text-blue-700'}`}
           >
-            ← Back to Dashboard
+            ← Back to Games
           </button>
           <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {game.emoji} {game.name}
@@ -217,17 +225,53 @@ export default function LobbyGameView() {
             <button onClick={() => setShowConfig(!showConfig)} className={btnSecondary}>
               ⚙️ Points Config
             </button>
-            <button onClick={openNewEntry} className={btnSecondary}>
-              + Add Entry
-            </button>
-            <button onClick={openNewSession} className={btnPrimary}>
-              + Add Session
-            </button>
+            {!isCompleted && (
+              <>
+                <button onClick={openNewEntry} className={btnSecondary}>
+                  + Add Entry
+                </button>
+                <button onClick={openNewSession} className={btnPrimary}>
+                  + Add Session
+                </button>
+              </>
+            )}
+            {gameResults.length > 0 && (
+              isCompleted ? (
+                <button
+                  onClick={() => {
+                    if (confirm('Reopen this lobby game? You will be able to add/edit sessions again.')) {
+                      dispatch({ type: 'REOPEN_LOBBY_GAME', payload: { gameId: selectedGameId } });
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors`}
+                >
+                  Reopen Game
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    if (confirm('Mark this lobby game as completed? This finalizes standings.')) {
+                      dispatch({ type: 'COMPLETE_LOBBY_GAME', payload: { gameId: selectedGameId } });
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium bg-win text-white hover:bg-win/90 transition-colors`}
+                >
+                  Finish Game
+                </button>
+              )
+            )}
           </div>
         )}
       </div>
 
-      <PointsExplainer filterType="individual" gameId={selectedGameId} />
+      {isCompleted && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-win/10 border border-win/20">
+          <span className="text-win font-bold text-sm">Completed</span>
+          <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>— Standings are finalized.</span>
+        </div>
+      )}
+
+      <PointsExplainer filterType="lobby" gameId={selectedGameId} />
 
       {/* Points Config Panel */}
       {showConfig && isAdmin && (

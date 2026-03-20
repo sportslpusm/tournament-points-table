@@ -29,6 +29,7 @@ const initialState = {
   lobbyEntries: [],
   lobbyResults: [],
   lobbyPointsConfig: {},
+  lobbyGameStatus: {}, // gameId → 'active' | 'completed'
   darkMode: true,
   currentView: 'dashboard',
   selectedGameId: null,
@@ -63,6 +64,7 @@ const ADMIN_ACTIONS = new Set([
   'SET_INDIVIDUAL_RESULT', 'UPDATE_INDIVIDUAL_POINTS_CONFIG',
   'ADD_LOBBY_ENTRY', 'UPDATE_LOBBY_ENTRY', 'DELETE_LOBBY_ENTRY',
   'ADD_LOBBY_RESULT', 'UPDATE_LOBBY_RESULT', 'DELETE_LOBBY_RESULT', 'UPDATE_LOBBY_POINTS_CONFIG',
+  'COMPLETE_LOBBY_GAME', 'REOPEN_LOBBY_GAME',
   'IMPORT_DATA', 'LOAD_SAMPLE', 'RESET_DATA',
 ]);
 
@@ -111,6 +113,7 @@ function tournamentReducer(state, action) {
         lobbyEntries: safeArr(incoming.lobbyEntries, LIMITS.MAX_ATHLETES) || state.lobbyEntries,
         lobbyResults: safeArr(incoming.lobbyResults, LIMITS.MAX_INDIVIDUAL_RESULTS) || state.lobbyResults,
         lobbyPointsConfig: safeObj(incoming.lobbyPointsConfig) || state.lobbyPointsConfig,
+        lobbyGameStatus: safeObj(incoming.lobbyGameStatus) || state.lobbyGameStatus,
       };
     }
 
@@ -267,6 +270,7 @@ function tournamentReducer(state, action) {
       const { [gameId]: _qt, ...restQualifiedTeams } = state.qualifiedTeams;
       const { [gameId]: _ipc, ...restIndPointsConfig } = state.individualPointsConfig;
       const { [gameId]: _lpc, ...restLobbyPointsConfig } = state.lobbyPointsConfig;
+      const { [gameId]: _lgs, ...restLobbyGameStatus } = state.lobbyGameStatus;
       return {
         ...state,
         games: state.games.filter(g => g.id !== gameId),
@@ -282,6 +286,7 @@ function tournamentReducer(state, action) {
         lobbyEntries: state.lobbyEntries.filter(e => e.gameId !== gameId),
         lobbyResults: state.lobbyResults.filter(r => r.gameId !== gameId),
         lobbyPointsConfig: restLobbyPointsConfig,
+        lobbyGameStatus: restLobbyGameStatus,
         selectedGameId: state.selectedGameId === gameId ? null : state.selectedGameId,
       };
     }
@@ -720,6 +725,20 @@ function tournamentReducer(state, action) {
       };
     }
 
+    // Lobby game status (complete / reopen)
+    case 'COMPLETE_LOBBY_GAME': {
+      const { gameId: clgId } = action.payload;
+      return {
+        ...state,
+        lobbyGameStatus: { ...state.lobbyGameStatus, [clgId]: 'completed' },
+      };
+    }
+    case 'REOPEN_LOBBY_GAME': {
+      const { gameId: rlgId } = action.payload;
+      const { [rlgId]: _, ...restLgs } = state.lobbyGameStatus;
+      return { ...state, lobbyGameStatus: restLgs };
+    }
+
     // Dark mode
     case 'TOGGLE_DARK_MODE':
       return { ...state, darkMode: !state.darkMode };
@@ -745,6 +764,7 @@ function tournamentReducer(state, action) {
         lobbyEntries: action.payload.lobbyEntries || [],
         lobbyResults: action.payload.lobbyResults || [],
         lobbyPointsConfig: action.payload.lobbyPointsConfig || {},
+        lobbyGameStatus: action.payload.lobbyGameStatus || {},
         currentView: 'dashboard',
         toasts: state.toasts,
         darkMode: state.darkMode,
@@ -763,6 +783,7 @@ function tournamentReducer(state, action) {
         lobbyEntries: action.payload.lobbyEntries || [],
         lobbyResults: action.payload.lobbyResults || [],
         lobbyPointsConfig: action.payload.lobbyPointsConfig || {},
+        lobbyGameStatus: action.payload.lobbyGameStatus || {},
         currentView: 'dashboard',
         toasts: state.toasts,
         darkMode: state.darkMode,
@@ -897,6 +918,7 @@ export function TournamentProvider({ children }) {
       lobbyEntries: state.lobbyEntries,
       lobbyResults: state.lobbyResults,
       lobbyPointsConfig: state.lobbyPointsConfig,
+      lobbyGameStatus: state.lobbyGameStatus,
     };
 
     const serialized = JSON.stringify(savePayload);
