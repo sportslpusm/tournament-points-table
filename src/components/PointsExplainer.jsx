@@ -63,7 +63,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
   const byePresentPts = 4;
 
   // Gather all unique knockout bonus configs
-  const teamGames = games.filter(g => g.type === 'team');
+  const teamGames = games.filter(g => !g.type || g.type === 'team');
   const individualGames = games.filter(g => g.type === 'individual');
   const lobbyGames = games.filter(g => g.type === 'lobby');
 

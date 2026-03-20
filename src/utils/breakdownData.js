@@ -18,8 +18,8 @@ export function getTeamFullBreakdown(teamId, state) {
   const sections = [];
   let grandTotal = 0;
 
-  // Team games (exclude lobby)
-  const teamGames = games.filter(g => g.type === 'team');
+  // Team games (games without a type default to 'team')
+  const teamGames = games.filter(g => !g.type || g.type === 'team');
   for (const game of teamGames) {
     const gamePools = pools.filter(p => p.gameId === game.id);
     const teamInGame = gamePools.some(p => p.teamIds.includes(teamId));
@@ -399,7 +399,7 @@ export function getPoolPointsBreakdown(teamId, state) {
   const sections = [];
   let total = 0;
 
-  for (const game of games.filter(g => g.type === 'team')) {
+  for (const game of games.filter(g => !g.type || g.type === 'team')) {
     const gamePools = pools.filter(p => p.gameId === game.id);
     const poolSection = getTeamGamePoolBreakdown(teamId, game, gamePools, matches, teams);
     if (poolSection.hasData) {
@@ -440,7 +440,7 @@ export function getKnockoutPointsBreakdown(teamId, state) {
   const sections = [];
   let total = 0;
 
-  for (const game of games.filter(g => g.type === 'team')) {
+  for (const game of games.filter(g => !g.type || g.type === 'team')) {
     const koSection = getTeamGameKnockoutBreakdown(teamId, game, knockoutMatches, knockoutConfig, teams);
     sections.push({ game, ...koSection });
     total += koSection.subtotal;
