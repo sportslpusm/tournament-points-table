@@ -3,7 +3,7 @@
  * All breakdowns are calculated from actual match/result data — never stored separately.
  */
 
-import { DEFAULT_INDIVIDUAL_POINTS } from './individualPoints';
+import { DEFAULT_INDIVIDUAL_POINTS, resolvePointsConfig } from './individualPoints';
 import { DEFAULT_LOBBY_POINTS } from './lobbyPoints';
 
 /**
@@ -151,7 +151,6 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
 
   const gameCategories = allCategories.filter(c => c.gameId === game.id);
   const gameResults = allResults.filter(r => r.gameId === game.id);
-  const config = allPointsConfig[game.id] || DEFAULT_INDIVIDUAL_POINTS;
 
   const categoryBreakdowns = [];
   let subtotal = 0;
@@ -159,6 +158,9 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
   for (const cat of gameCategories) {
     const result = gameResults.find(r => r.categoryId === cat.id);
     if (!result) continue;
+
+    // Use category-specific config if available
+    const config = resolvePointsConfig(allPointsConfig, game.id, cat.id);
 
     const athleteDetails = [];
     const absentSet = new Set(result.absentees || []);

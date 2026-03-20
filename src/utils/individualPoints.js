@@ -8,6 +8,11 @@
  *  - 3rd place: configurable bonus (default 1) ON TOP of participation
  *  - Absent/DNS: 0 points (no participation)
  *
+ * Per-category overrides:
+ *  - Each category can have its own points config stored in
+ *    individualPointsConfig[gameId].categoryOverrides[categoryId].
+ *  - Falls back to game-level config, then DEFAULT_INDIVIDUAL_POINTS.
+ *
  * ANTI-SPAM:
  *  - maxParticipationCap: configurable per-game limit on how many participation
  *    points a single TEAM can earn in a single event/category. Prevents point
@@ -24,6 +29,26 @@ export const DEFAULT_INDIVIDUAL_POINTS = {
   participation: 1,
   maxParticipationCap: Infinity, // ← dynamic cap; set to a number to limit
 };
+
+/**
+ * Resolve the effective points config for a specific category.
+ * Priority: category override → game-level config → DEFAULT.
+ * Category overrides inherit missing fields from game-level config.
+ */
+export function resolvePointsConfig(individualPointsConfig, gameId, categoryId) {
+  const gameConfig = individualPointsConfig[gameId] || DEFAULT_INDIVIDUAL_POINTS;
+  if (categoryId && gameConfig.categoryOverrides?.[categoryId]) {
+    const override = gameConfig.categoryOverrides[categoryId];
+    return {
+      first: override.first ?? gameConfig.first ?? DEFAULT_INDIVIDUAL_POINTS.first,
+      second: override.second ?? gameConfig.second ?? DEFAULT_INDIVIDUAL_POINTS.second,
+      third: override.third ?? gameConfig.third ?? DEFAULT_INDIVIDUAL_POINTS.third,
+      participation: override.participation ?? gameConfig.participation ?? DEFAULT_INDIVIDUAL_POINTS.participation,
+      maxParticipationCap: override.maxParticipationCap ?? gameConfig.maxParticipationCap ?? Infinity,
+    };
+  }
+  return gameConfig;
+}
 
 /**
  * Shift placements up when an athlete is deleted.
@@ -65,7 +90,8 @@ export function getAthletePoints(athleteId, individualResults, individualPointsC
         result.placements?.third === athleteId ||
         (result.participants || []).includes(athleteId)) {
 
-      const config = individualPointsConfig[result.gameId] || DEFAULT_INDIVIDUAL_POINTS;
+      // Use category-specific config if available, else game-level
+      const config = resolvePointsConfig(individualPointsConfig, result.gameId, result.categoryId);
 
       // Check if absent
       if ((result.absentees || []).includes(athleteId)) continue;
@@ -109,12 +135,14 @@ export function getIndividualPointsForTeam(teamId, athletes, individualResults, 
 
   for (const gameId in resultsByGame) {
     const gameResults = resultsByGame[gameId];
-    const config = individualPointsConfig[gameId] || DEFAULT_INDIVIDUAL_POINTS;
-    const cap = config.maxParticipationCap ?? Infinity;
+    const gameConfig = individualPointsConfig[gameId] || DEFAULT_INDIVIDUAL_POINTS;
+    const cap = gameConfig.maxParticipationCap ?? Infinity;
 
     let gameParticipationCount = 0; // track participation slots used
 
     for (const result of gameResults) {
+      // Use category-specific config if available
+      const config = resolvePointsConfig(individualPointsConfig, gameId, result.categoryId);
       const absentSet = new Set(result.absentees || []);
       const placedIds = new Set([
         result.placements?.first,
@@ -242,11 +270,11 @@ export function getCategoryPointsBreakdown(categoryId, individualResults, athlet
  * Sorted by: total points → golds → silvers → bronzes (Olympic-style).
  * Enforces maxParticipationCap across all categories in the game.
  */
-export function getIndividualGameTeamStandings(gameId, athletes, categories, individualResults, teams, pointsConfig) {
+export function getIndividualGameTeamStandings(gameId, athletes, categories, individualResults, teams, pointsConfig, individualPointsConfig) {
   const gameCategories = categories.filter(c => c.gameId === gameId);
   const gameResults = individualResults.filter(r => r.gameId === gameId);
   const gameAthletes = athletes.filter(a => a.gameId === gameId);
-  const config = pointsConfig || DEFAULT_INDIVIDUAL_POINTS;
+  const fallbackConfig = pointsConfig || DEFAULT_INDIVIDUAL_POINTS;
 
   const teamMap = new Map();
 
@@ -269,17 +297,20 @@ export function getIndividualGameTeamStandings(gameId, athletes, categories, ind
     }
   }
 
-  // Aggregate across all categories
+  // Aggregate across all categories (each may have its own points config)
   for (const result of gameResults) {
-    const breakdown = getCategoryPointsBreakdown(result.categoryId, [result], athletes, config);
+    const catConfig = individualPointsConfig
+      ? resolvePointsConfig(individualPointsConfig, gameId, result.categoryId)
+      : fallbackConfig;
+    const breakdown = getCategoryPointsBreakdown(result.categoryId, [result], athletes, catConfig);
     for (const entry of breakdown) {
       const team = teamMap.get(entry.teamId);
       if (!team) continue;
       team.golds += entry.golds;
       team.silvers += entry.silvers;
       team.bronzes += entry.bronzes;
-      team.participationPoints += entry.participations * config.participation;
-      team.placementPoints += entry.points - (entry.participations * config.participation);
+      team.participationPoints += entry.participations * safeNum(catConfig.participation);
+      team.placementPoints += entry.points - (entry.participations * safeNum(catConfig.participation));
       team.totalPoints += entry.points;
     }
   }

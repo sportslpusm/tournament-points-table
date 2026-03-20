@@ -7,6 +7,7 @@ import {
   getAthletePoints,
   getAthleteMedals,
   getCategoryPointsBreakdown,
+  resolvePointsConfig,
   DEFAULT_INDIVIDUAL_POINTS,
 } from '../utils/individualPoints';
 import Modal, { ConfirmDialog } from '../components/Modal';
@@ -49,21 +50,27 @@ export default function IndividualGameView() {
   const [deleteAthleteId, setDeleteAthleteId] = useState(null);
   // Search
   const [athleteSearch, setAthleteSearch] = useState('');
-  // Points config
+  // Points config (game-level defaults)
   const [ptFirst, setPtFirst] = useState(pointsConfig.first);
   const [ptSecond, setPtSecond] = useState(pointsConfig.second);
   const [ptThird, setPtThird] = useState(pointsConfig.third);
   const [ptParticipation, setPtParticipation] = useState(pointsConfig.participation);
   const [ptMaxCap, setPtMaxCap] = useState(pointsConfig.maxParticipationCap ?? '');
+  // Per-category points config modal
+  const [catPtsCatId, setCatPtsCatId] = useState(null);
+  const [catPtFirst, setCatPtFirst] = useState(0);
+  const [catPtSecond, setCatPtSecond] = useState(0);
+  const [catPtThird, setCatPtThird] = useState(0);
+  const [catPtParticipation, setCatPtParticipation] = useState(0);
 
   const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border ${
     darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
   }`;
 
-  // Team standings
+  // Team standings (uses per-category points config)
   const standings = useMemo(() =>
-    getIndividualGameTeamStandings(selectedGameId, athletes, categories, individualResults, teams, pointsConfig),
-    [selectedGameId, athletes, categories, individualResults, teams, pointsConfig]
+    getIndividualGameTeamStandings(selectedGameId, athletes, categories, individualResults, teams, pointsConfig, individualPointsConfig),
+    [selectedGameId, athletes, categories, individualResults, teams, pointsConfig, individualPointsConfig]
   );
 
   // ── Category CRUD ──
@@ -78,16 +85,20 @@ export default function IndividualGameView() {
     setShowAddCat(true);
   }
   function handleSaveCategory() {
+    const trimmedName = catName.trim();
+    if (!trimmedName) { showToast('Category name is required', 'error'); return; }
     const err = validateCategoryName(catName, categories, selectedGameId, editCat?.id);
     if (err) { showToast(err, 'error'); return; }
     if (editCat) {
-      dispatch({ type: 'UPDATE_CATEGORY', payload: { id: editCat.id, name: catName.trim() } });
+      dispatch({ type: 'UPDATE_CATEGORY', payload: { id: editCat.id, name: trimmedName } });
       showToast('Category updated');
     } else {
-      dispatch({ type: 'ADD_CATEGORY', payload: { name: catName.trim(), gameId: selectedGameId } });
+      dispatch({ type: 'ADD_CATEGORY', payload: { name: trimmedName, gameId: selectedGameId } });
       showToast('Category added');
     }
     setShowAddCat(false);
+    setEditCat(null);
+    setCatName('');
   }
 
   // ── Result Entry ──
@@ -197,6 +208,36 @@ export default function IndividualGameView() {
     showToast('Points configuration saved');
   }
 
+  // ── Per-Category Points Config ──
+  function openCategoryPointsConfig(catId) {
+    const catConfig = resolvePointsConfig(individualPointsConfig, selectedGameId, catId);
+    setCatPtsCatId(catId);
+    setCatPtFirst(catConfig.first);
+    setCatPtSecond(catConfig.second);
+    setCatPtThird(catConfig.third);
+    setCatPtParticipation(catConfig.participation);
+  }
+  function handleSaveCategoryPointsConfig() {
+    if (!catPtsCatId) return;
+    dispatch({
+      type: 'UPDATE_CATEGORY_POINTS_CONFIG',
+      payload: {
+        gameId: selectedGameId,
+        categoryId: catPtsCatId,
+        first: Math.max(0, Math.min(100, Math.round(Number(catPtFirst) || 0))),
+        second: Math.max(0, Math.min(100, Math.round(Number(catPtSecond) || 0))),
+        third: Math.max(0, Math.min(100, Math.round(Number(catPtThird) || 0))),
+        participation: Math.max(0, Math.min(100, Math.round(Number(catPtParticipation) || 0))),
+      },
+    });
+    showToast('Category points saved');
+    setCatPtsCatId(null);
+  }
+  function handleResetCategoryPoints(catId) {
+    dispatch({ type: 'RESET_CATEGORY_POINTS_CONFIG', payload: { gameId: selectedGameId, categoryId: catId } });
+    showToast('Category reset to game defaults');
+  }
+
   // Filtered athletes
   const filteredAthletes = useMemo(() => {
     const q = athleteSearch.toLowerCase();
@@ -304,6 +345,8 @@ export default function IndividualGameView() {
                 const result = gameResults.find(r => r.categoryId === cat.id);
                 const isExpanded = expandedCat === cat.id;
                 const catAthletes = cat.athleteIds.map(id => athletes.find(a => a.id === id)).filter(Boolean);
+                const hasCatOverride = !!(individualPointsConfig[selectedGameId]?.categoryOverrides?.[cat.id]);
+                const catResolvedConfig = resolvePointsConfig(individualPointsConfig, selectedGameId, cat.id);
 
                 return (
                   <div
@@ -316,7 +359,7 @@ export default function IndividualGameView() {
                       className={`px-4 py-3 flex items-center justify-between cursor-pointer ${darkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-gray-50'}`}
                       onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm">{cat.name}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                           cat.status === 'completed' ? 'bg-win/10 text-win' : darkMode ? 'bg-white/[0.04] text-gray-500' : 'bg-gray-100 text-gray-400'
@@ -326,6 +369,11 @@ export default function IndividualGameView() {
                         <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                           {catAthletes.length} athletes
                         </span>
+                        {hasCatOverride && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-accent/10 text-accent">
+                            Custom Points
+                          </span>
+                        )}
                       </div>
                       <span className={`text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
                     </div>
@@ -384,7 +432,7 @@ export default function IndividualGameView() {
                           </div>
                         )}
                         {isAdmin && (
-                          <div className="flex gap-2 pt-1">
+                          <div className="flex flex-wrap gap-2 pt-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); openResultEntry(cat.id); }}
                               className="px-3 py-1.5 text-xs font-medium rounded-xl bg-accent text-navy-900 shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200"
@@ -395,7 +443,17 @@ export default function IndividualGameView() {
                               onClick={(e) => { e.stopPropagation(); openEditCategory(cat); }}
                               className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                             >
-                              Edit
+                              Edit Name
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openCategoryPointsConfig(cat.id); }}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${
+                                hasCatOverride
+                                  ? 'bg-accent/10 text-accent border border-accent/30'
+                                  : darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }`}
+                            >
+                              {hasCatOverride ? '⚙ Points (Custom)' : '⚙ Points'}
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setDeleteCatId(cat.id); }}
@@ -406,10 +464,16 @@ export default function IndividualGameView() {
                           </div>
                         )}
 
+                        {/* Points config summary */}
+                        <div className={`mt-2 text-[10px] ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                          <span className="font-mono">1st: {catResolvedConfig.first} | 2nd: {catResolvedConfig.second} | 3rd: {catResolvedConfig.third} | Part: {catResolvedConfig.participation}</span>
+                          {hasCatOverride && <span className="ml-1.5 text-accent">(custom)</span>}
+                        </div>
+
                         {/* Points breakdown */}
                         {result && (
-                          <div className={`mt-3 pt-2 border-t text-xs ${darkMode ? 'border-white/[0.04] text-gray-500' : 'border-gray-100 text-gray-400'}`}>
-                            {getCategoryPointsBreakdown(cat.id, [result], athletes, pointsConfig).map(entry => {
+                          <div className={`mt-2 pt-2 border-t text-xs ${darkMode ? 'border-white/[0.04] text-gray-500' : 'border-gray-100 text-gray-400'}`}>
+                            {getCategoryPointsBreakdown(cat.id, [result], athletes, catResolvedConfig).map(entry => {
                               const team = teams.find(t => t.id === entry.teamId);
                               return (
                                 <div key={entry.teamId} className="flex justify-between py-0.5">
@@ -581,9 +645,9 @@ export default function IndividualGameView() {
       {/* ═══ TAB 4: Settings (Admin) ═══ */}
       {activeTab === 'settings' && isAdmin && (
         <div className={`rounded-2xl border p-6 max-w-md ${darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'}`}>
-          <h3 className="font-bold tracking-tight mb-4">Points Configuration</h3>
+          <h3 className="font-bold tracking-tight mb-4">Game Default Points</h3>
           <p className={`text-xs mb-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            Configure how many bonus points are awarded for each placement. Participation points are awarded to every athlete who competes.
+            Default points for all categories in this game. Each category can override these with its own custom points (via the category card's "Points" button).
           </p>
           <div className="space-y-3">
             {[
@@ -647,7 +711,7 @@ export default function IndividualGameView() {
       {/* ══════ MODALS ══════ */}
 
       {/* Add/Edit Category Modal */}
-      <Modal isOpen={showAddCat} onClose={() => setShowAddCat(false)} title={editCat ? 'Edit Category' : 'Add Category'}>
+      <Modal isOpen={showAddCat} onClose={() => { setShowAddCat(false); setEditCat(null); setCatName(''); }} title={editCat ? 'Edit Category' : 'Add Category'}>
         <div className="space-y-4">
           <div>
             <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category Name *</label>
@@ -655,13 +719,14 @@ export default function IndividualGameView() {
               type="text"
               value={catName}
               onChange={e => setCatName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSaveCategory(); } }}
               placeholder="e.g. 69 kg, 100m Sprint"
               className={inputCls}
               autoFocus
             />
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setShowAddCat(false)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
+            <button onClick={() => { setShowAddCat(false); setEditCat(null); setCatName(''); }} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
             <button onClick={handleSaveCategory} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">{editCat ? 'Update' : 'Add'}</button>
           </div>
         </div>
@@ -793,6 +858,51 @@ export default function IndividualGameView() {
           <div className="flex gap-3 pt-2">
             <button onClick={() => setShowAddAthlete(false)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
             <button onClick={handleSaveAthlete} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">{editAthlete ? 'Update' : 'Add'} Athlete</button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Category Points Config Modal */}
+      <Modal isOpen={!!catPtsCatId} onClose={() => setCatPtsCatId(null)} title={`Points: ${gameCategories.find(c => c.id === catPtsCatId)?.name || ''}`}>
+        <div className="space-y-4">
+          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            Set custom points for this category. Leave as game default or customize independently.
+          </p>
+          {[
+            { label: '🥇 1st Place Bonus', value: catPtFirst, set: setCatPtFirst },
+            { label: '🥈 2nd Place Bonus', value: catPtSecond, set: setCatPtSecond },
+            { label: '🥉 3rd Place Bonus', value: catPtThird, set: setCatPtThird },
+            { label: '👤 Participation', value: catPtParticipation, set: setCatPtParticipation },
+          ].map(({ label, value, set }) => (
+            <div key={label} className="flex items-center justify-between gap-4">
+              <label className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={value}
+                onChange={e => set(e.target.value)}
+                onBlur={e => set(Math.max(0, Math.min(100, Math.round(Number(e.target.value) || 0))))}
+                className={`w-20 px-3 py-2.5 rounded-xl text-sm border text-center ${
+                  darkMode ? 'bg-navy-800 border-white/[0.08] text-white' : 'bg-white border-gray-300 text-gray-900'
+                }`}
+              />
+            </div>
+          ))}
+          <div className={`text-[11px] px-3 py-2 rounded-xl ${darkMode ? 'bg-white/[0.03] text-gray-500' : 'bg-gray-50 text-gray-400'}`}>
+            Game defaults: 1st={pointsConfig.first} | 2nd={pointsConfig.second} | 3rd={pointsConfig.third} | Part={pointsConfig.participation}
+          </div>
+          <div className="flex gap-3">
+            {!!(individualPointsConfig[selectedGameId]?.categoryOverrides?.[catPtsCatId]) && (
+              <button
+                onClick={() => { handleResetCategoryPoints(catPtsCatId); setCatPtsCatId(null); }}
+                className={`px-4 py-2.5 rounded-xl text-sm transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}
+              >
+                Reset to Default
+              </button>
+            )}
+            <button onClick={() => setCatPtsCatId(null)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
+            <button onClick={handleSaveCategoryPointsConfig} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">Save</button>
           </div>
         </div>
       </Modal>

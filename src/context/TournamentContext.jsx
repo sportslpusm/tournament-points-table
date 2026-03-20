@@ -627,11 +627,66 @@ function tournamentReducer(state, action) {
       if (pcConfig.maxParticipationCap !== undefined) {
         safeConfig.maxParticipationCap = pcConfig.maxParticipationCap === Infinity ? Infinity : Math.max(1, Math.min(100, Math.round(Number(pcConfig.maxParticipationCap) || Infinity)));
       }
+      // Preserve existing categoryOverrides when updating game-level config
+      const existingOverrides = (state.individualPointsConfig[pcGameId] || {}).categoryOverrides;
+      const mergedGameConfig = { ...(state.individualPointsConfig[pcGameId] || {}), ...safeConfig };
+      if (existingOverrides) mergedGameConfig.categoryOverrides = existingOverrides;
       return {
         ...state,
         individualPointsConfig: {
           ...state.individualPointsConfig,
-          [pcGameId]: { ...(state.individualPointsConfig[pcGameId] || {}), ...safeConfig },
+          [pcGameId]: mergedGameConfig,
+        },
+      };
+    }
+
+    // ── Individual Game: Per-Category Points Config ──────────────────
+    case 'UPDATE_CATEGORY_POINTS_CONFIG': {
+      const { gameId: cpGameId, categoryId: cpCatId, ...cpConfig } = action.payload;
+      const cpGame = state.games.find(g => g.id === cpGameId);
+      if (!cpGame || cpGame.type !== 'individual') return state;
+      const cpCat = state.categories.find(c => c.id === cpCatId && c.gameId === cpGameId);
+      if (!cpCat) return state;
+      const clampCp = (v) => Math.max(0, Math.min(100, Math.round(Number(v) || 0)));
+      const safeCatConfig = {};
+      if (cpConfig.first != null) safeCatConfig.first = clampCp(cpConfig.first);
+      if (cpConfig.second != null) safeCatConfig.second = clampCp(cpConfig.second);
+      if (cpConfig.third != null) safeCatConfig.third = clampCp(cpConfig.third);
+      if (cpConfig.participation != null) safeCatConfig.participation = clampCp(cpConfig.participation);
+      if (cpConfig.maxParticipationCap !== undefined) {
+        safeCatConfig.maxParticipationCap = cpConfig.maxParticipationCap === Infinity ? Infinity : Math.max(1, Math.min(100, Math.round(Number(cpConfig.maxParticipationCap) || Infinity)));
+      }
+      const existingGameConfig = state.individualPointsConfig[cpGameId] || {};
+      const existingCatOverrides = existingGameConfig.categoryOverrides || {};
+      return {
+        ...state,
+        individualPointsConfig: {
+          ...state.individualPointsConfig,
+          [cpGameId]: {
+            ...existingGameConfig,
+            categoryOverrides: {
+              ...existingCatOverrides,
+              [cpCatId]: { ...(existingCatOverrides[cpCatId] || {}), ...safeCatConfig },
+            },
+          },
+        },
+      };
+    }
+
+    // ── Individual Game: Reset Category Points to Game Default ──────────────────
+    case 'RESET_CATEGORY_POINTS_CONFIG': {
+      const { gameId: rcGameId, categoryId: rcCatId } = action.payload;
+      const existingRcConfig = state.individualPointsConfig[rcGameId];
+      if (!existingRcConfig?.categoryOverrides?.[rcCatId]) return state;
+      const { [rcCatId]: _removed, ...remainingOverrides } = existingRcConfig.categoryOverrides;
+      return {
+        ...state,
+        individualPointsConfig: {
+          ...state.individualPointsConfig,
+          [rcGameId]: {
+            ...existingRcConfig,
+            categoryOverrides: remainingOverrides,
+          },
         },
       };
     }
