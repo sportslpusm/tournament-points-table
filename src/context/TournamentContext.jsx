@@ -26,6 +26,7 @@ const initialState = {
   individualResults: [],
   individualPointsConfig: {},
   // Lobby game data
+  lobbyEntries: [],
   lobbyResults: [],
   lobbyPointsConfig: {},
   darkMode: true,
@@ -60,6 +61,7 @@ const ADMIN_ACTIONS = new Set([
   'ADD_ATHLETE', 'UPDATE_ATHLETE', 'DELETE_ATHLETE',
   'ADD_CATEGORY', 'UPDATE_CATEGORY', 'DELETE_CATEGORY',
   'SET_INDIVIDUAL_RESULT', 'UPDATE_INDIVIDUAL_POINTS_CONFIG',
+  'ADD_LOBBY_ENTRY', 'UPDATE_LOBBY_ENTRY', 'DELETE_LOBBY_ENTRY',
   'ADD_LOBBY_RESULT', 'UPDATE_LOBBY_RESULT', 'DELETE_LOBBY_RESULT', 'UPDATE_LOBBY_POINTS_CONFIG',
   'IMPORT_DATA', 'LOAD_SAMPLE', 'RESET_DATA',
 ]);
@@ -106,6 +108,7 @@ function tournamentReducer(state, action) {
         categories: safeArr(incoming.categories, LIMITS.MAX_CATEGORIES) || state.categories,
         individualResults: safeArr(incoming.individualResults, LIMITS.MAX_INDIVIDUAL_RESULTS) || state.individualResults,
         individualPointsConfig: safeObj(incoming.individualPointsConfig) || state.individualPointsConfig,
+        lobbyEntries: safeArr(incoming.lobbyEntries, LIMITS.MAX_ATHLETES) || state.lobbyEntries,
         lobbyResults: safeArr(incoming.lobbyResults, LIMITS.MAX_INDIVIDUAL_RESULTS) || state.lobbyResults,
         lobbyPointsConfig: safeObj(incoming.lobbyPointsConfig) || state.lobbyPointsConfig,
       };
@@ -175,6 +178,23 @@ function tournamentReducer(state, action) {
           };
         });
       }
+      // Cascade lobby entries belonging to this team
+      const deletedEntryIds = new Set(state.lobbyEntries.filter(e => e.teamId === teamId).map(e => e.id));
+      const updatedLobbyResults = deletedEntryIds.size > 0
+        ? state.lobbyResults.map(r => {
+            const hasEntry = (r.participantEntryIds || []).some(id => deletedEntryIds.has(id));
+            const p = r.placements || {};
+            const hasPlacement = deletedEntryIds.has(p.first) || deletedEntryIds.has(p.second) || deletedEntryIds.has(p.third);
+            if (!hasEntry && !hasPlacement) return r;
+            let placements = { ...p };
+            for (const eid of deletedEntryIds) {
+              if (placements.first === eid || placements.second === eid || placements.third === eid) {
+                placements = shiftPlacementsHelper(placements, eid);
+              }
+            }
+            return { ...r, participantEntryIds: (r.participantEntryIds || []).filter(id => !deletedEntryIds.has(id)), placements };
+          })
+        : state.lobbyResults;
       return {
         ...state,
         teams: state.teams.filter(t => t.id !== teamId),
@@ -190,6 +210,8 @@ function tournamentReducer(state, action) {
           athleteIds: c.athleteIds.filter(id => !teamAthleteIds.has(id)),
         })),
         individualResults: updatedResults,
+        lobbyEntries: state.lobbyEntries.filter(e => e.teamId !== teamId),
+        lobbyResults: updatedLobbyResults,
       };
     }
 
@@ -243,6 +265,7 @@ function tournamentReducer(state, action) {
       const { [gameId]: _kc, ...restKnockoutConfig } = state.knockoutConfig;
       const { [gameId]: _qt, ...restQualifiedTeams } = state.qualifiedTeams;
       const { [gameId]: _ipc, ...restIndPointsConfig } = state.individualPointsConfig;
+      const { [gameId]: _lpc, ...restLobbyPointsConfig } = state.lobbyPointsConfig;
       return {
         ...state,
         games: state.games.filter(g => g.id !== gameId),
@@ -255,6 +278,9 @@ function tournamentReducer(state, action) {
         categories: state.categories.filter(c => c.gameId !== gameId),
         individualResults: state.individualResults.filter(r => r.gameId !== gameId),
         individualPointsConfig: restIndPointsConfig,
+        lobbyEntries: state.lobbyEntries.filter(e => e.gameId !== gameId),
+        lobbyResults: state.lobbyResults.filter(r => r.gameId !== gameId),
+        lobbyPointsConfig: restLobbyPointsConfig,
         selectedGameId: state.selectedGameId === gameId ? null : state.selectedGameId,
       };
     }
@@ -604,6 +630,46 @@ function tournamentReducer(state, action) {
       };
     }
 
+    // ── Lobby Game: Entries ──────────────────
+    case 'ADD_LOBBY_ENTRY': {
+      const le = action.payload;
+      const leGame = state.games.find(g => g.id === le.gameId);
+      if (!leGame || leGame.type !== 'lobby') return state;
+      if (!state.teams.some(t => t.id === le.teamId)) return state;
+      const newEntry = {
+        id: genId('le'),
+        gameId: le.gameId,
+        teamId: le.teamId,
+        entryName: le.entryName ? sanitizeString(le.entryName, LIMITS.MAX_NAME_LENGTH) : '',
+      };
+      return { ...state, lobbyEntries: [...state.lobbyEntries, newEntry] };
+    }
+    case 'UPDATE_LOBBY_ENTRY': {
+      const ule = action.payload;
+      const existing = state.lobbyEntries.find(e => e.id === ule.id);
+      if (!existing) return state;
+      const update = { id: ule.id };
+      if (ule.entryName != null) update.entryName = sanitizeString(ule.entryName, LIMITS.MAX_NAME_LENGTH);
+      if (ule.teamId != null && state.teams.some(t => t.id === ule.teamId)) update.teamId = ule.teamId;
+      return { ...state, lobbyEntries: state.lobbyEntries.map(e => e.id === update.id ? { ...e, ...update } : e) };
+    }
+    case 'DELETE_LOBBY_ENTRY': {
+      const entryId = action.payload;
+      // Cascade: remove from session participants and shift placements
+      const updatedLR = state.lobbyResults.map(r => {
+        const inParticipants = (r.participantEntryIds || []).includes(entryId);
+        const p = r.placements || {};
+        const inPlacements = p.first === entryId || p.second === entryId || p.third === entryId;
+        if (!inParticipants && !inPlacements) return r;
+        return {
+          ...r,
+          participantEntryIds: (r.participantEntryIds || []).filter(id => id !== entryId),
+          placements: inPlacements ? shiftPlacementsHelper(p, entryId) : p,
+        };
+      });
+      return { ...state, lobbyEntries: state.lobbyEntries.filter(e => e.id !== entryId), lobbyResults: updatedLR };
+    }
+
     // ── Lobby Game: Results ──────────────────
     case 'ADD_LOBBY_RESULT': {
       const lr = action.payload;
@@ -614,7 +680,7 @@ function tournamentReducer(state, action) {
         gameId: lr.gameId,
         sessionName: sanitizeString(lr.sessionName || 'Session', LIMITS.MAX_NAME_LENGTH),
         placements: lr.placements || { first: null, second: null, third: null },
-        participantTeamIds: Array.isArray(lr.participantTeamIds) ? lr.participantTeamIds : [],
+        participantEntryIds: Array.isArray(lr.participantEntryIds) ? lr.participantEntryIds : [],
       };
       return { ...state, lobbyResults: [...state.lobbyResults, newLr] };
     }
@@ -672,6 +738,9 @@ function tournamentReducer(state, action) {
         categories: action.payload.categories || [],
         individualResults: action.payload.individualResults || [],
         individualPointsConfig: action.payload.individualPointsConfig || {},
+        lobbyEntries: action.payload.lobbyEntries || [],
+        lobbyResults: action.payload.lobbyResults || [],
+        lobbyPointsConfig: action.payload.lobbyPointsConfig || {},
         currentView: 'dashboard',
         toasts: state.toasts,
         darkMode: state.darkMode,
@@ -687,6 +756,9 @@ function tournamentReducer(state, action) {
         categories: action.payload.categories || [],
         individualResults: action.payload.individualResults || [],
         individualPointsConfig: action.payload.individualPointsConfig || {},
+        lobbyEntries: action.payload.lobbyEntries || [],
+        lobbyResults: action.payload.lobbyResults || [],
+        lobbyPointsConfig: action.payload.lobbyPointsConfig || {},
         currentView: 'dashboard',
         toasts: state.toasts,
         darkMode: state.darkMode,
@@ -818,6 +890,9 @@ export function TournamentProvider({ children }) {
       categories: state.categories,
       individualResults: state.individualResults,
       individualPointsConfig: state.individualPointsConfig,
+      lobbyEntries: state.lobbyEntries,
+      lobbyResults: state.lobbyResults,
+      lobbyPointsConfig: state.lobbyPointsConfig,
     };
 
     const serialized = JSON.stringify(savePayload);

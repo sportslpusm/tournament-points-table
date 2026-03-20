@@ -12,7 +12,8 @@ import PointsBreakdownPopover from '../components/PointsBreakdownPopover';
 export default function Dashboard() {
   const state = useTournament();
   const { dispatch } = useDispatch();
-  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyResults, lobbyPointsConfig } = state;
+  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyEntries: rawLobbyEntries, lobbyResults, lobbyPointsConfig } = state;
+  const lobbyEntries = Array.isArray(rawLobbyEntries) ? rawLobbyEntries : [];
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState('table');
   const [compareTeams, setCompareTeams] = useState([null, null]);
@@ -136,7 +137,7 @@ export default function Dashboard() {
       totalPoints += indPts;
 
       // Lobby game points
-      const lobbyPts = getLobbyPointsForTeam(team.id, lobbyResults, lobbyPointsConfig);
+      const lobbyPts = getLobbyPointsForTeam(team.id, lobbyResults, lobbyEntries, lobbyPointsConfig);
       totalPoints += lobbyPts.total;
 
       // Combined medal counts (individual + lobby)
@@ -170,7 +171,7 @@ export default function Dashboard() {
     });
     // New tiebreaker: points → wins+golds → silvers → bronzes (no H2H, no alphabetical)
     return sortTeamsByTiebreaker(teamStats);
-  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyResults, lobbyPointsConfig]);
+  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig]);
 
   const filtered = standings.filter(s =>
     s.teamName.toLowerCase().includes(search.toLowerCase())

@@ -9,19 +9,31 @@ export default function LobbyGameView() {
   const state = useTournament();
   const { dispatch } = useDispatch();
   const { isAdmin } = useAuth();
-  const { games, teams, selectedGameId, darkMode, lobbyResults, lobbyPointsConfig } = state;
+  const { games, teams, selectedGameId, darkMode, lobbyEntries, lobbyResults, lobbyPointsConfig } = state;
   const game = games.find(g => g.id === selectedGameId);
 
   const config = lobbyPointsConfig[selectedGameId] || DEFAULT_LOBBY_POINTS;
+
+  const gameEntries = useMemo(() =>
+    lobbyEntries.filter(e => e.gameId === selectedGameId),
+    [lobbyEntries, selectedGameId]
+  );
+
   const gameResults = useMemo(() =>
     lobbyResults.filter(r => r.gameId === selectedGameId),
     [lobbyResults, selectedGameId]
   );
 
   const standings = useMemo(() =>
-    getLobbyGameStandings(selectedGameId, lobbyResults, teams, lobbyPointsConfig),
-    [selectedGameId, lobbyResults, teams, lobbyPointsConfig]
+    getLobbyGameStandings(selectedGameId, lobbyResults, lobbyEntries, teams, lobbyPointsConfig),
+    [selectedGameId, lobbyResults, lobbyEntries, teams, lobbyPointsConfig]
   );
+
+  // ── Entry form state ──
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [editEntryObj, setEditEntryObj] = useState(null);
+  const [entryTeamId, setEntryTeamId] = useState('');
+  const [entryName, setEntryName] = useState('');
 
   // ── Session form state ──
   const [showForm, setShowForm] = useState(false);
@@ -40,6 +52,53 @@ export default function LobbyGameView() {
   const [cfgParticipation, setCfgParticipation] = useState(config.participation);
   const [cfgCap, setCfgCap] = useState(config.maxParticipationCap === Infinity ? '' : config.maxParticipationCap);
 
+  // ── Entry helpers ──
+  function getEntryDisplayName(entryId) {
+    const entry = gameEntries.find(e => e.id === entryId);
+    if (!entry) return '?';
+    const team = teams.find(t => t.id === entry.teamId);
+    const schoolName = team?.shortCode || team?.name || '?';
+    return entry.entryName ? `${schoolName} – ${entry.entryName}` : schoolName;
+  }
+
+  function getEntryTeam(entryId) {
+    const entry = gameEntries.find(e => e.id === entryId);
+    if (!entry) return null;
+    return teams.find(t => t.id === entry.teamId) || null;
+  }
+
+  // ── Entry CRUD ──
+  function openNewEntry() {
+    setEditEntryObj(null);
+    setEntryTeamId(teams[0]?.id || '');
+    setEntryName('');
+    setShowEntryForm(true);
+  }
+
+  function openEditEntry(entry) {
+    setEditEntryObj(entry);
+    setEntryTeamId(entry.teamId);
+    setEntryName(entry.entryName || '');
+    setShowEntryForm(true);
+  }
+
+  function handleSaveEntry() {
+    if (!entryTeamId) return;
+    if (editEntryObj) {
+      dispatch({ type: 'UPDATE_LOBBY_ENTRY', payload: { id: editEntryObj.id, teamId: entryTeamId, entryName: entryName.trim() } });
+    } else {
+      dispatch({ type: 'ADD_LOBBY_ENTRY', payload: { gameId: selectedGameId, teamId: entryTeamId, entryName: entryName.trim() } });
+    }
+    setShowEntryForm(false);
+  }
+
+  function handleDeleteEntry(id) {
+    if (confirm('Delete this entry? It will be removed from all sessions.')) {
+      dispatch({ type: 'DELETE_LOBBY_ENTRY', payload: id });
+    }
+  }
+
+  // ── Session CRUD ──
   function openNewSession() {
     setEditSession(null);
     setSessionName(`Session ${gameResults.length + 1}`);
@@ -57,7 +116,7 @@ export default function LobbyGameView() {
     setFirst(p.first || '');
     setSecond(p.second || '');
     setThird(p.third || '');
-    setParticipantIds(session.participantTeamIds || []);
+    setParticipantIds(session.participantEntryIds || []);
     setShowForm(true);
   }
 
@@ -67,7 +126,7 @@ export default function LobbyGameView() {
       gameId: selectedGameId,
       sessionName: sessionName.trim(),
       placements: { first: first || null, second: second || null, third: third || null },
-      participantTeamIds: participantIds,
+      participantEntryIds: participantIds,
     };
     if (editSession) {
       dispatch({ type: 'UPDATE_LOBBY_RESULT', payload: { id: editSession.id, ...payload } });
@@ -98,11 +157,21 @@ export default function LobbyGameView() {
     setShowConfig(false);
   }
 
-  function toggleParticipant(teamId) {
+  function toggleParticipant(entryId) {
     setParticipantIds(prev =>
-      prev.includes(teamId) ? prev.filter(id => id !== teamId) : [...prev, teamId]
+      prev.includes(entryId) ? prev.filter(id => id !== entryId) : [...prev, entryId]
     );
   }
+
+  // Group entries by school for display
+  const entriesBySchool = useMemo(() => {
+    const map = new Map();
+    for (const entry of gameEntries) {
+      if (!map.has(entry.teamId)) map.set(entry.teamId, []);
+      map.get(entry.teamId).push(entry);
+    }
+    return map;
+  }, [gameEntries]);
 
   const cardCls = `rounded-xl border ${darkMode ? 'bg-navy-800/60 backdrop-blur border-white/5' : 'bg-white/80 backdrop-blur border-gray-200'}`;
   const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'}`;
@@ -129,9 +198,12 @@ export default function LobbyGameView() {
           </h2>
         </div>
         {isAdmin && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={() => setShowConfig(!showConfig)} className={btnSecondary}>
               ⚙️ Points Config
+            </button>
+            <button onClick={openNewEntry} className={btnSecondary}>
+              + Add Entry
             </button>
             <button onClick={openNewSession} className={btnPrimary}>
               + Add Session
@@ -166,13 +238,102 @@ export default function LobbyGameView() {
                 placeholder="∞" className={inputCls}
               />
               <p className={`text-[10px] mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                Caps +1 attendance pts per team. Medal pts never capped.
+                Caps +1 attendance pts per school. Medal pts never capped.
               </p>
             </div>
           </div>
           <div className="flex gap-2">
             <button onClick={handleSaveConfig} className={btnPrimary}>Save Config</button>
             <button onClick={() => setShowConfig(false)} className={btnSecondary}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Entry Form */}
+      {showEntryForm && isAdmin && (
+        <div className={`${cardCls} p-4 space-y-4`}>
+          <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            {editEntryObj ? 'Edit Entry' : 'Register New Entry'}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>School</label>
+              <select value={entryTeamId} onChange={e => setEntryTeamId(e.target.value)} className={inputCls}>
+                <option value="">-- Select School --</option>
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>{t.shortCode || t.name} ({t.name})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Entry/Team Name <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>(optional)</span></label>
+              <input
+                value={entryName}
+                onChange={e => setEntryName(e.target.value)}
+                className={inputCls}
+                placeholder="e.g. Team Alpha, Squad B (leave blank for school name)"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSaveEntry} className={btnPrimary}>{editEntryObj ? 'Update' : 'Register'}</button>
+            <button onClick={() => setShowEntryForm(false)} className={btnSecondary}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Registered Entries List */}
+      {gameEntries.length > 0 && (
+        <div className={cardCls}>
+          <div className="p-4">
+            <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Registered Entries ({gameEntries.length})
+            </h3>
+            <div className="space-y-2">
+              {[...entriesBySchool.entries()].map(([schoolId, entries]) => {
+                const team = teams.find(t => t.id === schoolId);
+                if (!team) return null;
+                return (
+                  <div key={schoolId} className={`rounded-lg p-3 border ${darkMode ? 'bg-white/[0.02] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <TeamLogo team={team} size={20} />
+                      <span className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {team.name}
+                      </span>
+                      <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                        ({entries.length} {entries.length === 1 ? 'entry' : 'entries'})
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 ml-7">
+                      {entries.map(entry => (
+                        <div
+                          key={entry.id}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border ${
+                            darkMode ? 'bg-white/5 border-white/10 text-gray-300' : 'bg-white border-gray-200 text-gray-700'
+                          }`}
+                        >
+                          <span>{entry.entryName || team.shortCode || team.name}</span>
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => openEditEntry(entry)}
+                                className={`ml-1 ${darkMode ? 'text-accent hover:text-accent/80' : 'text-blue-600 hover:text-blue-700'}`}
+                                title="Edit"
+                              >✎</button>
+                              <button
+                                onClick={() => handleDeleteEntry(entry.id)}
+                                className={`${darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-600'}`}
+                                title="Delete"
+                              >×</button>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -188,52 +349,66 @@ export default function LobbyGameView() {
             <input value={sessionName} onChange={e => setSessionName(e.target.value)} className={inputCls} placeholder="e.g. Match 1, Round 2" />
           </div>
 
-          {/* Participant selection — supports multiple entries per school */}
-          <div>
-            <label className={labelCls}>Participating Teams (click to toggle)</label>
-            <p className={`text-[10px] mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              A school can enter multiple teams. Select all that competed in this session.
+          {gameEntries.length === 0 ? (
+            <p className={`text-sm ${darkMode ? 'text-yellow-400' : 'text-amber-600'}`}>
+              No entries registered yet. Add entries first using "+ Add Entry" above.
             </p>
-            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-              {teams.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => toggleParticipant(t.id)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                    participantIds.includes(t.id)
-                      ? 'bg-accent/20 border-accent text-accent'
-                      : darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
-                  }`}
-                >
-                  <TeamLogo team={t} size={16} />
-                  {t.shortCode || t.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Placements — podium stacking: same school can win multiple spots */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { label: '🥇 1st Place', value: first, set: setFirst },
-              { label: '🥈 2nd Place', value: second, set: setSecond },
-              { label: '🥉 3rd Place', value: third, set: setThird },
-            ].map((p, i) => (
-              <div key={i}>
-                <label className={labelCls}>{p.label}</label>
-                <select value={p.value} onChange={e => p.set(e.target.value)} className={inputCls}>
-                  <option value="">-- None --</option>
-                  {participantIds.map(tid => {
-                    const t = teams.find(x => x.id === tid);
-                    return t ? <option key={tid} value={tid}>{t.shortCode || t.name}</option> : null;
+          ) : (
+            <>
+              {/* Participant selection — select entries */}
+              <div>
+                <label className={labelCls}>Participating Entries (click to toggle)</label>
+                <p className={`text-[10px] mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  Select all entries that competed in this session.
+                </p>
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                  {gameEntries.map(entry => {
+                    const team = teams.find(t => t.id === entry.teamId);
+                    if (!team) return null;
+                    const displayName = entry.entryName
+                      ? `${team.shortCode || team.name} – ${entry.entryName}`
+                      : (team.shortCode || team.name);
+                    return (
+                      <button
+                        key={entry.id}
+                        onClick={() => toggleParticipant(entry.id)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          participantIds.includes(entry.id)
+                            ? 'bg-accent/20 border-accent text-accent'
+                            : darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        <TeamLogo team={team} size={16} />
+                        {displayName}
+                      </button>
+                    );
                   })}
-                </select>
+                </div>
               </div>
-            ))}
-          </div>
-          <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-            Same school CAN win multiple podium spots (podium stacking is allowed).
-          </p>
+
+              {/* Placements — podium stacking allowed */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { label: '🥇 1st Place', value: first, set: setFirst },
+                  { label: '🥈 2nd Place', value: second, set: setSecond },
+                  { label: '🥉 3rd Place', value: third, set: setThird },
+                ].map((p, i) => (
+                  <div key={i}>
+                    <label className={labelCls}>{p.label}</label>
+                    <select value={p.value} onChange={e => p.set(e.target.value)} className={inputCls}>
+                      <option value="">-- None --</option>
+                      {participantIds.map(eid => (
+                        <option key={eid} value={eid}>{getEntryDisplayName(eid)}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <p className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                Same school CAN win multiple podium spots (podium stacking is allowed).
+              </p>
+            </>
+          )}
 
           <div className="flex gap-2">
             <button onClick={handleSaveSession} className={btnPrimary}>{editSession ? 'Update' : 'Save'}</button>
@@ -252,7 +427,7 @@ export default function LobbyGameView() {
                 <thead>
                   <tr className={darkMode ? 'bg-white/[0.02]' : 'bg-gray-50/50'}>
                     <th className={`px-3 py-2 text-left text-[11px] font-bold uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
-                    <th className={`px-3 py-2 text-left text-[11px] font-bold uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team</th>
+                    <th className={`px-3 py-2 text-left text-[11px] font-bold uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>School</th>
                     <th className={`px-3 py-2 text-center text-[11px] font-bold uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>🥇</th>
                     <th className={`px-3 py-2 text-center text-[11px] font-bold uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>🥈</th>
                     <th className={`px-3 py-2 text-center text-[11px] font-bold uppercase ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>🥉</th>
@@ -292,15 +467,15 @@ export default function LobbyGameView() {
           </h3>
           {gameResults.length === 0 ? (
             <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              No sessions recorded yet. {isAdmin ? 'Click "+ Add Session" to get started.' : ''}
+              No sessions recorded yet. {isAdmin ? 'Register entries first, then click "+ Add Session" to get started.' : ''}
             </p>
           ) : (
             <div className="space-y-3">
               {gameResults.map(session => {
                 const p = session.placements || {};
-                const firstTeam = teams.find(t => t.id === p.first);
-                const secondTeam = teams.find(t => t.id === p.second);
-                const thirdTeam = teams.find(t => t.id === p.third);
+                const firstTeam = getEntryTeam(p.first);
+                const secondTeam = getEntryTeam(p.second);
+                const thirdTeam = getEntryTeam(p.third);
                 return (
                   <div key={session.id} className={`rounded-lg p-3 border ${darkMode ? 'bg-white/[0.02] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
                     <div className="flex items-center justify-between mb-2">
@@ -313,23 +488,23 @@ export default function LobbyGameView() {
                       )}
                     </div>
                     <div className="flex flex-wrap gap-3 text-xs">
-                      {firstTeam && (
+                      {p.first && (
                         <span className="inline-flex items-center gap-1 text-gold font-semibold">
-                          🥇 <TeamLogo team={firstTeam} size={14} /> {firstTeam.shortCode}
+                          🥇 {firstTeam && <TeamLogo team={firstTeam} size={14} />} {getEntryDisplayName(p.first)}
                         </span>
                       )}
-                      {secondTeam && (
+                      {p.second && (
                         <span className="inline-flex items-center gap-1 text-silver font-semibold">
-                          🥈 <TeamLogo team={secondTeam} size={14} /> {secondTeam.shortCode}
+                          🥈 {secondTeam && <TeamLogo team={secondTeam} size={14} />} {getEntryDisplayName(p.second)}
                         </span>
                       )}
-                      {thirdTeam && (
+                      {p.third && (
                         <span className="inline-flex items-center gap-1 text-bronze font-semibold">
-                          🥉 <TeamLogo team={thirdTeam} size={14} /> {thirdTeam.shortCode}
+                          🥉 {thirdTeam && <TeamLogo team={thirdTeam} size={14} />} {getEntryDisplayName(p.third)}
                         </span>
                       )}
                       <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>
-                        {(session.participantTeamIds || []).length} teams
+                        {(session.participantEntryIds || []).length} entries
                       </span>
                     </div>
                   </div>

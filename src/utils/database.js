@@ -297,6 +297,7 @@ async function doSave(state) {
     categories: state.categories || [],
     individualResults: state.individualResults || [],
     individualPointsConfig: state.individualPointsConfig || {},
+    lobbyEntries: state.lobbyEntries || [],
     lobbyResults: state.lobbyResults || [],
     lobbyPointsConfig: state.lobbyPointsConfig || {},
     _updatedAt: serverTimestamp(),

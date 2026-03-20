@@ -92,22 +92,28 @@ describe('Test D: Shared Ranking / Absolute Deadlock', () => {
 // TEST E: Lobby Game Scoring + Podium Stacking
 // ═══════════════════════════════════════════════════════════════
 
-describe('Test E: Lobby Game Scoring', () => {
+describe('Test E: Lobby Game Scoring (Entry-based)', () => {
   const gameId = 'lobbyGame1';
 
+  // Helper: create entries (one per school, no custom name)
+  function makeEntries(schoolIds) {
+    return schoolIds.map((sid, i) => ({ id: `e${i}`, gameId, teamId: sid, entryName: '' }));
+  }
+
   test('Basic lobby scoring: 1st=6, 2nd=4, 3rd=2, participant=1', () => {
+    const entries = makeEntries(['teamA', 'teamB', 'teamC', 'teamD']);
     const results = [{
       id: 'lr1', gameId,
       sessionName: 'Session 1',
-      placements: { first: 'teamA', second: 'teamB', third: 'teamC' },
-      participantTeamIds: ['teamA', 'teamB', 'teamC', 'teamD'],
+      placements: { first: 'e0', second: 'e1', third: 'e2' },
+      participantEntryIds: ['e0', 'e1', 'e2', 'e3'],
     }];
     const config = { [gameId]: DEFAULT_LOBBY_POINTS };
 
-    const ptsA = getLobbyPointsForTeam('teamA', results, config);
-    const ptsB = getLobbyPointsForTeam('teamB', results, config);
-    const ptsC = getLobbyPointsForTeam('teamC', results, config);
-    const ptsD = getLobbyPointsForTeam('teamD', results, config);
+    const ptsA = getLobbyPointsForTeam('teamA', results, entries, config);
+    const ptsB = getLobbyPointsForTeam('teamB', results, entries, config);
+    const ptsC = getLobbyPointsForTeam('teamC', results, entries, config);
+    const ptsD = getLobbyPointsForTeam('teamD', results, entries, config);
 
     expect(ptsA.total).toBe(6); // 5 placement + 1 participation
     expect(ptsA.golds).toBe(1);
@@ -118,17 +124,23 @@ describe('Test E: Lobby Game Scoring', () => {
     expect(ptsD.total).toBe(1); // 0 placement + 1 participation
   });
 
-  test('Podium stacking: same school wins 1st AND 2nd', () => {
-    // School Alpha has two entries: both placed on podium
+  test('Podium stacking: same school has 2 entries, wins 1st AND 2nd', () => {
+    // School Alpha has two entries: e0 and e1, both placed on podium
+    const entries = [
+      { id: 'eA1', gameId, teamId: 'schoolAlpha', entryName: 'Team 1' },
+      { id: 'eA2', gameId, teamId: 'schoolAlpha', entryName: 'Team 2' },
+      { id: 'eB1', gameId, teamId: 'schoolBeta', entryName: '' },
+      { id: 'eG1', gameId, teamId: 'schoolGamma', entryName: '' },
+    ];
     const results = [{
       id: 'lr2', gameId,
       sessionName: 'Session 2',
-      placements: { first: 'schoolAlpha', second: 'schoolAlpha', third: 'schoolBeta' },
-      participantTeamIds: ['schoolAlpha', 'schoolBeta', 'schoolGamma'],
+      placements: { first: 'eA1', second: 'eA2', third: 'eB1' },
+      participantEntryIds: ['eA1', 'eA2', 'eB1', 'eG1'],
     }];
     const config = { [gameId]: DEFAULT_LOBBY_POINTS };
 
-    const ptsAlpha = getLobbyPointsForTeam('schoolAlpha', results, config);
+    const ptsAlpha = getLobbyPointsForTeam('schoolAlpha', results, entries, config);
     // Alpha gets: 5 (1st) + 3 (2nd) + 1 (participation) = 9
     expect(ptsAlpha.total).toBe(9);
     expect(ptsAlpha.golds).toBe(1);
@@ -136,15 +148,21 @@ describe('Test E: Lobby Game Scoring', () => {
   });
 
   test('Podium stacking: same school sweeps all three spots', () => {
+    const entries = [
+      { id: 'eX1', gameId, teamId: 'teamX', entryName: 'A' },
+      { id: 'eX2', gameId, teamId: 'teamX', entryName: 'B' },
+      { id: 'eX3', gameId, teamId: 'teamX', entryName: 'C' },
+      { id: 'eY1', gameId, teamId: 'teamY', entryName: '' },
+    ];
     const results = [{
       id: 'lr3', gameId,
       sessionName: 'Session 3',
-      placements: { first: 'teamX', second: 'teamX', third: 'teamX' },
-      participantTeamIds: ['teamX', 'teamY'],
+      placements: { first: 'eX1', second: 'eX2', third: 'eX3' },
+      participantEntryIds: ['eX1', 'eX2', 'eX3', 'eY1'],
     }];
     const config = { [gameId]: DEFAULT_LOBBY_POINTS };
 
-    const ptsX = getLobbyPointsForTeam('teamX', results, config);
+    const ptsX = getLobbyPointsForTeam('teamX', results, entries, config);
     // X gets: 5 (1st) + 3 (2nd) + 1 (3rd) + 1 (participation) = 10
     expect(ptsX.total).toBe(10);
     expect(ptsX.golds).toBe(1);
@@ -153,45 +171,35 @@ describe('Test E: Lobby Game Scoring', () => {
   });
 
   test('Participation cap only caps +1 attendance, not medals', () => {
+    const entries = [{ id: 'e1', gameId, teamId: 'team1', entryName: '' }];
     const results = [
-      {
-        id: 'lr4', gameId,
-        sessionName: 'S1',
-        placements: { first: 'team1', second: null, third: null },
-        participantTeamIds: ['team1'],
-      },
-      {
-        id: 'lr5', gameId,
-        sessionName: 'S2',
-        placements: { first: 'team1', second: null, third: null },
-        participantTeamIds: ['team1'],
-      },
-      {
-        id: 'lr6', gameId,
-        sessionName: 'S3',
-        placements: { first: 'team1', second: null, third: null },
-        participantTeamIds: ['team1'],
-      },
+      { id: 'lr4', gameId, sessionName: 'S1', placements: { first: 'e1', second: null, third: null }, participantEntryIds: ['e1'] },
+      { id: 'lr5', gameId, sessionName: 'S2', placements: { first: 'e1', second: null, third: null }, participantEntryIds: ['e1'] },
+      { id: 'lr6', gameId, sessionName: 'S3', placements: { first: 'e1', second: null, third: null }, participantEntryIds: ['e1'] },
     ];
     // Cap participation to 1 — but team1 wins gold in all 3 sessions
     const config = { [gameId]: { ...DEFAULT_LOBBY_POINTS, maxParticipationCap: 1 } };
 
-    const pts = getLobbyPointsForTeam('team1', results, config);
+    const pts = getLobbyPointsForTeam('team1', results, entries, config);
     // 3 × 5 (gold bonus, NEVER capped) + 1 (capped participation) = 16
     expect(pts.total).toBe(16);
     expect(pts.golds).toBe(3);
   });
 
-  test('Non-participant team gets 0 points', () => {
+  test('Non-participant school gets 0 points', () => {
+    const entries = [
+      { id: 'eA', gameId, teamId: 'teamA', entryName: '' },
+      { id: 'eB', gameId, teamId: 'teamB', entryName: '' },
+    ];
     const results = [{
       id: 'lr7', gameId,
       sessionName: 'Session',
-      placements: { first: 'teamA', second: 'teamB', third: null },
-      participantTeamIds: ['teamA', 'teamB'],
+      placements: { first: 'eA', second: 'eB', third: null },
+      participantEntryIds: ['eA', 'eB'],
     }];
     const config = { [gameId]: DEFAULT_LOBBY_POINTS };
 
-    const pts = getLobbyPointsForTeam('teamZ', results, config);
+    const pts = getLobbyPointsForTeam('teamZ', results, entries, config);
     expect(pts.total).toBe(0);
   });
 
@@ -201,15 +209,20 @@ describe('Test E: Lobby Game Scoring', () => {
       { id: 'teamB', name: 'Team B', shortCode: 'B' },
       { id: 'teamC', name: 'Team C', shortCode: 'C' },
     ];
+    const entries = [
+      { id: 'eA', gameId, teamId: 'teamA', entryName: '' },
+      { id: 'eB', gameId, teamId: 'teamB', entryName: '' },
+      { id: 'eC', gameId, teamId: 'teamC', entryName: '' },
+    ];
     const results = [{
       id: 'lr8', gameId,
       sessionName: 'Session',
-      placements: { first: 'teamC', second: 'teamA', third: 'teamB' },
-      participantTeamIds: ['teamA', 'teamB', 'teamC'],
+      placements: { first: 'eC', second: 'eA', third: 'eB' },
+      participantEntryIds: ['eA', 'eB', 'eC'],
     }];
     const config = { [gameId]: DEFAULT_LOBBY_POINTS };
 
-    const standings = getLobbyGameStandings(gameId, results, teams, config);
+    const standings = getLobbyGameStandings(gameId, results, entries, teams, config);
     expect(standings[0].teamId).toBe('teamC'); // Gold = 6 pts
     expect(standings[1].teamId).toBe('teamA'); // Silver = 4 pts
     expect(standings[2].teamId).toBe('teamB'); // Bronze = 2 pts
