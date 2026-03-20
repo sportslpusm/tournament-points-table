@@ -43,14 +43,6 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
   const state = useTournament();
   const { darkMode } = state;
   const [open, setOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 640);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -80,7 +72,7 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
   // Render the modal via Portal so it's always on top of everything
   const modal = open && breakdownContent ? createPortal(
     <div
-      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
       style={{ pointerEvents: 'auto' }}
     >
       {/* Backdrop */}
@@ -91,11 +83,7 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
 
       {/* Panel */}
       <div
-        className={`relative w-full ${
-          isMobile
-            ? 'max-h-[85vh] rounded-t-2xl animate-slideUp'
-            : 'max-w-md max-h-[80vh] rounded-2xl mx-4 animate-scaleIn'
-        } overflow-hidden shadow-2xl border flex flex-col ${
+        className={`relative w-full max-w-md max-h-[85vh] rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
           darkMode
             ? 'bg-navy-850 border-white/10 text-white'
             : 'bg-white border-gray-200 text-gray-900'
@@ -103,11 +91,9 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag Handle — mobile only */}
-        {isMobile && (
-          <div className="flex justify-center pt-2 pb-1">
-            <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
-          </div>
-        )}
+        <div className="flex justify-center pt-2 pb-1 sm:hidden">
+          <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
+        </div>
 
         {/* Header */}
         <div className={`flex items-center justify-between px-4 py-3 border-b shrink-0 ${
