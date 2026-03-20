@@ -199,27 +199,44 @@ export default function LobbyGameView() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <div className={`flex items-center gap-2 text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+        <button
+          onClick={() => dispatch({ type: 'SET_VIEW', payload: { view: 'dashboard' } })}
+          className={`hover:underline ${darkMode ? 'text-accent' : 'text-blue-600'}`}
+        >
+          Tournament
+        </button>
+        <span className={darkMode ? 'text-gray-600' : 'text-gray-300'}>/</span>
+        <span className="font-medium">{game?.name || 'Games'}</span>
+      </div>
+
+      {/* Game Tabs - same as GameView */}
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+        {games.map(g => (
+          <button
+            key={g.id}
+            onClick={() => dispatch({ type: 'SELECT_GAME', payload: g.id })}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+              selectedGameId === g.id
+                ? 'bg-accent text-navy-900 shadow-lg shadow-accent/20'
+                : darkMode
+                ? 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/5'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+            }`}
+          >
+            <span className="text-lg">{g.emoji}</span>
+            {g.name}
+          </button>
+        ))}
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <button
-            onClick={() => {
-              const firstNonLobby = games.find(g => g.type !== 'lobby');
-              if (firstNonLobby) {
-                dispatch({ type: 'SELECT_GAME', payload: firstNonLobby.id });
-              } else {
-                dispatch({ type: 'SET_VIEW', payload: { view: 'dashboard' } });
-              }
-            }}
-            className={`text-xs mb-1 ${darkMode ? 'text-accent hover:text-accent/80' : 'text-blue-600 hover:text-blue-700'}`}
-          >
-            ← Back to Games
-          </button>
-          <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            {game.emoji} {game.name}
-            <span className={`text-sm font-normal ml-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Lobby Game</span>
-          </h2>
-        </div>
+        <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          {game.emoji} {game.name}
+          <span className={`text-sm font-normal ml-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Lobby Game</span>
+        </h2>
         {isAdmin && (
           <div className="flex gap-2 flex-wrap">
             <button onClick={() => setShowConfig(!showConfig)} className={btnSecondary}>
