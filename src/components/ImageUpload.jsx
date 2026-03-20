@@ -49,12 +49,12 @@ export default function ImageUpload({ value, onChange, label = 'Upload Image', s
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2.5">
       <div
-        className={`rounded-xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-all overflow-hidden ${
+        className={`rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-all duration-200 overflow-hidden group ${
           darkMode
-            ? 'border-white/10 bg-white/5 hover:border-accent/50 hover:bg-white/10'
-            : 'border-gray-300 bg-gray-50 hover:border-accent hover:bg-gray-100'
+            ? 'border-white/[0.08] bg-white/[0.03] hover:border-accent/50 hover:bg-white/[0.06]'
+            : 'border-gray-300/80 bg-gray-50 hover:border-accent hover:bg-gray-100'
         }`}
         style={{ width: size, height: size }}
         onClick={() => !compressing && inputRef.current?.click()}
@@ -68,7 +68,7 @@ export default function ImageUpload({ value, onChange, label = 'Upload Image', s
         ) : value ? (
           <img src={value} alt="Preview" className="w-full h-full object-contain p-1" />
         ) : (
-          <span className={`text-2xl ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>+</span>
+          <span className={`text-2xl transition-transform duration-200 group-hover:scale-110 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>+</span>
         )}
       </div>
       <input
@@ -79,11 +79,11 @@ export default function ImageUpload({ value, onChange, label = 'Upload Image', s
         className="hidden"
         aria-label={`Upload ${label}`}
       />
-      <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{label}</span>
+      <span className={`text-xs font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{label}</span>
       {value && !compressing && (
         <button
           onClick={() => onChange(null)}
-          className="text-xs text-red-400 hover:text-red-300"
+          className="text-xs text-red-400 hover:text-red-300 transition-colors duration-200"
           aria-label={`Remove ${label}`}
         >
           Remove

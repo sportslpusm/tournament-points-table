@@ -28,8 +28,8 @@ export default function GamePoolManagement() {
 
   const EMOJI_OPTIONS = ['🎮', '🏐', '🏏', '⚽', '🏀', '🎾', '🏓', '🤼', '🏋', '🏊', '🥊', '⛳', '🎯', '♟️', '🎳', '🏑'];
 
-  const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${
-    darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
+  const inputCls = `w-full px-3 py-2 rounded-xl text-sm border ${
+    darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
   }`;
 
   // Game CRUD
@@ -129,8 +129,8 @@ export default function GamePoolManagement() {
   return (
     <div className="animate-slideUp">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Games & Pools</h2>
-        <button onClick={openAddGame} className="px-4 py-2 bg-accent text-navy-900 font-bold text-sm rounded-lg hover:bg-accent-dark transition-colors">
+        <h2 className="text-xl font-bold tracking-tight">Games & Pools</h2>
+        <button onClick={openAddGame} className="px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">
           + Add Game
         </button>
       </div>
@@ -155,12 +155,12 @@ export default function GamePoolManagement() {
             const stageLabel = isIndividual ? 'Individual' : isLobby ? 'Lobby' : cfg.stage === 'knockout' ? 'Knockout' : cfg.stage === 'completed' ? 'Completed' : 'Pool';
 
             return (
-              <div key={game.id} className={`rounded-xl border overflow-hidden ${
-                darkMode ? 'bg-navy-800/40 backdrop-blur border-white/5' : 'bg-white/80 backdrop-blur border-gray-200'
+              <div key={game.id} className={`rounded-2xl border overflow-hidden ${
+                darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
               }`}>
                 {/* Game Header */}
-                <div className={`px-4 py-3 flex items-center justify-between ${
-                  darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'
+                <div className={`px-5 py-4 flex items-center justify-between ${
+                  darkMode ? 'bg-white/[0.02]' : 'bg-gray-50'
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{game.emoji}</span>
@@ -183,7 +183,7 @@ export default function GamePoolManagement() {
                       isLobby ? 'bg-emerald-500/10 text-emerald-400' :
                       stageLabel === 'Knockout' ? 'bg-accent/10 text-accent' :
                       stageLabel === 'Completed' ? 'bg-win/10 text-win' :
-                      darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
+                      darkMode ? 'bg-white/[0.04] text-gray-500' : 'bg-gray-100 text-gray-400'
                     }`}>
                       {stageLabel}
                     </span>
@@ -192,8 +192,8 @@ export default function GamePoolManagement() {
                     {!isIndividual && !isLobby && (
                       <button
                         onClick={() => setShowKoSettings(game.id)}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                          cfg.enabled !== false ? 'bg-accent/10 text-accent' : darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
+                        className={`px-2 py-1 rounded-xl text-xs font-medium transition-all duration-200 ${
+                          cfg.enabled !== false ? 'bg-accent/10 text-accent' : darkMode ? 'bg-white/[0.04] text-gray-500' : 'bg-gray-100 text-gray-400'
                         }`}
                         title="Knockout Settings"
                         aria-label="Knockout settings"
@@ -204,22 +204,22 @@ export default function GamePoolManagement() {
                     {(isIndividual || isLobby) && (
                       <button
                         onClick={() => dispatch({ type: 'SELECT_GAME', payload: game.id })}
-                        className={`px-2 py-1 rounded text-xs font-medium transition-colors hover:opacity-80 ${
+                        className={`px-2 py-1 rounded-xl text-xs font-medium transition-all duration-200 hover:opacity-80 ${
                           isLobby ? 'bg-emerald-500/10 text-emerald-400' : 'bg-purple-500/10 text-purple-400'
                         }`}
                       >
                         Manage →
                       </button>
                     )}
-                    <button onClick={() => openEditGame(game)} className={`p-1.5 rounded-lg text-sm transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`} aria-label="Edit game">
+                    <button onClick={() => openEditGame(game)} className={`p-1.5 rounded-xl text-sm transition-all duration-200 ${darkMode ? 'hover:bg-white/[0.08] text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`} aria-label="Edit game">
                       ✏️
                     </button>
-                    <button onClick={() => setDeleteGameId(game.id)} className="p-1.5 rounded-lg hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-colors" aria-label="Delete game">
+                    <button onClick={() => setDeleteGameId(game.id)} className="p-1.5 rounded-xl hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-all duration-200" aria-label="Delete game">
                       🗑
                     </button>
                     {!isIndividual && !isLobby && (
-                      <button onClick={() => openAddPool(game.id)} className={`px-3 py-1 rounded-lg text-xs font-medium ml-2 transition-colors ${
-                        darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      <button onClick={() => openAddPool(game.id)} className={`px-3 py-1 rounded-xl text-xs font-medium ml-2 transition-all duration-200 ${
+                        darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}>
                         + Pool
                       </button>
@@ -236,8 +236,8 @@ export default function GamePoolManagement() {
                           {gameLobbyEntries.map(entry => {
                             const team = teams.find(t => t.id === entry.teamId);
                             return (
-                              <span key={entry.id} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs ${
-                                darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'
+                              <span key={entry.id} className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-xl text-xs ${
+                                darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-600'
                               }`}>
                                 {team && <TeamLogo team={team} size={14} />}
                                 {entry.entryName ? `${team?.shortCode || team?.name} – ${entry.entryName}` : (team?.shortCode || team?.name || '?')}
@@ -256,10 +256,10 @@ export default function GamePoolManagement() {
                       {gameCategories.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {gameCategories.map(cat => (
-                            <span key={cat.id} className={`px-2 py-1 rounded-lg text-xs ${
+                            <span key={cat.id} className={`px-2 py-1 rounded-xl text-xs ${
                               cat.status === 'completed'
                                 ? 'bg-win/10 text-win'
-                                : darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'
+                                : darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-600'
                             }`}>
                               {cat.name} ({cat.athleteIds.length})
                             </span>
@@ -273,7 +273,7 @@ export default function GamePoolManagement() {
                 ) : gamePools.length === 0 ? (
                   <p className={`p-4 text-sm ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>No pools yet. Add a pool to this game.</p>
                 ) : (
-                  <div className={`divide-y ${darkMode ? 'divide-white/5' : 'divide-gray-100'}`}>
+                  <div className={`divide-y ${darkMode ? 'divide-white/[0.04]' : 'divide-gray-100'}`}>
                     {gamePools.map(pool => {
                       const poolTeams = pool.teamIds.map(tid => teams.find(t => t.id === tid)).filter(Boolean);
                       const poolMatchCount = matches.filter(m => m.poolId === pool.id).length;
@@ -287,15 +287,15 @@ export default function GamePoolManagement() {
                               </span>
                             </div>
                             <div className="flex gap-1">
-                              <button onClick={() => setAssignPoolId(pool.id)} className={`px-2 py-1 rounded text-xs transition-colors ${
-                                darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              <button onClick={() => setAssignPoolId(pool.id)} className={`px-2 py-1 rounded-xl text-xs transition-all duration-200 ${
+                                darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                               }`}>
                                 + Team
                               </button>
-                              <button onClick={() => openEditPool(pool)} className={`p-1 rounded text-sm transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`} aria-label="Edit pool">
+                              <button onClick={() => openEditPool(pool)} className={`p-1 rounded-xl text-sm transition-all duration-200 ${darkMode ? 'hover:bg-white/[0.08] text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`} aria-label="Edit pool">
                                 ✏️
                               </button>
-                              <button onClick={() => setDeletePoolId(pool.id)} className="p-1 rounded hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-colors" aria-label="Delete pool">
+                              <button onClick={() => setDeletePoolId(pool.id)} className="p-1 rounded-xl hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-all duration-200" aria-label="Delete pool">
                                 🗑
                               </button>
                             </div>
@@ -306,7 +306,7 @@ export default function GamePoolManagement() {
                                 <div
                                   key={team.id}
                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
-                                    darkMode ? 'bg-white/5 text-gray-300' : 'bg-gray-100 text-gray-700'
+                                    darkMode ? 'bg-white/[0.04] text-gray-300' : 'bg-gray-100 text-gray-700'
                                   }`}
                                 >
                                   <TeamLogo team={team} size={24} />
@@ -316,7 +316,7 @@ export default function GamePoolManagement() {
                                       dispatch({ type: 'REMOVE_TEAM_FROM_POOL', payload: { poolId: pool.id, teamId: team.id } });
                                       showToast(`${team.shortCode} removed from ${pool.name}`);
                                     }}
-                                    className="text-gray-500 hover:text-red-400 ml-1 transition-colors"
+                                    className="text-gray-500 hover:text-red-400 ml-1 transition-all duration-200"
                                     aria-label="Remove team from pool"
                                   >
                                     ✕
@@ -352,17 +352,17 @@ export default function GamePoolManagement() {
             );
             return (
               <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game Type *</label>
+                <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game Type *</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => !hasData && setGameType('team')}
                     disabled={hasData}
-                    className={`px-3 py-3 rounded-lg text-sm font-medium border transition-all text-center ${
+                    className={`px-3 py-3 rounded-xl text-sm font-medium border transition-all duration-200 text-center ${
                       gameType === 'team'
-                        ? 'bg-accent/20 border-accent text-accent'
+                        ? 'bg-accent/15 border-accent text-accent'
                         : hasData
-                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/5 border-white/10 text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
-                          : darkMode ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
+                          : darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-300 hover:border-white/[0.15]' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
                     }`}
                   >
                     <div className="text-xl mb-1">🏐</div>
@@ -372,12 +372,12 @@ export default function GamePoolManagement() {
                   <button
                     onClick={() => !hasData && setGameType('individual')}
                     disabled={hasData}
-                    className={`px-3 py-3 rounded-lg text-sm font-medium border transition-all text-center ${
+                    className={`px-3 py-3 rounded-xl text-sm font-medium border transition-all duration-200 text-center ${
                       gameType === 'individual'
                         ? 'bg-purple-500/20 border-purple-400 text-purple-400'
                         : hasData
-                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/5 border-white/10 text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
-                          : darkMode ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
+                          : darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-300 hover:border-white/[0.15]' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
                     }`}
                   >
                     <div className="text-xl mb-1">🏋️</div>
@@ -387,12 +387,12 @@ export default function GamePoolManagement() {
                   <button
                     onClick={() => !hasData && setGameType('lobby')}
                     disabled={hasData}
-                    className={`px-3 py-3 rounded-lg text-sm font-medium border transition-all text-center ${
+                    className={`px-3 py-3 rounded-xl text-sm font-medium border transition-all duration-200 text-center ${
                       gameType === 'lobby'
                         ? 'bg-emerald-500/20 border-emerald-400 text-emerald-400'
                         : hasData
-                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/5 border-white/10 text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
-                          : darkMode ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                          ? 'opacity-40 cursor-not-allowed ' + (darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-500' : 'bg-gray-50 border-gray-300 text-gray-400')
+                          : darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-300 hover:border-white/[0.15]' : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
                     }`}
                   >
                     <div className="text-xl mb-1">🎮</div>
@@ -409,7 +409,7 @@ export default function GamePoolManagement() {
             );
           })()}
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game Name *</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game Name *</label>
             <input
               type="text"
               value={gameName}
@@ -419,16 +419,16 @@ export default function GamePoolManagement() {
             />
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Icon</label>
+            <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Icon</label>
             <div className="flex flex-wrap gap-2">
               {EMOJI_OPTIONS.map(emoji => (
                 <button
                   key={emoji}
                   onClick={() => setGameEmoji(emoji)}
-                  className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center border transition-all ${
+                  className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center border transition-all duration-200 ${
                     gameEmoji === emoji
-                      ? 'bg-accent/20 border-accent scale-110'
-                      : darkMode ? 'bg-white/5 border-white/10 hover:border-white/20' : 'bg-gray-50 border-gray-300 hover:border-gray-400'
+                      ? 'bg-accent/15 border-accent scale-110'
+                      : darkMode ? 'bg-white/[0.04] border-white/[0.08] hover:border-white/[0.15]' : 'bg-gray-50 border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   {emoji}
@@ -448,10 +448,10 @@ export default function GamePoolManagement() {
                   else if (val === '') setGameEmoji(EMOJI_OPTIONS[0]);
                 }}
                 placeholder="🏸"
-                className={`w-16 h-10 text-center text-xl rounded-lg border ${
+                className={`w-16 h-10 text-center text-xl rounded-xl border ${
                   !EMOJI_OPTIONS.includes(gameEmoji)
-                    ? 'bg-accent/20 border-accent'
-                    : darkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-300'
+                    ? 'bg-accent/15 border-accent'
+                    : darkMode ? 'bg-white/[0.04] border-white/[0.08]' : 'bg-gray-50 border-gray-300'
                 }`}
                 maxLength={4}
               />
@@ -461,10 +461,10 @@ export default function GamePoolManagement() {
             </div>
           </div>
           <div className="flex gap-3 pt-2">
-            <button onClick={() => setShowGameModal(false)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-              darkMode ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-700'
+            <button onClick={() => setShowGameModal(false)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${
+              darkMode ? 'bg-white/[0.06] text-gray-300' : 'bg-gray-100 text-gray-700'
             }`}>Cancel</button>
-            <button onClick={handleSaveGame} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors">{editGame ? 'Update' : 'Add'} Game</button>
+            <button onClick={handleSaveGame} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20">{editGame ? 'Update' : 'Add'} Game</button>
           </div>
         </div>
       </Modal>
@@ -489,7 +489,7 @@ export default function GamePoolManagement() {
           {koConfig.enabled !== false && (
             <>
               <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Teams qualifying per pool
                 </label>
                 <select
@@ -504,7 +504,7 @@ export default function GamePoolManagement() {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   Starting Round
                 </label>
                 <select
@@ -525,7 +525,7 @@ export default function GamePoolManagement() {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Seeding Format</label>
+                <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Seeding Format</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { value: 'cross', label: 'Cross-Pool' },
@@ -535,10 +535,10 @@ export default function GamePoolManagement() {
                     <button
                       key={opt.value}
                       onClick={() => updateKoConfig(showKoSettings, { seedingFormat: opt.value })}
-                      className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
+                      className={`px-3 py-2.5 rounded-xl text-xs font-medium border transition-all duration-200 ${
                         (koConfig.seedingFormat || 'cross') === opt.value
-                          ? 'bg-accent/20 border-accent text-accent'
-                          : darkMode ? 'bg-white/5 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-700'
+                          ? 'bg-accent/15 border-accent text-accent'
+                          : darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-700'
                       }`}
                     >
                       {opt.label}
@@ -601,7 +601,7 @@ export default function GamePoolManagement() {
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setShowKoSettings(null)}
-              className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20"
             >
               Done
             </button>
@@ -613,7 +613,7 @@ export default function GamePoolManagement() {
       <Modal isOpen={showPoolModal} onClose={() => setShowPoolModal(false)} title={editPool ? 'Edit Pool' : 'Add Pool'}>
         <div className="space-y-4">
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Pool Name *</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Pool Name *</label>
             <input
               type="text"
               value={poolName}
@@ -623,7 +623,7 @@ export default function GamePoolManagement() {
             />
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game *</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Game *</label>
             <select
               value={poolGameId}
               onChange={e => setPoolGameId(e.target.value)}
@@ -635,10 +635,10 @@ export default function GamePoolManagement() {
             </select>
           </div>
           <div className="flex gap-3 pt-2">
-            <button onClick={() => setShowPoolModal(false)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-              darkMode ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-700'
+            <button onClick={() => setShowPoolModal(false)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${
+              darkMode ? 'bg-white/[0.06] text-gray-300' : 'bg-gray-100 text-gray-700'
             }`}>Cancel</button>
-            <button onClick={handleSavePool} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors">{editPool ? 'Update' : 'Add'} Pool</button>
+            <button onClick={handleSavePool} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20">{editPool ? 'Update' : 'Add'} Pool</button>
           </div>
         </div>
       </Modal>
@@ -657,8 +657,8 @@ export default function GamePoolManagement() {
                   dispatch({ type: 'ASSIGN_TEAM_TO_POOL', payload: { poolId: assignPoolId, teamId: team.id } });
                   showToast(`${team.shortCode} added to ${assignPool?.name}`);
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left ${
-                  darkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-gray-50 hover:bg-gray-100'
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left ${
+                  darkMode ? 'bg-white/[0.04] hover:bg-white/[0.08]' : 'bg-gray-50 hover:bg-gray-100'
                 }`}
               >
                 <TeamLogo team={team} size={32} />

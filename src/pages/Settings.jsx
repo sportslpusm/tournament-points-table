@@ -159,29 +159,29 @@ export default function Settings() {
     }
   }
 
-  const inputCls = `w-full px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+  const inputCls = `w-full px-3 py-2.5 rounded-xl border text-sm transition-all duration-200 ${
     darkMode
-      ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-accent/50'
+      ? 'bg-white/5 border-white/[0.08] text-white placeholder-gray-500 focus:border-accent/40'
       : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'
   }`;
 
-  const sectionCls = `rounded-xl p-6 border mb-6 ${
+  const sectionCls = `rounded-2xl p-6 border mb-6 ${
     darkMode
-      ? 'bg-navy-800/40 backdrop-blur border-white/5'
-      : 'bg-white/80 backdrop-blur border-gray-200'
+      ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]'
+      : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
   }`;
 
-  const sectionTitle = `font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`;
+  const sectionTitle = `font-bold tracking-tight mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`;
 
-  const actionBtnCls = `w-full px-4 py-2.5 rounded-lg font-medium text-sm text-left flex items-center gap-3 transition-all ${
+  const actionBtnCls = `w-full px-4 py-2.5 rounded-xl font-medium text-sm text-left flex items-center gap-3 transition-all ${
     darkMode
-      ? 'bg-white/5 border border-white/5 hover:bg-white/10 text-gray-300'
-      : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700'
+      ? 'bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] text-gray-300'
+      : 'bg-gray-50 border border-gray-200/80 hover:bg-gray-100 text-gray-700'
   }`;
 
   return (
     <div className="max-w-2xl mx-auto animate-slideUp">
-      <h2 className={`text-xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Tournament Settings</h2>
+      <h2 className={`text-xl font-bold tracking-tight mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Tournament Settings</h2>
 
       {/* Tournament Info */}
       <div className={sectionCls}>
@@ -191,20 +191,20 @@ export default function Settings() {
         </div>
         <div className="space-y-3">
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tournament Name</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Tournament Name</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={200} className={inputCls} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Start Date</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Start Date</label>
               <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>End Date</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>End Date</label>
               <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={inputCls} />
             </div>
           </div>
-          <button onClick={handleSaveTournament} className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-lg hover:bg-accent-dark transition-colors mt-2">
+          <button onClick={handleSaveTournament} className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-xl shadow-sm shadow-accent/20 hover:bg-accent-dark transition-colors mt-2">
             Save Settings
           </button>
         </div>
@@ -215,7 +215,7 @@ export default function Settings() {
         <h3 className={sectionTitle}>Change Admin Password</h3>
         <div className="space-y-3">
           <div className="relative">
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Current Password</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Current Password</label>
             <input
               type={showCurrentPw ? 'text' : 'password'}
               value={currentPw}
@@ -225,13 +225,13 @@ export default function Settings() {
             <button
               type="button"
               onClick={() => setShowCurrentPw(!showCurrentPw)}
-              className={`absolute right-3 top-8 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
+              className={`absolute right-3 top-8 text-sm rounded-xl ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
             >
               {showCurrentPw ? '🙈' : '👁'}
             </button>
           </div>
           <div className="relative">
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password (min 6 chars)</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password (min 6 chars)</label>
             <input
               type={showNewPw ? 'text' : 'password'}
               value={newPw}
@@ -241,13 +241,13 @@ export default function Settings() {
             <button
               type="button"
               onClick={() => setShowNewPw(!showNewPw)}
-              className={`absolute right-3 top-8 text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
+              className={`absolute right-3 top-8 text-sm rounded-xl ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
             >
               {showNewPw ? '🙈' : '👁'}
             </button>
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm New Password</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm New Password</label>
             <input
               type="password"
               value={confirmPw}
@@ -263,7 +263,7 @@ export default function Settings() {
           )}
           <button
             onClick={handleChangePassword}
-            className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-lg hover:bg-accent-dark transition-colors"
+            className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-xl shadow-sm shadow-accent/20 hover:bg-accent-dark transition-colors"
           >
             Change Password
           </button>
@@ -280,7 +280,7 @@ export default function Settings() {
           </div>
           <button
             onClick={() => dispatch({ type: 'TOGGLE_DARK_MODE' })}
-            className={`relative w-14 h-7 rounded-full transition-all ${
+            className={`relative w-14 h-7 rounded-xl transition-all ${
               darkMode
                 ? 'bg-accent shadow-md shadow-accent/30'
                 : 'bg-gray-300'
@@ -319,9 +319,9 @@ export default function Settings() {
               <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Populate with demo tournament data</div>
             </div>
           </button>
-          <button onClick={() => setShowReset(true)} className={`w-full px-4 py-2.5 rounded-lg font-medium text-sm text-left flex items-center gap-3 transition-all border ${
+          <button onClick={() => setShowReset(true)} className={`w-full px-4 py-2.5 rounded-xl font-medium text-sm text-left flex items-center gap-3 transition-all border ${
             darkMode
-              ? 'bg-red-900/10 border-red-500/20 hover:bg-red-900/20 text-red-400'
+              ? 'bg-red-500/[0.06] border-red-500/20 hover:bg-red-500/[0.10] text-red-400'
               : 'bg-red-50 border-red-200 hover:bg-red-100 text-red-600'
           }`}>
             <span className="text-lg">⚠️</span>
@@ -338,7 +338,7 @@ export default function Settings() {
         <h3 className={sectionTitle}>Cloud Sync Status</h3>
         <div className="space-y-3">
           {/* Connection Status */}
-          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/[0.05]' : 'border-gray-100'}`}>
             <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Connection</span>
             <div className="flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400' : 'bg-red-400 animate-pulseLive'}`} />
@@ -349,7 +349,7 @@ export default function Settings() {
           </div>
 
           {/* Save Status */}
-          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/[0.05]' : 'border-gray-100'}`}>
             <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Save Status</span>
             <span className={`text-sm font-medium ${
               saveStatus === 'saving' ? 'text-amber-400' :
@@ -365,7 +365,7 @@ export default function Settings() {
           </div>
 
           {/* Last Saved */}
-          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+          <div className={`flex items-center justify-between py-2.5 border-b ${darkMode ? 'border-white/[0.05]' : 'border-gray-100'}`}>
             <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Last Saved</span>
             <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
               {lastSavedAt ? lastSavedAt.toLocaleTimeString() : 'Not yet saved'}
@@ -386,7 +386,7 @@ export default function Settings() {
               }
             }}
             disabled={forceSaving}
-            className={`w-full px-4 py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition-all ${
+            className={`w-full px-4 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all ${
               darkMode
                 ? 'bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20 disabled:opacity-50'
                 : 'bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 disabled:opacity-50'
@@ -403,10 +403,10 @@ export default function Settings() {
       </div>
 
       {/* Points System Reference */}
-      <div className={`rounded-xl p-6 border ${
+      <div className={`rounded-2xl p-6 border ${
         darkMode
-          ? 'bg-navy-800/40 backdrop-blur border-white/5'
-          : 'bg-white/80 backdrop-blur border-gray-200'
+          ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]'
+          : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
       }`}>
         <h3 className={sectionTitle}>Points System</h3>
         <div className="space-y-2 text-sm">
@@ -418,7 +418,7 @@ export default function Settings() {
             { label: 'Bye (absent)', points: '0 pts', detail: 'No points at all', color: darkMode ? 'text-gray-500' : 'text-gray-400' },
           ].map(row => (
             <div key={row.label} className={`flex items-center justify-between py-2.5 border-b ${
-              darkMode ? 'border-white/5' : 'border-gray-100'
+              darkMode ? 'border-white/[0.05]' : 'border-gray-100'
             }`}>
               <span className="font-medium">{row.label}</span>
               <div className="text-right">

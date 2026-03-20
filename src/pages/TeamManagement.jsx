@@ -22,8 +22,8 @@ export default function TeamManagement() {
   const [formCode, setFormCode] = useState('');
   const [formLogo, setFormLogo] = useState(null);
 
-  const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${
-    darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+  const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border transition-all duration-200 ${
+    darkMode ? 'bg-white/[0.04] border-white/[0.06] text-white' : 'bg-white border-gray-200/80 text-gray-900'
   }`;
 
   function resetForm() {
@@ -107,9 +107,9 @@ export default function TeamManagement() {
   return (
     <div className="animate-slideUp">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">Teams ({teams.length})</h2>
+        <h2 className="text-xl font-bold tracking-tight">Teams ({teams.length})</h2>
         {isAdmin && (
-          <button onClick={openAdd} className="px-4 py-2 bg-accent text-navy-900 font-bold text-sm rounded-lg hover:bg-accent-dark transition-colors">
+          <button onClick={openAdd} className="px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">
             + Add Team
           </button>
         )}
@@ -135,10 +135,10 @@ export default function TeamManagement() {
             return (
               <div
                 key={team.id}
-                className={`rounded-xl p-4 border cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg ${
+                className={`rounded-2xl p-4 border cursor-pointer transition-all duration-200 card-hover-lift hover:shadow-lg ${
                   darkMode
-                    ? 'bg-navy-800/60 backdrop-blur border-white/5 hover:border-white/10'
-                    : 'bg-white/80 backdrop-blur border-gray-200 hover:border-gray-300'
+                    ? 'bg-navy-850/60 backdrop-blur-xl border-white/[0.06] hover:border-white/10'
+                    : 'bg-white/80 backdrop-blur-xl border-gray-200/80 hover:border-gray-300'
                 }`}
                 onClick={() => setProfileTeamId(team.id)}
               >
@@ -152,14 +152,14 @@ export default function TeamManagement() {
                     <div className="flex gap-1">
                       <button
                         onClick={e => { e.stopPropagation(); openEdit(team); }}
-                        className={`p-1.5 rounded-lg text-sm transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`}
+                        className={`p-1.5 rounded-xl text-sm transition-all duration-200 ${darkMode ? 'hover:bg-white/[0.08] text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`}
                         aria-label="Edit team"
                       >
                         ✏️
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); setDeleteId(team.id); }}
-                        className="p-1.5 rounded-lg hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-colors"
+                        className="p-1.5 rounded-xl hover:bg-red-900/30 text-gray-400 hover:text-red-400 text-sm transition-all duration-200"
                         aria-label="Delete team"
                       >
                         🗑
@@ -176,7 +176,7 @@ export default function TeamManagement() {
                 {teamGames.length > 0 && (
                   <div className="flex gap-1 flex-wrap">
                     {teamGames.map(g => (
-                      <span key={g.id} className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                      <span key={g.id} className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
                         {g.emoji} {g.name}
                       </span>
                     ))}
@@ -196,7 +196,7 @@ export default function TeamManagement() {
               <ImageUpload value={formLogo} onChange={setFormLogo} label="Team Logo" size={80} />
             </div>
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team Name *</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team Name *</label>
               <input
                 type="text"
                 value={formName}
@@ -206,7 +206,7 @@ export default function TeamManagement() {
               />
             </div>
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Short Code * (3-4 letters)</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Short Code * (3-4 letters)</label>
               <input
                 type="text"
                 value={formCode}
@@ -217,10 +217,10 @@ export default function TeamManagement() {
               />
             </div>
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowModal(false)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                darkMode ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              <button onClick={() => setShowModal(false)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                darkMode ? 'bg-white/[0.06] border border-white/[0.06] text-gray-300 hover:bg-white/[0.10]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}>Cancel</button>
-              <button onClick={handleSave} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors">{editTeam ? 'Update' : 'Add'}</button>
+              <button onClick={handleSave} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">{editTeam ? 'Update' : 'Add'}</button>
             </div>
           </div>
         </Modal>
@@ -233,14 +233,14 @@ export default function TeamManagement() {
             <div className="flex items-center gap-4 mb-6">
               <TeamLogo team={profileTeam} size={64} />
               <div>
-                <h3 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{profileTeam.name}</h3>
+                <h3 className={`text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>{profileTeam.name}</h3>
                 <p className={darkMode ? 'text-gray-400' : 'text-gray-500'}>{profileTeam.shortCode}</p>
               </div>
             </div>
             {/* Overall Stats */}
             <h4 className={`section-heading mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Overall Stats</h4>
-            <div className={`grid grid-cols-6 gap-2 text-center mb-6 p-3 rounded-lg ${
-              darkMode ? 'bg-white/5' : 'bg-gray-50'
+            <div className={`grid grid-cols-6 gap-2 text-center mb-6 p-3 rounded-xl ${
+              darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'
             }`}>
               {[
                 { label: 'GP', value: profileStats.overall.played },
@@ -262,11 +262,11 @@ export default function TeamManagement() {
                 <h4 className={`section-heading mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Per Game</h4>
                 <div className="space-y-2">
                   {profileStats.byGame.map(({ game, stats }) => (
-                    <div key={game.id} className={`flex items-center gap-3 p-3 rounded-lg ${
-                      darkMode ? 'bg-white/5' : 'bg-gray-50'
+                    <div key={game.id} className={`flex items-center gap-3 p-3 rounded-xl ${
+                      darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'
                     }`}>
                       <span className="text-lg">{game.emoji}</span>
-                      <span className="font-medium text-sm flex-1">{game.name}</span>
+                      <span className="font-semibold text-sm flex-1">{game.name}</span>
                       <div className="flex gap-3 text-xs text-center">
                         <span>GP: <b>{stats.played}</b></span>
                         <span className="text-win">W: <b>{stats.wins}</b></span>

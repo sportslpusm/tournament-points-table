@@ -56,8 +56,8 @@ export default function IndividualGameView() {
   const [ptParticipation, setPtParticipation] = useState(pointsConfig.participation);
   const [ptMaxCap, setPtMaxCap] = useState(pointsConfig.maxParticipationCap ?? '');
 
-  const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${
-    darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
+  const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border ${
+    darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
   }`;
 
   // Team standings
@@ -225,7 +225,7 @@ export default function IndividualGameView() {
     <div className="animate-slideUp">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm mb-4">
-        <button onClick={() => dispatch({ type: 'SET_VIEW', payload: { view: 'dashboard' } })} className="text-accent hover:underline">
+        <button onClick={() => dispatch({ type: 'SET_VIEW', payload: { view: 'dashboard' } })} className="text-accent hover:underline transition-colors duration-150">
           Tournament
         </button>
         <span className={`${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>/</span>
@@ -238,12 +238,12 @@ export default function IndividualGameView() {
           <button
             key={g.id}
             onClick={() => dispatch({ type: 'SELECT_GAME', payload: g.id })}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
               g.id === selectedGameId
                 ? 'bg-accent text-navy-900 shadow-lg shadow-accent/20'
                 : darkMode
-                ? 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/5'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] border border-white/[0.06]'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200/80'
             }`}
           >
             <span className="text-lg">{g.emoji}</span>
@@ -274,10 +274,10 @@ export default function IndividualGameView() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
               activeTab === tab.id
                 ? 'bg-accent text-navy-900 shadow-lg shadow-accent/20'
-                : darkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                : darkMode ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
             {tab.icon} {tab.label}
@@ -292,7 +292,7 @@ export default function IndividualGameView() {
       {activeTab === 'categories' && (
         <div>
           {isAdmin && (
-            <button onClick={openAddCategory} className="mb-4 px-4 py-2 bg-accent text-navy-900 font-bold text-sm rounded-lg hover:bg-accent-dark transition-colors">
+            <button onClick={openAddCategory} className="mb-4 px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">
               + Add Category
             </button>
           )}
@@ -308,18 +308,18 @@ export default function IndividualGameView() {
                 return (
                   <div
                     key={cat.id}
-                    className={`rounded-xl border overflow-hidden transition-all ${
-                      darkMode ? 'bg-navy-800/60 backdrop-blur border-white/5 hover:border-white/10' : 'bg-white/80 backdrop-blur border-gray-200 hover:border-gray-300'
+                    className={`rounded-2xl border overflow-hidden transition-all duration-200 ${
+                      darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06] hover:border-white/[0.08]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80 hover:border-gray-300'
                     }`}
                   >
                     <div
-                      className={`px-4 py-3 flex items-center justify-between cursor-pointer ${darkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-gray-50'}`}
+                      className={`px-4 py-3 flex items-center justify-between cursor-pointer ${darkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-gray-50'}`}
                       onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">{cat.name}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                          cat.status === 'completed' ? 'bg-win/10 text-win' : darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
+                          cat.status === 'completed' ? 'bg-win/10 text-win' : darkMode ? 'bg-white/[0.04] text-gray-500' : 'bg-gray-100 text-gray-400'
                         }`}>
                           {cat.status === 'completed' ? '✓ Completed' : 'Upcoming'}
                         </span>
@@ -332,7 +332,7 @@ export default function IndividualGameView() {
 
                     {/* Podium preview for completed */}
                     {result && (
-                      <div className={`px-4 py-2 border-t ${darkMode ? 'border-white/5 bg-white/[0.02]' : 'border-gray-100 bg-gray-50/50'}`}>
+                      <div className={`px-4 py-2 border-t ${darkMode ? 'border-white/[0.04] bg-white/[0.02]' : 'border-gray-100 bg-gray-50/50'}`}>
                         <div className="flex gap-3">
                           {[
                             { place: 'first', icon: '🥇', color: 'text-gold' },
@@ -361,7 +361,7 @@ export default function IndividualGameView() {
 
                     {/* Expanded details */}
                     {isExpanded && (
-                      <div className={`px-4 py-3 border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                      <div className={`px-4 py-3 border-t ${darkMode ? 'border-white/[0.04]' : 'border-gray-100'}`}>
                         {catAthletes.length === 0 ? (
                           <p className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>No athletes registered in this category.</p>
                         ) : (
@@ -373,7 +373,7 @@ export default function IndividualGameView() {
                                 result?.placements?.third === ath.id ? '🥉' :
                                 (result?.absentees || []).includes(ath.id) ? '❌ DNS' : '';
                               return (
-                                <div key={ath.id} className={`flex items-center gap-2 text-xs px-2 py-1 rounded ${darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}`}>
+                                <div key={ath.id} className={`flex items-center gap-2 text-xs px-2 py-1 rounded-xl ${darkMode ? 'bg-white/[0.02]' : 'bg-gray-50'}`}>
                                   {team && <TeamLogo team={team} size={20} />}
                                   <span className="font-medium">{ath.name}</span>
                                   <span className={`font-mono ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{ath.regNumber}</span>
@@ -387,19 +387,19 @@ export default function IndividualGameView() {
                           <div className="flex gap-2 pt-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); openResultEntry(cat.id); }}
-                              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent text-navy-900 hover:bg-accent-dark transition-colors"
+                              className="px-3 py-1.5 text-xs font-medium rounded-xl bg-accent text-navy-900 shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200"
                             >
                               {result ? 'Edit Results' : 'Enter Results'}
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); openEditCategory(cat); }}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                             >
                               Edit
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setDeleteCatId(cat.id); }}
-                              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-900/20 text-red-400 hover:bg-red-900/30 transition-colors"
+                              className="px-3 py-1.5 text-xs font-medium rounded-xl bg-red-900/20 text-red-400 hover:bg-red-900/30 transition-all duration-200"
                             >
                               Delete
                             </button>
@@ -408,7 +408,7 @@ export default function IndividualGameView() {
 
                         {/* Points breakdown */}
                         {result && (
-                          <div className={`mt-3 pt-2 border-t text-xs ${darkMode ? 'border-white/5 text-gray-500' : 'border-gray-100 text-gray-400'}`}>
+                          <div className={`mt-3 pt-2 border-t text-xs ${darkMode ? 'border-white/[0.04] text-gray-500' : 'border-gray-100 text-gray-400'}`}>
                             {getCategoryPointsBreakdown(cat.id, [result], athletes, pointsConfig).map(entry => {
                               const team = teams.find(t => t.id === entry.teamId);
                               return (
@@ -439,12 +439,12 @@ export default function IndividualGameView() {
               placeholder="Search athletes..."
               value={athleteSearch}
               onChange={e => setAthleteSearch(e.target.value)}
-              className={`px-3 py-1.5 rounded-lg text-sm border w-full sm:w-64 transition-colors ${
-                darkMode ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-accent/50' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'
+              className={`px-3 py-2.5 rounded-xl text-sm border w-full sm:w-64 transition-colors duration-150 ${
+                darkMode ? 'bg-white/[0.04] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent/50' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'
               }`}
             />
             {isAdmin && (
-              <button onClick={openAddAthlete} className="px-4 py-2 bg-accent text-navy-900 font-bold text-sm rounded-lg hover:bg-accent-dark transition-colors whitespace-nowrap">
+              <button onClick={openAddAthlete} className="px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200 whitespace-nowrap">
                 + Add Athlete
               </button>
             )}
@@ -453,17 +453,17 @@ export default function IndividualGameView() {
           {filteredAthletes.length === 0 ? (
             <EmptyState icon="🏃" title="No athletes" description={gameAthletes.length === 0 ? 'Register athletes for this game.' : 'No athletes match your search.'} action={isAdmin && gameAthletes.length === 0 ? { label: 'Add Athlete', onClick: openAddAthlete } : undefined} />
           ) : (
-            <div className={`overflow-x-auto rounded-xl border ${darkMode ? 'bg-navy-800/40 backdrop-blur border-white/5' : 'bg-white/80 backdrop-blur border-gray-200'}`}>
+            <div className={`overflow-x-auto rounded-2xl border ${darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'}`}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className={darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}>
-                    <th className={`px-3 py-2 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Reg No.</th>
-                    <th className={`px-3 py-2 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Athlete</th>
-                    <th className={`px-3 py-2 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>School</th>
-                    <th className={`px-3 py-2 text-left text-xs font-medium hidden sm:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Categories</th>
-                    <th className={`px-3 py-2 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Medals</th>
-                    <th className={`px-3 py-2 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Points</th>
-                    {isAdmin && <th className={`px-3 py-2 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Actions</th>}
+                  <tr className={darkMode ? 'bg-white/[0.02]' : 'bg-gray-50'}>
+                    <th className={`px-3 py-2.5 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Reg No.</th>
+                    <th className={`px-3 py-2.5 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Athlete</th>
+                    <th className={`px-3 py-2.5 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>School</th>
+                    <th className={`px-3 py-2.5 text-left text-xs font-medium hidden sm:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Categories</th>
+                    <th className={`px-3 py-2.5 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Medals</th>
+                    <th className={`px-3 py-2.5 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Points</th>
+                    {isAdmin && <th className={`px-3 py-2.5 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -474,7 +474,7 @@ export default function IndividualGameView() {
                     const { total: pts } = getAthletePoints(ath.id, gameResults, individualPointsConfig);
 
                     return (
-                      <tr key={ath.id} className={`border-b transition-colors ${darkMode ? 'border-white/5 hover:bg-white/[0.03]' : 'border-gray-100 hover:bg-gray-50'}`}>
+                      <tr key={ath.id} className={`border-b transition-colors duration-150 ${darkMode ? 'border-white/[0.04] hover:bg-white/[0.02]' : 'border-gray-100 hover:bg-gray-50'}`}>
                         <td className="px-3 py-2 font-mono text-xs">{ath.regNumber}</td>
                         <td className="px-3 py-2 font-medium text-sm">{ath.name}</td>
                         <td className="px-3 py-2">
@@ -486,7 +486,7 @@ export default function IndividualGameView() {
                         <td className="px-3 py-2 hidden sm:table-cell">
                           <div className="flex flex-wrap gap-1">
                             {athCats.map(c => (
-                              <span key={c.id} className={`text-[10px] px-1.5 py-0.5 rounded ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                              <span key={c.id} className={`text-[10px] px-1.5 py-0.5 rounded ${darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
                                 {c.name}
                               </span>
                             ))}
@@ -502,8 +502,8 @@ export default function IndividualGameView() {
                         {isAdmin && (
                           <td className="px-3 py-2 text-center">
                             <div className="flex gap-1 justify-center">
-                              <button onClick={() => openEditAthlete(ath)} className={`p-1 rounded text-xs transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>✏️</button>
-                              <button onClick={() => setDeleteAthleteId(ath.id)} className="p-1 rounded text-xs hover:bg-red-900/30 text-gray-400 hover:text-red-400 transition-colors">🗑</button>
+                              <button onClick={() => openEditAthlete(ath)} className={`p-1 rounded-xl text-xs transition-all duration-200 ${darkMode ? 'hover:bg-white/[0.08] text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}>✏️</button>
+                              <button onClick={() => setDeleteAthleteId(ath.id)} className="p-1 rounded-xl text-xs hover:bg-red-900/30 text-gray-400 hover:text-red-400 transition-all duration-200">🗑</button>
                             </div>
                           </td>
                         )}
@@ -523,19 +523,19 @@ export default function IndividualGameView() {
           {standings.length === 0 ? (
             <EmptyState icon="📊" title="No standings yet" description="Register athletes and enter results to see team standings." />
           ) : (
-            <div className={`overflow-x-auto rounded-xl border ${darkMode ? 'bg-navy-800/40 backdrop-blur border-white/5' : 'bg-white/80 backdrop-blur border-gray-200'}`}>
+            <div className={`overflow-x-auto rounded-2xl border ${darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'}`}>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className={darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}>
-                    <th className={`px-3 py-2 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
-                    <th className={`px-3 py-2 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>School</th>
-                    <th className={`px-2 py-2 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Athletes</th>
-                    <th className="px-2 py-2 text-center text-xs font-medium text-gold">🥇</th>
-                    <th className="px-2 py-2 text-center text-xs font-medium text-silver">🥈</th>
-                    <th className="px-2 py-2 text-center text-xs font-medium text-bronze">🥉</th>
-                    <th className={`px-2 py-2 text-center text-xs font-medium hidden sm:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Part.</th>
-                    <th className={`px-2 py-2 text-center text-xs font-medium hidden sm:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Place.</th>
-                    <th className={`px-3 py-2 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Total</th>
+                  <tr className={darkMode ? 'bg-white/[0.02]' : 'bg-gray-50'}>
+                    <th className={`px-3 py-2.5 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                    <th className={`px-3 py-2.5 text-left text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>School</th>
+                    <th className={`px-2 py-2.5 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Athletes</th>
+                    <th className="px-2 py-2.5 text-center text-xs font-medium text-gold">🥇</th>
+                    <th className="px-2 py-2.5 text-center text-xs font-medium text-silver">🥈</th>
+                    <th className="px-2 py-2.5 text-center text-xs font-medium text-bronze">🥉</th>
+                    <th className={`px-2 py-2.5 text-center text-xs font-medium hidden sm:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Part.</th>
+                    <th className={`px-2 py-2.5 text-center text-xs font-medium hidden sm:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Place.</th>
+                    <th className={`px-3 py-2.5 text-center text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -549,7 +549,7 @@ export default function IndividualGameView() {
                                        rank === 3 ? 'border-l-[3px] border-l-bronze' : 'border-l-[3px] border-l-transparent';
 
                     return (
-                      <tr key={row.teamId} className={`border-b transition-colors ${darkMode ? 'border-white/5' : 'border-gray-100'} ${rowBg} ${leftBorder}`}>
+                      <tr key={row.teamId} className={`border-b transition-colors duration-150 ${darkMode ? 'border-white/[0.04]' : 'border-gray-100'} ${rowBg} ${leftBorder}`}>
                         <td className="px-3 py-2 font-mono text-sm">{rank}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
@@ -580,8 +580,8 @@ export default function IndividualGameView() {
 
       {/* ═══ TAB 4: Settings (Admin) ═══ */}
       {activeTab === 'settings' && isAdmin && (
-        <div className={`rounded-xl border p-6 max-w-md ${darkMode ? 'bg-navy-800/40 backdrop-blur border-white/5' : 'bg-white/80 backdrop-blur border-gray-200'}`}>
-          <h3 className="font-bold mb-4">Points Configuration</h3>
+        <div className={`rounded-2xl border p-6 max-w-md ${darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'}`}>
+          <h3 className="font-bold tracking-tight mb-4">Points Configuration</h3>
           <p className={`text-xs mb-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
             Configure how many bonus points are awarded for each placement. Participation points are awarded to every athlete who competes.
           </p>
@@ -601,8 +601,8 @@ export default function IndividualGameView() {
                   value={value}
                   onChange={e => set(e.target.value)}
                   onBlur={e => set(Math.max(0, Math.min(100, Math.round(Number(e.target.value) || 0))))}
-                  className={`w-20 px-3 py-2 rounded-lg text-sm border text-center ${
-                    darkMode ? 'bg-navy-800 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+                  className={`w-20 px-3 py-2.5 rounded-xl text-sm border text-center ${
+                    darkMode ? 'bg-navy-800 border-white/[0.08] text-white' : 'bg-white border-gray-300 text-gray-900'
                   }`}
                 />
               </div>
@@ -610,10 +610,10 @@ export default function IndividualGameView() {
           </div>
 
           {/* Participation Cap */}
-          <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-white/10' : 'border-gray-200'}`}>
+          <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-white/[0.08]' : 'border-gray-200/80'}`}>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>🛡️ Max Participation Cap</label>
+                <label className={`text-sm font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>🛡️ Max Participation Cap</label>
                 <p className={`text-[11px] mt-0.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                   Max participation points a single team can earn per event. Leave empty for no limit. Medal bonuses are never capped.
                 </p>
@@ -629,15 +629,15 @@ export default function IndividualGameView() {
                   if (e.target.value === '') setPtMaxCap('');
                   else setPtMaxCap(Math.max(1, Math.min(100, Math.round(Number(e.target.value) || 1))));
                 }}
-                className={`w-20 px-3 py-2 rounded-lg text-sm border text-center ${
-                  darkMode ? 'bg-navy-800 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+                className={`w-20 px-3 py-2.5 rounded-xl text-sm border text-center ${
+                  darkMode ? 'bg-navy-800 border-white/[0.08] text-white' : 'bg-white border-gray-300 text-gray-900'
                 }`}
               />
             </div>
           </div>
           <button
             onClick={handleSavePointsConfig}
-            className="mt-4 w-full px-4 py-2 bg-accent text-navy-900 font-bold text-sm rounded-lg hover:bg-accent-dark transition-colors"
+            className="mt-4 w-full px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200"
           >
             Save Points Config
           </button>
@@ -650,7 +650,7 @@ export default function IndividualGameView() {
       <Modal isOpen={showAddCat} onClose={() => setShowAddCat(false)} title={editCat ? 'Edit Category' : 'Add Category'}>
         <div className="space-y-4">
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category Name *</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category Name *</label>
             <input
               type="text"
               value={catName}
@@ -661,8 +661,8 @@ export default function IndividualGameView() {
             />
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setShowAddCat(false)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
-            <button onClick={handleSaveCategory} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors">{editCat ? 'Update' : 'Add'}</button>
+            <button onClick={() => setShowAddCat(false)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
+            <button onClick={handleSaveCategory} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">{editCat ? 'Update' : 'Add'}</button>
           </div>
         </div>
       </Modal>
@@ -682,7 +682,7 @@ export default function IndividualGameView() {
                   { label: '🥉 3rd Place (Bronze)', value: resultThird, set: setResultThird },
                 ].map(({ label, value, set }) => (
                   <div key={label}>
-                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}</label>
+                    <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}</label>
                     <select value={value} onChange={e => set(e.target.value)} className={inputCls}>
                       <option value="">— None —</option>
                       {resultCatAthletes.filter(a => !resultAbsentees.includes(a.id)).map(a => {
@@ -694,7 +694,7 @@ export default function IndividualGameView() {
                 ))}
 
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Absent / DNS Athletes</label>
+                  <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Absent / DNS Athletes</label>
                   <div className="space-y-1.5 max-h-40 overflow-y-auto">
                     {resultCatAthletes.map(a => {
                       const team = teams.find(t => t.id === a.teamId);
@@ -703,8 +703,8 @@ export default function IndividualGameView() {
                       return (
                         <label
                           key={a.id}
-                          className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm cursor-pointer transition-colors ${
-                            isAbsent ? 'bg-red-900/20 text-red-400' : darkMode ? 'bg-white/[0.03] hover:bg-white/5' : 'bg-gray-50 hover:bg-gray-100'
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded-xl text-sm cursor-pointer transition-colors duration-150 ${
+                            isAbsent ? 'bg-red-900/20 text-red-400' : darkMode ? 'bg-white/[0.02] hover:bg-white/[0.04]' : 'bg-gray-50 hover:bg-gray-100'
                           } ${isPlaced ? 'opacity-40 pointer-events-none' : ''}`}
                         >
                           <input
@@ -725,8 +725,8 @@ export default function IndividualGameView() {
                 </div>
 
                 <div className="flex gap-3 pt-2">
-                  <button onClick={() => setResultCatId(null)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
-                  <button onClick={handleSaveResult} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors">Save Results</button>
+                  <button onClick={() => setResultCatId(null)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
+                  <button onClick={handleSaveResult} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">Save Results</button>
                 </div>
               </>
             )}
@@ -738,11 +738,11 @@ export default function IndividualGameView() {
       <Modal isOpen={showAddAthlete} onClose={() => setShowAddAthlete(false)} title={editAthlete ? 'Edit Athlete' : 'Add Athlete'}>
         <div className="space-y-4">
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Full Name *</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Full Name *</label>
             <input type="text" value={athName} onChange={e => setAthName(e.target.value)} placeholder="Athlete full name" className={inputCls} autoFocus />
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Registration Number *</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Registration Number *</label>
             <input
               type="text"
               inputMode="numeric"
@@ -763,7 +763,7 @@ export default function IndividualGameView() {
             </div>
           </div>
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>School / Team *</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>School / Team *</label>
             <select value={athTeam} onChange={e => setAthTeam(e.target.value)} className={inputCls}>
               <option value="">Select School</option>
               {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.shortCode})</option>)}
@@ -771,17 +771,17 @@ export default function IndividualGameView() {
           </div>
           {gameCategories.length > 0 && (
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Category</label>
               <p className={`text-[10px] mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Select one category per athlete</p>
               <div className="flex flex-wrap gap-2">
                 {gameCategories.map(c => (
                   <button
                     key={c.id}
                     onClick={() => toggleAthCat(c.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-200 ${
                       athCats.includes(c.id)
                         ? 'bg-accent/20 border-accent text-accent'
-                        : darkMode ? 'bg-white/5 border-white/10 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-700'
+                        : darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-700'
                     }`}
                   >
                     {c.name}
@@ -791,8 +791,8 @@ export default function IndividualGameView() {
             </div>
           )}
           <div className="flex gap-3 pt-2">
-            <button onClick={() => setShowAddAthlete(false)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${darkMode ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
-            <button onClick={handleSaveAthlete} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors">{editAthlete ? 'Update' : 'Add'} Athlete</button>
+            <button onClick={() => setShowAddAthlete(false)} className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.06] text-gray-300 border border-white/[0.06]' : 'bg-gray-100 text-gray-700'}`}>Cancel</button>
+            <button onClick={handleSaveAthlete} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold shadow-sm shadow-accent/20 hover:bg-accent-dark transition-all duration-200">{editAthlete ? 'Update' : 'Add'} Athlete</button>
           </div>
         </div>
       </Modal>

@@ -27,8 +27,8 @@ export default function LoginModal({ isOpen, onClose }) {
 
   const inputRef = useRef(null);
 
-  const inputCls = `w-full px-3 py-2.5 rounded-lg text-sm border ${
-    darkMode ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-gray-300 text-gray-900'
+  const inputCls = `w-full px-3.5 py-2.5 rounded-xl text-sm border transition-all duration-200 ${
+    darkMode ? 'bg-white/[0.04] border-white/[0.08] text-white focus:border-accent/50 focus:bg-white/[0.06]' : 'bg-white border-gray-200/80 text-gray-900 focus:border-accent'
   }`;
 
   useEffect(() => {
@@ -116,17 +116,17 @@ export default function LoginModal({ isOpen, onClose }) {
       <Modal isOpen={isOpen} onClose={onClose} title="Reset Password" size="sm">
         {recoverySuccess ? (
           <div className="space-y-4">
-            <div className="text-center py-4">
-              <div className="text-3xl mb-2">✅</div>
-              <p className="text-win font-medium">Password reset successfully!</p>
-              <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>You can now log in with your new password.</p>
+            <div className="text-center py-6">
+              <div className="text-3xl mb-3">✅</div>
+              <p className="text-win font-semibold">Password reset successfully!</p>
+              <p className={`text-sm mt-1.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>You can now log in with your new password.</p>
             </div>
             <button
               onClick={() => {
                 setShowRecovery(false);
                 setRecoverySuccess(false);
               }}
-              className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-lg hover:bg-accent-dark transition-colors"
+              className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-xl hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20"
             >
               Back to Login
             </button>
@@ -135,7 +135,7 @@ export default function LoginModal({ isOpen, onClose }) {
           <div className="space-y-4">
             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Enter the recovery key you saved during setup.</p>
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Recovery Key</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Recovery Key</label>
               <input
                 type="text"
                 value={recoveryKey}
@@ -146,7 +146,7 @@ export default function LoginModal({ isOpen, onClose }) {
               />
             </div>
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password (min 6 characters)</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password (min 6 characters)</label>
               <input
                 type="password"
                 value={newPassword}
@@ -155,7 +155,7 @@ export default function LoginModal({ isOpen, onClose }) {
               />
             </div>
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm New Password</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm New Password</label>
               <input
                 type="password"
                 value={confirmNewPassword}
@@ -167,15 +167,15 @@ export default function LoginModal({ isOpen, onClose }) {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowRecovery(false)}
-                className={`flex-1 px-4 py-2.5 rounded-lg transition-colors ${
-                  darkMode ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                  darkMode ? 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] border border-white/[0.06]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Back
               </button>
               <button
                 onClick={handleRecover}
-                className="flex-1 px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-lg hover:bg-accent-dark transition-colors"
+                className="flex-1 px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-xl hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20"
               >
                 Reset Password
               </button>
@@ -190,13 +190,13 @@ export default function LoginModal({ isOpen, onClose }) {
     <Modal isOpen={isOpen} onClose={onClose} title="Admin Login" size="sm">
       <div className={`space-y-4 ${shake ? 'animate-shake' : ''}`}>
         <div className="text-center">
-          <div className="text-3xl mb-1">🛡️</div>
+          <div className="text-3xl mb-1.5">🛡️</div>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Enter admin password to manage tournament data</p>
         </div>
 
         {isLocked ? (
-          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 text-center">
-            <p className="text-red-300 font-medium text-sm">Account Locked</p>
+          <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-center">
+            <p className="text-red-300 font-semibold text-sm">Account Locked</p>
             <p className="text-red-400/70 text-xs mt-1">Too many failed attempts</p>
             <div className="text-2xl font-mono font-bold text-red-300 mt-2">
               {lockoutMinutes > 0 ? `${lockoutMinutes}m ` : ''}{lockoutSeconds}s
@@ -205,7 +205,7 @@ export default function LoginModal({ isOpen, onClose }) {
         ) : (
           <>
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
               <div className="relative">
                 <input
                   ref={inputRef}
@@ -220,7 +220,7 @@ export default function LoginModal({ isOpen, onClose }) {
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 text-sm px-1 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
+                  className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-sm px-1 transition-colors duration-200 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-400 hover:text-gray-700'}`}
                 >
                   {showPw ? '🙈' : '👁'}
                 </button>
@@ -233,10 +233,10 @@ export default function LoginModal({ isOpen, onClose }) {
         <button
           onClick={handleLogin}
           disabled={isLocked || loading || !password}
-          className={`w-full px-4 py-2.5 font-bold rounded-lg transition-colors ${
+          className={`w-full px-4 py-2.5 font-bold rounded-xl transition-all duration-200 ${
             isLocked || loading || !password
-              ? darkMode ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-accent text-navy-900 hover:bg-accent-dark'
+              ? darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5'
           }`}
         >
           {loading ? 'Verifying...' : 'Login'}
@@ -244,7 +244,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
         <button
           onClick={() => setShowRecovery(true)}
-          className={`w-full text-xs transition-colors ${darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+          className={`w-full text-xs transition-colors duration-200 ${darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
         >
           Forgot password? Use recovery key
         </button>

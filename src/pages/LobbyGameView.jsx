@@ -217,11 +217,11 @@ export default function LobbyGameView() {
     return map;
   }, [gameEntries]);
 
-  const cardCls = `rounded-xl border ${darkMode ? 'bg-navy-800/60 backdrop-blur border-white/5' : 'bg-white/80 backdrop-blur border-gray-200'}`;
-  const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'}`;
-  const labelCls = `block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`;
-  const btnPrimary = `px-4 py-2 rounded-lg text-sm font-medium bg-accent text-navy-900 hover:bg-accent/90 transition-colors`;
-  const btnSecondary = `px-4 py-2 rounded-lg text-sm font-medium ${darkMode ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`;
+  const cardCls = `rounded-2xl border ${darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'}`;
+  const inputCls = `w-full px-3 py-2.5 rounded-xl text-sm border ${darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'}`;
+  const labelCls = `block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`;
+  const btnPrimary = `px-4 py-2.5 rounded-xl text-sm font-medium bg-accent text-navy-900 hover:bg-accent/90 shadow-sm shadow-accent/20 transition-all duration-200`;
+  const btnSecondary = `px-4 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${darkMode ? 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.08] border border-white/[0.06]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`;
 
   if (!game) return null;
 
@@ -245,12 +245,12 @@ export default function LobbyGameView() {
           <button
             key={g.id}
             onClick={() => dispatch({ type: 'SELECT_GAME', payload: g.id })}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
               selectedGameId === g.id
                 ? 'bg-accent text-navy-900 shadow-lg shadow-accent/20'
                 : darkMode
-                ? 'bg-white/5 text-gray-400 hover:bg-white/10 border border-white/5'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08] border border-white/[0.06]'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200/80'
             }`}
           >
             <span className="text-lg">{g.emoji}</span>
@@ -261,7 +261,7 @@ export default function LobbyGameView() {
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+        <h2 className={`text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
           {game.emoji} {game.name}
           <span className={`text-sm font-normal ml-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Lobby Game</span>
         </h2>
@@ -288,7 +288,7 @@ export default function LobbyGameView() {
                       dispatch({ type: 'REOPEN_LOBBY_GAME', payload: { gameId: selectedGameId } });
                     }
                   }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors`}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-all duration-200`}
                 >
                   Reopen Game
                 </button>
@@ -299,7 +299,7 @@ export default function LobbyGameView() {
                       dispatch({ type: 'COMPLETE_LOBBY_GAME', payload: { gameId: selectedGameId } });
                     }
                   }}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium bg-win text-white hover:bg-win/90 transition-colors`}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-medium bg-win text-white hover:bg-win/90 transition-all duration-200`}
                 >
                   Finish Game
                 </button>
@@ -310,15 +310,15 @@ export default function LobbyGameView() {
       </div>
 
       {isCompleted && podiumTeams.length > 0 && (
-        <div className={`rounded-xl border overflow-hidden mb-6 ${
-          darkMode ? 'bg-navy-800/60 backdrop-blur border-gold/20' : 'bg-white border-gold/30'
+        <div className={`rounded-2xl border overflow-hidden mb-6 ${
+          darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-gold/20' : 'bg-white border-gold/30'
         }`}>
           {/* Champion Banner */}
           <div className="bg-gradient-to-r from-yellow-600/20 via-yellow-500/10 to-yellow-600/20 p-6 text-center">
             <div className="text-4xl mb-2">🏆</div>
             <h2 className="text-xl font-black text-gold mb-1 tracking-wide">CHAMPION</h2>
             <div className="flex items-center justify-center gap-3">
-              <div className="ring-4 ring-gold/30 rounded-lg shadow-lg shadow-gold/20">
+              <div className="ring-4 ring-gold/30 rounded-xl shadow-lg shadow-gold/20">
                 <TeamLogo team={podiumTeams[0].team} size={56} />
               </div>
               <div className="text-left">
@@ -334,7 +334,7 @@ export default function LobbyGameView() {
             <div className="flex items-end justify-center gap-4">
               {podiumTeams.length > 1 && (
                 <div className="text-center flex-1">
-                  <div className={`rounded-lg p-3 ${darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}`} style={{ minHeight: '80px' }}>
+                  <div className={`rounded-xl p-3 ${darkMode ? 'bg-white/[0.02]' : 'bg-gray-50'}`} style={{ minHeight: '80px' }}>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-navy-900 font-bold text-sm mx-auto mb-1 flex items-center justify-center shadow-md">2</div>
                     <TeamLogo team={podiumTeams[1].team} size={36} className="mx-auto" />
                     <p className="text-xs font-semibold mt-1">{podiumTeams[1].team.shortCode}</p>
@@ -346,7 +346,7 @@ export default function LobbyGameView() {
                 </div>
               )}
               <div className="text-center flex-1">
-                <div className={`rounded-lg p-3 border-2 border-gold/30 ${darkMode ? 'bg-gold/5' : 'bg-yellow-50'}`} style={{ minHeight: '100px' }}>
+                <div className={`rounded-xl p-3 border-2 border-gold/30 ${darkMode ? 'bg-gold/5' : 'bg-yellow-50'}`} style={{ minHeight: '100px' }}>
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-navy-900 font-bold text-lg mx-auto mb-1 flex items-center justify-center shadow-lg shadow-yellow-500/30">1</div>
                   <TeamLogo team={podiumTeams[0].team} size={40} className="mx-auto" />
                   <p className="text-sm font-bold mt-1">{podiumTeams[0].team.shortCode}</p>
@@ -358,7 +358,7 @@ export default function LobbyGameView() {
               </div>
               {podiumTeams.length > 2 && (
                 <div className="text-center flex-1">
-                  <div className={`rounded-lg p-3 ${darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}`} style={{ minHeight: '70px' }}>
+                  <div className={`rounded-xl p-3 ${darkMode ? 'bg-white/[0.02]' : 'bg-gray-50'}`} style={{ minHeight: '70px' }}>
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-sm mx-auto mb-1 flex items-center justify-center shadow-md">3</div>
                     <TeamLogo team={podiumTeams[2].team} size={32} className="mx-auto" />
                     <p className="text-xs font-semibold mt-1">{podiumTeams[2].team.shortCode}</p>
@@ -385,7 +385,7 @@ export default function LobbyGameView() {
       {/* Points Config Panel */}
       {showConfig && isAdmin && (
         <div className={`${cardCls} p-4 space-y-4`}>
-          <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Lobby Points Configuration</h3>
+          <h3 className={`text-sm font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Lobby Points Configuration</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
               { label: '🥇 1st Place', value: cfgFirst, set: setCfgFirst },
@@ -431,7 +431,7 @@ export default function LobbyGameView() {
       {/* Entry Form */}
       {showEntryForm && isAdmin && (
         <div className={`${cardCls} p-4 space-y-4`}>
-          <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`text-sm font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {editEntryObj ? 'Edit Entry' : 'Register New Entry'}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -465,7 +465,7 @@ export default function LobbyGameView() {
       {gameEntries.length > 0 && (
         <div className={cardCls}>
           <div className="p-4">
-            <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h3 className={`text-sm font-bold tracking-tight mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               Registered Entries ({gameEntries.length})
             </h3>
             <div className="space-y-2">
@@ -473,7 +473,7 @@ export default function LobbyGameView() {
                 const team = teams.find(t => t.id === schoolId);
                 if (!team) return null;
                 return (
-                  <div key={schoolId} className={`rounded-lg p-3 border ${darkMode ? 'bg-white/[0.02] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                  <div key={schoolId} className={`rounded-xl p-3 border ${darkMode ? 'bg-white/[0.02] border-white/[0.04]' : 'bg-gray-50 border-gray-100'}`}>
                     <div className="flex items-center gap-2 mb-1">
                       <TeamLogo team={team} size={20} />
                       <span className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -488,7 +488,7 @@ export default function LobbyGameView() {
                         <div
                           key={entry.id}
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border ${
-                            darkMode ? 'bg-white/5 border-white/10 text-gray-300' : 'bg-white border-gray-200 text-gray-700'
+                            darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-300' : 'bg-white border-gray-200/80 text-gray-700'
                           }`}
                         >
                           <span>{entry.entryName || team.shortCode || team.name}</span>
@@ -496,12 +496,12 @@ export default function LobbyGameView() {
                             <>
                               <button
                                 onClick={() => openEditEntry(entry)}
-                                className={`ml-1 ${darkMode ? 'text-accent hover:text-accent/80' : 'text-blue-600 hover:text-blue-700'}`}
+                                className={`ml-1 transition-colors duration-150 ${darkMode ? 'text-accent hover:text-accent/80' : 'text-blue-600 hover:text-blue-700'}`}
                                 title="Edit"
                               >✎</button>
                               <button
                                 onClick={() => handleDeleteEntry(entry.id)}
-                                className={`${darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-600'}`}
+                                className={`transition-colors duration-150 ${darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-500 hover:text-red-600'}`}
                                 title="Delete"
                               >×</button>
                             </>
@@ -520,7 +520,7 @@ export default function LobbyGameView() {
       {/* Session Form Modal */}
       {showForm && isAdmin && (
         <div className={`${cardCls} p-4 space-y-4`}>
-          <h3 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`text-sm font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             {editSession ? 'Edit Session' : 'New Session'}
           </h3>
           <div>
@@ -551,10 +551,10 @@ export default function LobbyGameView() {
                       <button
                         key={entry.id}
                         onClick={() => toggleParticipant(entry.id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all duration-200 ${
                           participantIds.includes(entry.id)
                             ? 'bg-accent/20 border-accent text-accent'
-                            : darkMode ? 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20' : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300'
+                            : darkMode ? 'bg-white/[0.04] border-white/[0.08] text-gray-400 hover:border-white/[0.15]' : 'bg-gray-50 border-gray-200/80 text-gray-600 hover:border-gray-300'
                         }`}
                       >
                         <TeamLogo team={team} size={16} />
@@ -600,7 +600,7 @@ export default function LobbyGameView() {
       {standings.length > 0 && (
         <div className={cardCls}>
           <div className="p-4">
-            <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Standings</h3>
+            <h3 className={`text-sm font-bold tracking-tight mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Standings</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -616,7 +616,7 @@ export default function LobbyGameView() {
                 </thead>
                 <tbody>
                   {standings.map((s) => (
-                    <tr key={s.teamId} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                    <tr key={s.teamId} className={`border-t ${darkMode ? 'border-white/[0.04]' : 'border-gray-100'}`}>
                       <td className={`px-3 py-2 font-mono ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{s.rank}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
@@ -641,7 +641,7 @@ export default function LobbyGameView() {
       {/* Session Results List */}
       <div className={cardCls}>
         <div className="p-4">
-          <h3 className={`text-sm font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h3 className={`text-sm font-bold tracking-tight mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Session Results ({gameResults.length})
           </h3>
           {gameResults.length === 0 ? (
@@ -656,13 +656,13 @@ export default function LobbyGameView() {
                 const secondTeam = getEntryTeam(p.second);
                 const thirdTeam = getEntryTeam(p.third);
                 return (
-                  <div key={session.id} className={`rounded-lg p-3 border ${darkMode ? 'bg-white/[0.02] border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                  <div key={session.id} className={`rounded-xl p-3 border ${darkMode ? 'bg-white/[0.02] border-white/[0.04]' : 'bg-gray-50 border-gray-100'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{session.sessionName}</span>
                       {isAdmin && (
                         <div className="flex gap-1">
-                          <button onClick={() => openEditSession(session)} className={`text-xs px-2 py-1 rounded ${darkMode ? 'text-accent hover:bg-white/5' : 'text-blue-600 hover:bg-gray-100'}`}>Edit</button>
-                          <button onClick={() => handleDeleteSession(session.id)} className={`text-xs px-2 py-1 rounded ${darkMode ? 'text-red-400 hover:bg-white/5' : 'text-red-600 hover:bg-gray-100'}`}>Delete</button>
+                          <button onClick={() => openEditSession(session)} className={`text-xs px-2 py-1 rounded-xl transition-colors duration-150 ${darkMode ? 'text-accent hover:bg-white/[0.04]' : 'text-blue-600 hover:bg-gray-100'}`}>Edit</button>
+                          <button onClick={() => handleDeleteSession(session.id)} className={`text-xs px-2 py-1 rounded-xl transition-colors duration-150 ${darkMode ? 'text-red-400 hover:bg-white/[0.04]' : 'text-red-600 hover:bg-gray-100'}`}>Delete</button>
                         </div>
                       )}
                     </div>

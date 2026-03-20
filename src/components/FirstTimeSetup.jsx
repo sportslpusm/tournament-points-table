@@ -75,7 +75,7 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
     if (onComplete) onComplete();
   }
 
-  const inputCls = 'w-full px-3 py-2.5 rounded-lg text-sm bg-white/5 border border-white/10 text-white placeholder-gray-500';
+  const inputCls = 'w-full px-3.5 py-2.5 rounded-xl text-sm bg-white/[0.04] border border-white/[0.08] text-white placeholder-gray-500 transition-all duration-200 focus:border-accent/50 focus:bg-white/[0.06]';
 
   return (
     <div className="min-h-screen bg-navy-950 flex items-center justify-center p-4">
@@ -84,31 +84,31 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
         <div className="flex items-center justify-center gap-2 mb-8">
           {[1, 2, 3].map(s => (
             <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                step >= s ? 'bg-accent text-navy-900 shadow-md shadow-accent/20' : 'bg-white/5 text-gray-500'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                step >= s ? 'bg-accent text-navy-900 shadow-lg shadow-accent/25' : 'bg-white/[0.04] text-gray-500 border border-white/[0.06]'
               }`}>
                 {step > s ? '✓' : s}
               </div>
-              {s < 3 && <div className={`w-8 h-0.5 rounded-full transition-colors ${step > s ? 'bg-accent' : 'bg-white/10'}`} />}
+              {s < 3 && <div className={`w-8 h-0.5 rounded-full transition-colors duration-300 ${step > s ? 'bg-accent' : 'bg-white/[0.06]'}`} />}
             </div>
           ))}
         </div>
 
-        <div className="bg-navy-800/60 backdrop-blur-2xl rounded-2xl p-6 border border-white/10 shadow-2xl">
+        <div className="bg-navy-850/60 backdrop-blur-2xl rounded-2xl p-6 border border-white/[0.08] shadow-2xl">
           {/* Step 1: Tournament Info */}
           {step === 1 && (
             <div className="animate-slideUp">
               <div className="text-center mb-6">
                 <div className="text-3xl mb-2">🏆</div>
-                <h2 className="text-xl font-bold text-white">Welcome!</h2>
-                <p className="text-sm text-gray-400 mt-1">Set up your tournament</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">Welcome!</h2>
+                <p className="text-sm text-gray-400 mt-1.5">Set up your tournament</p>
               </div>
               <div className="space-y-4">
                 <div className="flex justify-center">
                   <ImageUpload value={tLogo} onChange={setTLogo} label="Tournament Logo" size={80} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Tournament Name</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-1.5">Tournament Name</label>
                   <input
                     type="text"
                     value={tName}
@@ -120,7 +120,7 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
                 </div>
                 <button
                   onClick={() => setStep(2)}
-                  className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-lg hover:bg-accent-dark transition-colors"
+                  className="w-full px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-xl hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5"
                 >
                   Next
                 </button>
@@ -133,10 +133,10 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
             <div className="animate-slideUp">
               <div className="text-center mb-6">
                 <div className="text-3xl mb-2">{skipTournamentInfo ? '🔄' : '🔐'}</div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-white tracking-tight">
                   {skipTournamentInfo ? 'Set New Admin Password' : 'Set Admin Password'}
                 </h2>
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="text-sm text-gray-400 mt-1.5">
                   {skipTournamentInfo
                     ? 'Your tournament data was found. Set a password to manage it from this device.'
                     : 'Protect your tournament data from unauthorized edits'}
@@ -144,7 +144,7 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Password (min 6 characters)</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-1.5">Password (min 6 characters)</label>
                   <div className="relative">
                     <input
                       type={showPw ? 'text' : 'password'}
@@ -157,14 +157,14 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
                     <button
                       type="button"
                       onClick={() => setShowPw(!showPw)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-sm px-1"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-sm px-1 transition-colors duration-200"
                     >
                       {showPw ? '🙈' : '👁'}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
+                  <label className="block text-sm font-semibold text-gray-300 mb-1.5">Confirm Password</label>
                   <input
                     type={showPw ? 'text' : 'password'}
                     value={confirmPassword}
@@ -181,14 +181,14 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
                   {!skipTournamentInfo && (
                     <button
                       onClick={() => setStep(1)}
-                      className="flex-1 px-4 py-2.5 bg-white/10 text-gray-300 rounded-lg hover:bg-white/15 transition-colors"
+                      className="flex-1 px-4 py-2.5 bg-white/[0.06] text-gray-300 rounded-xl hover:bg-white/[0.1] transition-all duration-200 border border-white/[0.06]"
                     >
                       Back
                     </button>
                   )}
                   <button
                     onClick={handleStep2}
-                    className="flex-1 px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-lg hover:bg-accent-dark transition-colors"
+                    className="flex-1 px-4 py-2.5 bg-accent text-navy-900 font-bold rounded-xl hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20"
                   >
                     Set Password
                   </button>
@@ -202,30 +202,30 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
             <div className="animate-slideUp">
               <div className="text-center mb-6">
                 <div className="text-3xl mb-2">🔑</div>
-                <h2 className="text-xl font-bold text-white">Save Your Recovery Key</h2>
-                <p className="text-sm text-gray-400 mt-1">This is your ONLY way to reset your password if you forget it</p>
+                <h2 className="text-xl font-bold text-white tracking-tight">Save Your Recovery Key</h2>
+                <p className="text-sm text-gray-400 mt-1.5">This is your ONLY way to reset your password if you forget it</p>
               </div>
               <div className="space-y-4">
-                <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-                  <p className="text-red-300 text-xs font-medium">
+                <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-3.5">
+                  <p className="text-red-300 text-xs font-semibold">
                     This key will only be shown ONCE. Save it somewhere safe!
                   </p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center border border-white/10">
-                  <p className="text-xs text-gray-500 mb-2">Recovery Key</p>
+                <div className="bg-white/[0.04] rounded-xl p-5 text-center border border-white/[0.08]">
+                  <p className="text-xs text-gray-500 mb-2.5">Recovery Key</p>
                   <p className="text-2xl font-mono font-bold text-accent tracking-widest">
                     {formatRecoveryKey(recoveryKey)}
                   </p>
                 </div>
                 <button
                   onClick={handleCopyKey}
-                  className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    keyCopied ? 'bg-win/20 text-win' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  className={`w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    keyCopied ? 'bg-win/20 text-win' : 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] border border-white/[0.06]'
                   }`}
                 >
                   {keyCopied ? '✓ Copied!' : 'Copy to Clipboard'}
                 </button>
-                <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg bg-white/5">
+                <label className="flex items-start gap-3 cursor-pointer p-3.5 rounded-xl bg-white/[0.03] border border-white/[0.06] transition-all duration-200 hover:bg-white/[0.05]">
                   <input
                     type="checkbox"
                     checked={keyAcknowledged}
@@ -239,10 +239,10 @@ export default function FirstTimeSetup({ onComplete, skipTournamentInfo = false 
                 <button
                   onClick={handleFinish}
                   disabled={!keyAcknowledged}
-                  className={`w-full px-4 py-2.5 font-bold rounded-lg transition-colors ${
+                  className={`w-full px-4 py-2.5 font-bold rounded-xl transition-all duration-200 ${
                     keyAcknowledged
-                      ? 'bg-accent text-navy-900 hover:bg-accent-dark'
-                      : 'bg-white/5 text-gray-600 cursor-not-allowed'
+                      ? 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5'
+                      : 'bg-white/[0.04] text-gray-600 cursor-not-allowed'
                   }`}
                 >
                   Get Started

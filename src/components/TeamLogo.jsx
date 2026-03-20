@@ -33,7 +33,7 @@ export default function TeamLogo({ team, size = 40, className = '' }) {
       <img
         src={team.logo}
         alt={team.name}
-        className={`rounded-lg object-contain flex-shrink-0 ${sizeClass} ${className}`}
+        className={`rounded-xl object-contain flex-shrink-0 ${sizeClass} ${className}`}
         style={style}
       />
     );
@@ -51,7 +51,7 @@ export default function TeamLogo({ team, size = 40, className = '' }) {
 
   return (
     <div
-      className={`rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 shadow-sm ${sizeClass} ${className}`}
+      className={`rounded-xl flex items-center justify-center font-bold text-white flex-shrink-0 shadow-sm ring-1 ring-white/10 ${sizeClass} ${className}`}
       style={{ backgroundColor: bg, ...style }}
     >
       {initials}

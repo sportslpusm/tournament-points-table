@@ -226,8 +226,8 @@ export default function MatchManagement() {
 
   const isEditingKnockout = editMatch?.matchType === 'knockout';
 
-  const inputCls = `w-full px-3 py-2 rounded-lg text-sm border ${
-    darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
+  const inputCls = `w-full px-3.5 py-2.5 rounded-xl text-sm border transition-all duration-200 ${
+    darkMode ? 'bg-navy-800 border-white/[0.08] text-white focus:border-accent/40 [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-200 text-gray-900 focus:border-accent/60'
   }`;
 
   const selectCls = inputCls;
@@ -251,16 +251,16 @@ export default function MatchManagement() {
 
   return (
     <div className="animate-slideUp">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h2 className="text-xl font-bold">Match Management</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+        <h2 className={`text-xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Match Management</h2>
         {isAdmin && (
           <div className="flex gap-2 flex-wrap">
-            <button onClick={openAdd} className="px-4 py-2 bg-accent text-navy-900 font-bold text-sm rounded-lg hover:bg-accent-dark transition-colors">
+            <button onClick={openAdd} className="px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20">
               + Add Match
             </button>
             {upcomingPoolMatches.length > 0 && (
-              <button onClick={openBulk} className={`px-4 py-2 font-medium text-sm rounded-lg transition-colors ${
-                darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              <button onClick={openBulk} className={`px-4 py-2.5 font-semibold text-sm rounded-xl transition-all duration-200 ${
+                darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] border border-white/[0.06]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
               }`}>
                 Bulk Entry
               </button>
@@ -270,7 +270,7 @@ export default function MatchManagement() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-5 flex-wrap">
         <select value={filterGame} onChange={e => setFilterGame(e.target.value)} className={selectCls} style={{width: 'auto'}}>
           <option value="all">All Games</option>
           {games.map(g => <option key={g.id} value={g.id}>{g.emoji} {g.name}</option>)}
@@ -296,26 +296,26 @@ export default function MatchManagement() {
           description="Add matches or adjust your filters."
         />
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {enrichedMatches.map(m => {
-            const statusBg = m.status === 'completed' ? 'bg-win/10 text-win' : m.status === 'live' ? 'bg-accent/10 text-accent animate-pulseLive' : darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400';
+            const statusBg = m.status === 'completed' ? 'bg-win/10 text-win' : m.status === 'live' ? 'bg-accent/10 text-accent animate-pulseLive' : darkMode ? 'bg-white/[0.04] text-gray-500' : 'bg-gray-100 text-gray-400';
             return (
-              <div key={m.id} className={`rounded-xl p-4 border border-l-[3px] transition-all ${getStatusStripe(m)} ${
+              <div key={m.id} className={`rounded-2xl p-4 border border-l-[3px] transition-all duration-150 ${getStatusStripe(m)} ${
                 darkMode
-                  ? 'bg-navy-800/40 backdrop-blur border-white/5 hover:bg-navy-800/60'
-                  : 'bg-white/80 backdrop-blur border-gray-200 hover:bg-white'
+                  ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06] hover:bg-navy-850/60'
+                  : 'bg-white/80 backdrop-blur-xl border-gray-200/80 hover:bg-white'
               }`}>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2.5">
                   <div className="flex items-center gap-2">
                     {m.game && <span className="text-lg">{m.game.emoji}</span>}
-                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span className={`text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                       {m.game?.name} · {m.matchType === 'knockout' ? ROUND_LABELS[m.round] || m.round : m.pool?.name}
                     </span>
                     {m.matchType === 'knockout' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent font-bold">KO</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-lg bg-accent/15 text-accent font-bold">KO</span>
                     )}
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${statusBg}`}>
+                  <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold ${statusBg}`}>
                     {m.status.toUpperCase()}
                   </span>
                 </div>
@@ -335,11 +335,11 @@ export default function MatchManagement() {
                         <span className={`text-sm italic ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>TBD</span>
                       )}
                     </div>
-                    <div className={`px-3 py-1 rounded text-xs font-bold ${
-                      m.result === 'draw' ? 'bg-draw/20 text-draw' :
-                      m.result === 'bye' ? 'bg-bye/20 text-bye' :
-                      m.result ? (darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500') :
-                      darkMode ? 'bg-white/5 text-gray-600' : 'bg-gray-50 text-gray-300'
+                    <div className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                      m.result === 'draw' ? 'bg-draw/15 text-draw' :
+                      m.result === 'bye' ? 'bg-bye/15 text-bye' :
+                      m.result ? (darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-500') :
+                      darkMode ? 'bg-white/[0.03] text-gray-600' : 'bg-gray-50 text-gray-300'
                     }`}>
                       {m.result === 'draw' ? 'DRAW' : m.result === 'bye' ? 'BYE' : 'vs'}
                     </div>
@@ -362,7 +362,7 @@ export default function MatchManagement() {
                     <div className="flex gap-1 ml-3">
                       <button
                         onClick={() => openEdit(m)}
-                        className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`}
+                        className={`p-2 rounded-xl transition-all duration-200 ${darkMode ? 'hover:bg-white/[0.06] text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'}`}
                         title="Edit"
                         aria-label="Edit match"
                       >
@@ -371,7 +371,7 @@ export default function MatchManagement() {
                       {m.matchType === 'pool' && (
                         <button
                           onClick={() => setDeleteId(m.id)}
-                          className="p-2 rounded-lg hover:bg-red-900/30 text-gray-400 hover:text-red-400 transition-colors"
+                          className="p-2 rounded-xl hover:bg-red-900/20 text-gray-400 hover:text-red-400 transition-all duration-200"
                           title="Delete"
                           aria-label="Delete match"
                         >
@@ -381,8 +381,8 @@ export default function MatchManagement() {
                     </div>
                   )}
                 </div>
-                {m.penalties && <span className="text-[10px] text-draw mt-1 block">Won on penalties</span>}
-                {m.extraTime && !m.penalties && <span className="text-[10px] text-draw mt-1 block">Won after extra time</span>}
+                {m.penalties && <span className="text-[10px] text-draw mt-1.5 block font-medium">Won on penalties</span>}
+                {m.extraTime && !m.penalties && <span className="text-[10px] text-draw mt-1.5 block font-medium">Won after extra time</span>}
               </div>
             );
           })}
@@ -399,7 +399,7 @@ export default function MatchManagement() {
           {!isEditingKnockout && (
             <>
               <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Pool *</label>
+                <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Pool *</label>
                 <select
                   value={formPoolId}
                   onChange={e => { setFormPoolId(e.target.value); setFormTeamA(''); setFormTeamB(''); }}
@@ -417,7 +417,7 @@ export default function MatchManagement() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team A *</label>
+                  <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team A *</label>
                   <select value={formTeamA} onChange={e => setFormTeamA(e.target.value)} className={inputCls} disabled={!!editMatch}>
                     <option value="">Select</option>
                     {availableTeams.filter(t => t.id !== formTeamB).map(t => (
@@ -426,7 +426,7 @@ export default function MatchManagement() {
                   </select>
                 </div>
                 <div>
-                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team B *</label>
+                  <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Team B *</label>
                   <select value={formTeamB} onChange={e => setFormTeamB(e.target.value)} className={inputCls} disabled={!!editMatch}>
                     <option value="">Select</option>
                     {availableTeams.filter(t => t.id !== formTeamA).map(t => (
@@ -439,17 +439,17 @@ export default function MatchManagement() {
           )}
 
           {isEditingKnockout && (
-            <div className="flex items-center justify-center gap-4 py-2">
+            <div className="flex items-center justify-center gap-4 py-3">
               <div className="text-center">
                 <TeamLogo team={teams.find(t => t.id === editMatch.teamAId)} size={40} />
-                <p className="text-xs font-bold mt-1">
+                <p className="text-xs font-bold mt-1.5">
                   {teams.find(t => t.id === editMatch.teamAId)?.name || 'TBD'}
                 </p>
               </div>
-              <span className="text-xl font-bold text-accent">VS</span>
+              <span className="text-xl font-black text-accent tracking-widest">VS</span>
               <div className="text-center">
                 <TeamLogo team={teams.find(t => t.id === editMatch.teamBId)} size={40} />
-                <p className="text-xs font-bold mt-1">
+                <p className="text-xs font-bold mt-1.5">
                   {teams.find(t => t.id === editMatch.teamBId)?.name || 'TBD'}
                 </p>
               </div>
@@ -457,7 +457,7 @@ export default function MatchManagement() {
           )}
 
           <div>
-            <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status</label>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Status</label>
             <select
               value={formStatus}
               onChange={e => { setFormStatus(e.target.value); if (e.target.value !== 'completed') { setFormResult(null); setFormAbsent(''); } }}
@@ -470,9 +470,9 @@ export default function MatchManagement() {
           </div>
           {formStatus === 'completed' && (
             <div>
-              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Result *</label>
+              <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Result *</label>
               {isEditingKnockout && (
-                <p className={`text-xs mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No draws allowed in knockout matches.</p>
+                <p className={`text-xs mb-2.5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No draws allowed in knockout matches.</p>
               )}
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -486,12 +486,12 @@ export default function MatchManagement() {
                   <button
                     key={opt.value}
                     onClick={() => setFormResult(opt.value)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    className={`px-3.5 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-200 ${
                       formResult === opt.value
-                        ? 'bg-accent/20 border-accent text-accent'
+                        ? 'bg-accent/15 border-accent text-accent'
                         : darkMode
-                        ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'
-                        : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                        ? 'bg-white/[0.03] border-white/[0.08] text-gray-300 hover:border-white/[0.15]'
+                        : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-gray-300'
                     }`}
                   >
                     {opt.label}
@@ -500,7 +500,7 @@ export default function MatchManagement() {
               </div>
               {formResult === 'bye' && !isEditingKnockout && (
                 <div className="mt-3">
-                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Absent Team *</label>
+                  <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Absent Team *</label>
                   <select value={formAbsent} onChange={e => setFormAbsent(e.target.value)} className={inputCls}>
                     <option value="">Select absent team</option>
                     <option value={editMatch?.teamAId || formTeamA}>{teams.find(t => t.id === (editMatch?.teamAId || formTeamA))?.name}</option>
@@ -511,12 +511,12 @@ export default function MatchManagement() {
             </div>
           )}
           <div className="flex gap-3 pt-2">
-            <button onClick={() => setShowAddModal(false)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-              darkMode ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            <button onClick={() => setShowAddModal(false)} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+              darkMode ? 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.10]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}>
               Cancel
             </button>
-            <button onClick={handleSave} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors">
+            <button onClick={handleSave} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors shadow-sm shadow-accent/20">
               {editMatch ? 'Update' : 'Add'} Match
             </button>
           </div>
@@ -533,8 +533,8 @@ export default function MatchManagement() {
         <div className="space-y-3">
           <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Quickly enter results for upcoming pool matches.</p>
           {upcomingPoolMatches.map(m => (
-            <div key={m.id} className={`flex items-center gap-3 p-3 rounded-lg ${
-              darkMode ? 'bg-white/5' : 'bg-gray-50'
+            <div key={m.id} className={`flex items-center gap-3 p-3.5 rounded-xl ${
+              darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'
             }`}>
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-sm">{m.game?.emoji}</span>
@@ -553,8 +553,8 @@ export default function MatchManagement() {
                     [m.id]: { result, absentTeamId: null },
                   }));
                 }}
-                className={`px-2 py-1.5 rounded text-xs border ${
-                  darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
+                className={`px-2.5 py-2 rounded-xl text-xs border ${
+                  darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-200 text-gray-900'
                 }`}
               >
                 <option value="">-- Select --</option>
@@ -570,8 +570,8 @@ export default function MatchManagement() {
                     ...prev,
                     [m.id]: { ...prev[m.id], absentTeamId: e.target.value },
                   }))}
-                  className={`px-2 py-1.5 rounded text-xs border ${
-                    darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-300 text-gray-900'
+                  className={`px-2.5 py-2 rounded-xl text-xs border ${
+                    darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-white border-gray-200 text-gray-900'
                   }`}
                 >
                   <option value="">Absent?</option>
@@ -582,12 +582,12 @@ export default function MatchManagement() {
             </div>
           ))}
           <div className="flex gap-3 pt-4">
-            <button onClick={() => setShowBulkModal(false)} className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-              darkMode ? 'bg-white/10 text-gray-300' : 'bg-gray-100 text-gray-700'
+            <button onClick={() => setShowBulkModal(false)} className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+              darkMode ? 'bg-white/[0.06] text-gray-300' : 'bg-gray-100 text-gray-700'
             }`}>
               Cancel
             </button>
-            <button onClick={handleBulkSave} className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold transition-colors hover:bg-accent-dark">
+            <button onClick={handleBulkSave} className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold transition-colors hover:bg-accent-dark shadow-sm shadow-accent/20">
               Save All Results
             </button>
           </div>

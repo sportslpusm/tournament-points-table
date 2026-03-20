@@ -18,7 +18,7 @@ export default function SaveIndicator({ darkMode }) {
       const pct = percent || Math.round((current / total) * 100);
       return (
         <div className="flex flex-col gap-0.5 min-w-0 max-w-[200px]">
-          <div className="flex items-center gap-1 text-[10px] font-medium select-none">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold select-none">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulseLive flex-shrink-0" />
             <span className={`truncate ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
               Logos {current}/{total}
@@ -29,9 +29,9 @@ export default function SaveIndicator({ darkMode }) {
               </span>
             )}
           </div>
-          <div className={`w-full h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-white/10' : 'bg-gray-200'}`}>
+          <div className={`w-full h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-white/[0.06]' : 'bg-gray-200'}`}>
             <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-400 to-cyan-400 transition-all duration-500 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-amber-400 via-cyan-400 to-accent transition-all duration-500 ease-out"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -47,7 +47,7 @@ export default function SaveIndicator({ darkMode }) {
     // Data saving phase
     if (phase === 'data') {
       return (
-        <div className="flex items-center gap-1.5 text-[10px] font-medium select-none">
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold select-none">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulseLive" />
           <span className={darkMode ? 'text-amber-400' : 'text-amber-600'}>
             {currentName || 'Saving data...'}
@@ -60,7 +60,7 @@ export default function SaveIndicator({ darkMode }) {
   // Generic saving (no progress detail yet)
   if (saveStatus === 'saving') {
     return (
-      <div className="flex items-center gap-1.5 text-[10px] font-medium select-none">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold select-none">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulseLive" />
         <span className={darkMode ? 'text-amber-400' : 'text-amber-600'}>Saving...</span>
       </div>
@@ -70,7 +70,7 @@ export default function SaveIndicator({ darkMode }) {
   if (saveStatus === 'idle' && !lastSavedAt) return null;
 
   return (
-    <div className="flex items-center gap-1.5 text-[10px] font-medium select-none">
+    <div className="flex items-center gap-1.5 text-[10px] font-semibold select-none">
       {saveStatus === 'saved' && (
         <>
           <span className="w-1.5 h-1.5 rounded-full bg-green-400" />

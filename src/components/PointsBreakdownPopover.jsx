@@ -91,28 +91,28 @@ export default function PointsBreakdownPopover({ teamId, type, gameId, value, la
 
       {/* Panel */}
       <div
-        className={`relative w-full lg:max-w-md lg:mx-4 rounded-t-2xl lg:rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col ${
+        className={`relative w-full lg:max-w-md lg:mx-4 rounded-t-2xl lg:rounded-2xl animate-scaleIn overflow-hidden shadow-2xl border flex flex-col backdrop-blur-xl ${
           darkMode
-            ? 'bg-navy-850 border-white/10 text-white'
-            : 'bg-white border-gray-200 text-gray-900'
+            ? 'bg-navy-850 border-white/[0.08] text-white'
+            : 'bg-white border-gray-200/80 text-gray-900'
         }`}
         style={{ maxHeight: '85vh', maxHeight: '85dvh' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle (mobile) */}
         <div className="lg:hidden flex justify-center pt-2 pb-1 shrink-0">
-          <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/20' : 'bg-gray-300'}`} />
+          <div className={`w-10 h-1 rounded-full ${darkMode ? 'bg-white/[0.15]' : 'bg-gray-300/80'}`} />
         </div>
 
         {/* Header */}
         <div className={`flex items-center justify-between px-4 py-3 border-b shrink-0 ${
-          darkMode ? 'border-white/10' : 'border-gray-200'
+          darkMode ? 'border-white/[0.08]' : 'border-gray-200/80'
         }`}>
           <h3 className="font-bold text-sm truncate pr-2">{breakdownContent.title}</h3>
           <button
             onClick={close}
-            className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xl font-light transition-colors ${
-              darkMode ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+            className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xl font-light transition-all duration-200 ${
+              darkMode ? 'hover:bg-white/[0.08] text-gray-400' : 'hover:bg-gray-100 text-gray-500'
             }`}
           >
             ×
@@ -379,7 +379,7 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
         )}
         {sessions.map((s, i) => (
           <div key={i} className={`flex items-center justify-between text-xs py-1 ${
-            i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}` : ''
+            i > 0 ? `border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}` : ''
           }`}>
             <span className="flex items-center gap-1 min-w-0">
               <span className="font-medium">{s.sessionName}</span>
@@ -419,7 +419,7 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
               {cat.category.name}
             </div>
             {cat.athletes.map((a, j) => (
-              <div key={j} className={`flex items-center justify-between text-xs py-1 ${j > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}` : ''}`}>
+              <div key={j} className={`flex items-center justify-between text-xs py-1 ${j > 0 ? `border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}` : ''}`}>
                 <span className="flex items-center gap-1">
                   {getPlacementEmoji(a.placement) && <span>{getPlacementEmoji(a.placement)}</span>}
                   <span className="font-medium">{a.athlete.name}</span>
@@ -499,12 +499,12 @@ function getStatBreakdownContent(teamId, team, statType, state) {
         <p className={`text-sm italic ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No {statType} recorded</p>
       )}
       {matchList.map((m, i) => (
-        <div key={i} className={`flex items-center gap-2 text-xs py-1.5 ${i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}` : ''}`}>
+        <div key={i} className={`flex items-center gap-2 text-xs py-1.5 ${i > 0 ? `border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}` : ''}`}>
           {m.game && <span>{m.game.emoji}</span>}
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
             m.isKnockout
               ? 'bg-accent/20 text-accent'
-              : darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'
+              : darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-500'
           }`}>
             {m.isKnockout ? (m.roundLabel || 'KO') : 'Pool'}
           </span>
@@ -539,7 +539,7 @@ function GameSection({ section, darkMode }) {
         ) : (
           lobby.sessions.map((s, i) => (
             <div key={i} className={`pl-2 py-0.5 ${
-              i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-50'}` : ''
+              i > 0 ? `border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-50'}` : ''
             }`}>
               <div className="flex items-center justify-between text-[11px]">
                 <span className="font-medium">{s.sessionName}</span>
@@ -648,7 +648,7 @@ function LobbyGameDetailSection({ section, lobbyEntries, darkMode }) {
       ) : (
         lobby.sessions.map((s, i) => (
           <div key={i} className={`pl-2 py-1 ${
-            i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-50'}` : ''
+            i > 0 ? `border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-50'}` : ''
           }`}>
             <div className="flex items-center justify-between text-[11px]">
               <span className="font-semibold">{s.sessionName}</span>
@@ -693,7 +693,7 @@ function LobbyGameDetailSection({ section, lobbyEntries, darkMode }) {
 
 function GameHeader({ game, subtitle, darkMode }) {
   return (
-    <div className={`flex items-center gap-2 mb-1.5 pb-1 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+    <div className={`flex items-center gap-2 mb-1.5 pb-1 border-b ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}`}>
       <span className="text-base">{game.emoji}</span>
       <span className="font-bold text-sm">{game.name}</span>
       {subtitle && <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{subtitle}</span>}
@@ -706,12 +706,12 @@ function MatchList({ matches, showBonus = false, compact = false, darkMode }) {
     <div className="space-y-0">
       {matches.map((m, i) => (
         <div key={i} className={`flex items-center justify-between ${compact ? 'text-[11px] py-0.5 pl-2' : 'text-xs py-1'} ${
-          i > 0 ? `border-t ${darkMode ? 'border-white/5' : 'border-gray-50'}` : ''
+          i > 0 ? `border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-50'}` : ''
         }`}>
           <span className="flex items-center gap-1 min-w-0">
             {m.roundLabel && (
               <span className={`shrink-0 text-[10px] px-1 py-0.5 rounded ${
-                darkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-400'
+                darkMode ? 'bg-white/[0.04] text-gray-500' : 'bg-gray-100 text-gray-400'
               }`}>{m.roundLabel}</span>
             )}
             <span className={`${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -744,7 +744,7 @@ function MatchList({ matches, showBonus = false, compact = false, darkMode }) {
 function Subtotal({ value, label = 'Subtotal', small = false, darkMode }) {
   return (
     <div className={`flex items-center justify-between ${small ? 'mt-1 pt-1' : 'mt-2 pt-2'} border-t ${
-      darkMode ? 'border-white/10' : 'border-gray-200'
+      darkMode ? 'border-white/[0.08]' : 'border-gray-200/80'
     }`}>
       <span className={`${small ? 'text-[11px]' : 'text-xs'} font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{label}</span>
       <span className={`font-mono font-bold text-accent ${small ? 'text-xs' : 'text-sm'}`}>{value} pts</span>

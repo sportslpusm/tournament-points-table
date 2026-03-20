@@ -309,17 +309,17 @@ export default function Dashboard() {
   }, [matches, knockoutMatches, teams, pools, games]);
 
   function getRankBadge(rank) {
-    if (rank === 1) return <span className="inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 text-navy-900 font-bold text-[10px] sm:text-sm shadow-lg shadow-yellow-500/20">1</span>;
-    if (rank === 2) return <span className="inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 text-navy-900 font-bold text-[10px] sm:text-sm shadow-lg shadow-gray-400/20">2</span>;
-    if (rank === 3) return <span className="inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-white font-bold text-[10px] sm:text-sm shadow-lg shadow-orange-500/20">3</span>;
-    return <span className={`inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full font-mono text-[10px] sm:text-sm ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>{rank}</span>;
+    if (rank === 1) return <span className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-600 text-navy-900 font-bold text-[10px] sm:text-sm shadow-lg shadow-yellow-500/25 ring-2 ring-yellow-400/20">1</span>;
+    if (rank === 2) return <span className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-gray-200 to-gray-400 text-navy-900 font-bold text-[10px] sm:text-sm shadow-lg shadow-gray-400/20 ring-2 ring-gray-300/20">2</span>;
+    if (rank === 3) return <span className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-orange-300 to-orange-600 text-white font-bold text-[10px] sm:text-sm shadow-lg shadow-orange-500/25 ring-2 ring-orange-400/20">3</span>;
+    return <span className={`inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full font-mono text-[10px] sm:text-sm font-semibold ${darkMode ? 'bg-white/[0.04] text-gray-500 ring-1 ring-white/[0.06]' : 'bg-gray-100 text-gray-500 ring-1 ring-gray-200'}`}>{rank}</span>;
   }
 
   function getRowBg(rank) {
-    if (rank === 1) return darkMode ? 'bg-yellow-500/5 hover:bg-yellow-500/10' : 'bg-yellow-50/50 hover:bg-yellow-50';
-    if (rank === 2) return darkMode ? 'bg-gray-400/5 hover:bg-gray-400/10' : 'bg-gray-50/50 hover:bg-gray-50';
-    if (rank === 3) return darkMode ? 'bg-orange-500/5 hover:bg-orange-500/10' : 'bg-orange-50/50 hover:bg-orange-50';
-    return darkMode ? 'hover:bg-white/[0.03]' : 'hover:bg-gray-50';
+    if (rank === 1) return darkMode ? 'bg-yellow-500/[0.04] hover:bg-yellow-500/[0.08]' : 'bg-yellow-50/60 hover:bg-yellow-50';
+    if (rank === 2) return darkMode ? 'bg-gray-400/[0.03] hover:bg-gray-400/[0.06]' : 'bg-gray-50/60 hover:bg-gray-50';
+    if (rank === 3) return darkMode ? 'bg-orange-500/[0.03] hover:bg-orange-500/[0.06]' : 'bg-orange-50/60 hover:bg-orange-50';
+    return darkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-gray-50/80';
   }
 
   function getRowLeftBorder(rank) {
@@ -384,20 +384,20 @@ export default function Dashboard() {
   return (
     <div className="animate-slideUp">
       {/* Hero Tournament Name */}
-      <div className="mb-6">
-        <div className="flex items-center gap-3 md:gap-4">
+      <div className="mb-8">
+        <div className="flex items-center gap-4 md:gap-5">
           {state.tournament.logo && (
             <img
               src={state.tournament.logo}
               alt="Event Logo"
-              className="h-24 w-24 md:h-28 md:w-28 object-contain rounded-xl flex-shrink-0"
+              className="h-20 w-20 md:h-28 md:w-28 object-contain rounded-2xl flex-shrink-0 ring-1 ring-white/[0.06]"
             />
           )}
           <div>
-            <h1 className={`text-3xl md:text-4xl font-black tracking-tight ${darkMode ? 'gradient-text' : 'text-gray-900'}`}>
+            <h1 className={`text-3xl md:text-4xl lg:text-[2.75rem] font-black tracking-tight leading-tight ${darkMode ? 'gradient-text' : 'text-gray-900'}`}>
               {state.tournament.name}
             </h1>
-            <p className={`text-sm mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+            <p className={`text-sm mt-1.5 font-medium tracking-wide ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
               Master Leaderboard
             </p>
           </div>
@@ -405,7 +405,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
         {[
           { label: 'Teams', value: teams.length, icon: '👥' },
           { label: 'Games', value: games.length, icon: '🎮' },
@@ -415,36 +415,36 @@ export default function Dashboard() {
         ].map((stat, i) => (
           <div
             key={stat.label}
-            className={`rounded-xl p-4 border transition-all hover:scale-[1.02] hover:shadow-lg ${
+            className={`rounded-2xl p-4 border transition-all duration-200 card-hover-lift ${
               darkMode
-                ? 'bg-navy-800/60 backdrop-blur border-white/5 hover:border-white/10'
-                : 'bg-white/80 backdrop-blur border-gray-200 hover:border-gray-300'
+                ? 'bg-navy-850/60 backdrop-blur-xl border-white/[0.06] hover:border-white/[0.10]'
+                : 'bg-white/80 backdrop-blur-xl border-gray-200/80 hover:border-gray-300'
             }`}
             style={{ animationDelay: `${i * 50}ms` }}
           >
-            <div className={`accent-top-border -mx-4 -mt-4 mb-3 rounded-t-xl`} />
-            <div className="flex items-center gap-2 mb-1">
+            <div className="h-[2px] bg-gradient-to-r from-accent to-accent/0 -mx-4 -mt-4 mb-3 rounded-t-2xl" />
+            <div className="flex items-center gap-2 mb-1.5">
               <span className="text-xl">{stat.icon}</span>
               <span className={`section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{stat.label}</span>
             </div>
-            <div className="stat-number">{stat.value}</div>
+            <div className={`stat-number ${darkMode ? 'text-white' : 'text-gray-900'}`}>{stat.value}</div>
           </div>
         ))}
       </div>
 
       {/* Tournament Progress */}
       {gameProgress.length > 0 && (
-        <div className={`rounded-xl p-4 mb-6 border ${
+        <div className={`rounded-2xl p-5 mb-8 border ${
           darkMode
-            ? 'bg-navy-800/40 backdrop-blur border-white/5'
-            : 'bg-white/80 backdrop-blur border-gray-200'
+            ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]'
+            : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
         }`}>
-          <h3 className={`section-heading mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Tournament Progress</h3>
+          <h3 className={`section-heading mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Tournament Progress</h3>
           <div className="flex flex-wrap gap-2">
             {gameProgress.map((gp) => {
               const { game, stage, champTeam, isIndividual, isLobby, completedCats, totalCats, lobbySessions, lobbyEntries: lobbyEntryCount } = gp;
               const stageColors = {
-                pool: darkMode ? 'bg-white/5 text-gray-300 border-white/5' : 'bg-gray-100 text-gray-600 border-gray-200',
+                pool: darkMode ? 'bg-white/[0.04] text-gray-300 border-white/[0.06]' : 'bg-gray-100 text-gray-600 border-gray-200',
                 active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
                 knockout: 'bg-accent/10 text-accent border-accent/20',
                 completed: 'bg-win/10 text-win border-win/20',
@@ -465,11 +465,11 @@ export default function Dashboard() {
                 <button
                   key={game.id}
                   onClick={() => dispatch({ type: 'SELECT_GAME', payload: game.id })}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all hover:scale-[1.02] border ${colorCls}`}
+                  className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-[1.02] border ${colorCls}`}
                 >
                   <span>{game.emoji}</span>
-                  <span className="font-medium">{game.name}</span>
-                  <span className="text-[10px] opacity-70">{stageLabel}</span>
+                  <span>{game.name}</span>
+                  <span className="text-[10px] opacity-60 font-semibold">{stageLabel}</span>
                   {champTeam && (
                     <span className="flex items-center gap-1 text-xs">
                       🏆 <TeamLogo team={champTeam} size={16} />
@@ -486,40 +486,44 @@ export default function Dashboard() {
       <PointsExplainer filterType="all" />
 
       {/* Header Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-bold">Standings</h2>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+        <h2 className={`text-lg font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Standings</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <input
             type="text"
             placeholder="Search teams..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+            className={`px-3.5 py-2 rounded-xl text-sm border transition-all duration-200 ${
               darkMode
-                ? 'bg-white/5 border-white/10 text-white placeholder-gray-500 focus:border-accent/50'
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-accent'
+                ? 'bg-white/[0.04] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent/40 focus:bg-white/[0.06]'
+                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400 focus:border-accent/60 focus:shadow-sm'
             }`}
           />
-          <div className={`flex rounded-lg overflow-hidden border ${darkMode ? 'border-white/10' : 'border-gray-300'}`}>
+          <div className={`flex rounded-xl overflow-hidden border ${darkMode ? 'border-white/[0.08]' : 'border-gray-200'}`}>
             <button
               onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'table' ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/5 text-gray-300' : 'bg-white text-gray-600'}`}
+              className={`px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${viewMode === 'table' ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.06]' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               Table
             </button>
             <button
               onClick={() => setViewMode('card')}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'card' ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/5 text-gray-300' : 'bg-white text-gray-600'}`}
+              className={`px-3.5 py-2 text-xs font-semibold transition-all duration-200 ${viewMode === 'card' ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.06]' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               Cards
             </button>
           </div>
-          <button onClick={handleScreenshot} className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`} title="Screenshot">
+          <button
+            onClick={handleScreenshot}
+            className={`px-3 py-2 text-xs font-medium rounded-xl transition-all duration-200 ${darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] border border-white/[0.06]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'}`}
+            title="Screenshot"
+          >
             📷
           </button>
           <button
             onClick={() => setShowCompare(!showCompare)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${showCompare ? 'bg-accent text-navy-900' : darkMode ? 'bg-white/5 text-gray-300 hover:bg-white/10' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            className={`px-3.5 py-2 text-xs font-semibold rounded-xl transition-all duration-200 ${showCompare ? 'bg-accent text-navy-900 shadow-sm shadow-accent/20' : darkMode ? 'bg-white/[0.04] text-gray-300 hover:bg-white/[0.08] border border-white/[0.06]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'}`}
           >
             Compare
           </button>
@@ -528,28 +532,28 @@ export default function Dashboard() {
 
       {/* Compare Panel */}
       {showCompare && (
-        <div className={`rounded-xl p-4 mb-4 border animate-slideUp ${
+        <div className={`rounded-2xl p-5 mb-5 border animate-slideUp ${
           darkMode
-            ? 'bg-navy-800/60 backdrop-blur border-white/5'
-            : 'bg-white/80 backdrop-blur border-gray-200'
+            ? 'bg-navy-850/60 backdrop-blur-xl border-white/[0.06]'
+            : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
         }`}>
           <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
             <select
               value={compareTeams[0] || ''}
               onChange={e => setCompareTeams([e.target.value || null, compareTeams[1]])}
-              className={`px-3 py-2 rounded-lg border text-sm flex-1 w-full sm:w-auto ${
-                darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-gray-50 border-gray-300'
+              className={`px-3.5 py-2.5 rounded-xl border text-sm flex-1 w-full sm:w-auto transition-colors ${
+                darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-gray-50 border-gray-200'
               }`}
             >
               <option value="">Select Team A</option>
               {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
-            <span className="font-bold text-accent text-lg">VS</span>
+            <span className="font-black text-accent text-lg tracking-widest">VS</span>
             <select
               value={compareTeams[1] || ''}
               onChange={e => setCompareTeams([compareTeams[0], e.target.value || null])}
-              className={`px-3 py-2 rounded-lg border text-sm flex-1 w-full sm:w-auto ${
-                darkMode ? 'bg-navy-800 border-white/10 text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-gray-50 border-gray-300'
+              className={`px-3.5 py-2.5 rounded-xl border text-sm flex-1 w-full sm:w-auto transition-colors ${
+                darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800 [&>option]:text-white' : 'bg-gray-50 border-gray-200'
               }`}
             >
               <option value="">Select Team B</option>
@@ -560,11 +564,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-3 gap-2 text-center text-sm">
               {['played', 'wins', 'losses', 'draws', 'byes', 'points'].map(key => (
                 <div key={key} className="contents">
-                  <div className={`py-2 font-mono font-bold text-lg ${compareData.a[key] > compareData.b[key] ? 'text-win' : compareData.a[key] < compareData.b[key] ? 'text-loss' : ''}`}>
+                  <div className={`py-2.5 font-mono font-bold text-lg ${compareData.a[key] > compareData.b[key] ? 'text-win' : compareData.a[key] < compareData.b[key] ? 'text-loss' : ''}`}>
                     {compareData.a[key]}
                   </div>
-                  <div className={`py-2 font-medium capitalize ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{key}</div>
-                  <div className={`py-2 font-mono font-bold text-lg ${compareData.b[key] > compareData.a[key] ? 'text-win' : compareData.b[key] < compareData.a[key] ? 'text-loss' : ''}`}>
+                  <div className={`py-2.5 font-medium capitalize text-xs tracking-wide ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{key}</div>
+                  <div className={`py-2.5 font-mono font-bold text-lg ${compareData.b[key] > compareData.a[key] ? 'text-win' : compareData.b[key] < compareData.a[key] ? 'text-loss' : ''}`}>
                     {compareData.b[key]}
                   </div>
                 </div>
@@ -577,33 +581,33 @@ export default function Dashboard() {
       {/* Leaderboard */}
       <div ref={tableRef}>
         {viewMode === 'table' ? (
-          <div className={`overflow-x-auto rounded-xl border ${
+          <div className={`overflow-x-auto rounded-2xl border ${
             darkMode
-              ? 'bg-navy-800/40 backdrop-blur border-white/5'
-              : 'bg-white/80 backdrop-blur border-gray-200'
+              ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]'
+              : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
           }`}>
             <table className="w-full text-sm">
               <thead>
-                <tr className={darkMode ? 'bg-white/[0.03]' : 'bg-gray-50'}>
-                  <th className={`px-1.5 sm:px-3 py-2 sm:py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
-                  <th className={`px-1.5 sm:px-3 py-2 sm:py-3 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team</th>
-                  <th className={`px-1 sm:px-3 py-2 sm:py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GP</th>
-                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-win">W</th>
-                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-loss">L</th>
-                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-draw">D</th>
-                  <th className="px-1 sm:px-3 py-2 sm:py-3 text-center section-heading text-bye">B</th>
-                  <th className={`px-1 sm:px-3 py-2 sm:py-3 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>PTS</th>
-                  <th className={`px-3 py-3 text-left section-heading hidden md:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Status</th>
+                <tr className={darkMode ? 'bg-white/[0.02]' : 'bg-gray-50/80'}>
+                  <th className={`px-1.5 sm:px-3 py-2.5 sm:py-3.5 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                  <th className={`px-1.5 sm:px-3 py-2.5 sm:py-3.5 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team</th>
+                  <th className={`px-1 sm:px-3 py-2.5 sm:py-3.5 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GP</th>
+                  <th className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center section-heading text-win">W</th>
+                  <th className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center section-heading text-loss">L</th>
+                  <th className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center section-heading text-draw">D</th>
+                  <th className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center section-heading text-bye">B</th>
+                  <th className={`px-1 sm:px-3 py-2.5 sm:py-3.5 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>PTS</th>
+                  <th className={`px-3 py-3.5 text-left section-heading hidden md:table-cell ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((row, i) => {
                   const rank = rankMap.get(row.teamId) || (i + 1);
                   return (
-                    <tr key={row.teamId} className={`border-b transition-colors ${darkMode ? 'border-white/5' : 'border-gray-100'} ${getRowBg(rank)} ${getRowLeftBorder(rank)}`}>
-                      <td className="px-1.5 sm:px-3 py-2 sm:py-3">{getRankBadge(rank)}</td>
-                      <td className="px-1.5 sm:px-3 py-2 sm:py-3">
-                        <div className="flex items-center gap-1.5 sm:gap-2">
+                    <tr key={row.teamId} className={`border-b transition-colors duration-150 ${darkMode ? 'border-white/[0.04]' : 'border-gray-100'} ${getRowBg(rank)} ${getRowLeftBorder(rank)}`}>
+                      <td className="px-1.5 sm:px-3 py-2.5 sm:py-3.5">{getRankBadge(rank)}</td>
+                      <td className="px-1.5 sm:px-3 py-2.5 sm:py-3.5">
+                        <div className="flex items-center gap-1.5 sm:gap-2.5">
                           <TeamLogo team={row.team} size={24} className="sm:!w-8 sm:!h-8" />
                           <div className="min-w-0 max-w-[140px] sm:max-w-[220px] md:max-w-xs">
                             {/* Mobile: show short code, Desktop: show full name */}
@@ -618,8 +622,8 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center font-mono text-xs sm:text-sm">{row.played}</td>
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                      <td className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center font-mono text-xs sm:text-sm">{row.played}</td>
+                      <td className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center">
                         <PointsBreakdownPopover
                           teamId={row.teamId}
                           type="wins"
@@ -627,7 +631,7 @@ export default function Dashboard() {
                           className="font-mono font-bold text-win text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                      <td className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center">
                         <PointsBreakdownPopover
                           teamId={row.teamId}
                           type="losses"
@@ -635,7 +639,7 @@ export default function Dashboard() {
                           className="font-mono font-bold text-loss text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                      <td className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center">
                         <PointsBreakdownPopover
                           teamId={row.teamId}
                           type="draws"
@@ -643,7 +647,7 @@ export default function Dashboard() {
                           className="font-mono font-bold text-draw text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                      <td className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center">
                         <PointsBreakdownPopover
                           teamId={row.teamId}
                           type="byes"
@@ -651,7 +655,7 @@ export default function Dashboard() {
                           className="font-mono font-bold text-bye text-xs sm:text-sm"
                         />
                       </td>
-                      <td className="px-1 sm:px-3 py-2 sm:py-3 text-center">
+                      <td className="px-1 sm:px-3 py-2.5 sm:py-3.5 text-center">
                         <PointsBreakdownPopover
                           teamId={row.teamId}
                           type="total"
@@ -693,7 +697,7 @@ export default function Dashboard() {
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-3 hidden md:table-cell">
+                      <td className="px-3 py-3.5 hidden md:table-cell">
                         <div className="flex gap-1 flex-wrap items-center">
                           {row.gameAdvancements.length > 0 ? row.gameAdvancements.map(ga => (
                             <span key={ga.game.id} className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${
@@ -711,7 +715,7 @@ export default function Dashboard() {
                               {row.gameIds.map(gid => {
                                 const game = games.find(g => g.id === gid);
                                 return game ? (
-                                  <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                                  <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
                                     {game.emoji}
                                   </span>
                                 ) : null;
@@ -733,12 +737,12 @@ export default function Dashboard() {
             {filtered.map((row, i) => {
               const rank = rankMap.get(row.teamId) || (i + 1);
               return (
-                <div key={row.teamId} className={`rounded-xl p-4 border transition-all hover:scale-[1.01] hover:shadow-lg ${getRowLeftBorder(rank)} ${
+                <div key={row.teamId} className={`rounded-2xl p-5 border transition-all duration-200 card-hover-lift ${getRowLeftBorder(rank)} ${
                   darkMode
-                    ? 'bg-navy-800/60 backdrop-blur border-white/5 hover:border-white/10'
-                    : 'bg-white/80 backdrop-blur border-gray-200 hover:border-gray-300'
+                    ? 'bg-navy-850/60 backdrop-blur-xl border-white/[0.06] hover:border-white/[0.10]'
+                    : 'bg-white/80 backdrop-blur-xl border-gray-200/80 hover:border-gray-300'
                 }`}>
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-4">
                     {getRankBadge(rank)}
                     <div className="text-right">
                       <PointsBreakdownPopover
@@ -781,7 +785,7 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-3 mb-4">
                     <TeamLogo team={row.team} size={48} />
                     <div>
                       <div className="flex items-center gap-1">
@@ -791,9 +795,9 @@ export default function Dashboard() {
                         ))}
                       </div>
                       <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{row.team.shortCode}</div>
-                      <div className="flex gap-1 flex-wrap mt-1">
+                      <div className="flex gap-1 flex-wrap mt-1.5">
                         {row.gameAdvancements.map(ga => (
-                          <span key={ga.game.id} className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-md font-semibold uppercase tracking-wider ${
+                          <span key={ga.game.id} className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-lg font-semibold uppercase tracking-wider ${
                             ga.status === 'Champion' ? 'bg-gold/20 text-gold border border-gold/30' :
                             ga.status === 'Finalist' ? 'bg-silver/20 text-silver border border-silver/30' :
                             ga.status === '3rd Place' ? 'bg-bronze/20 text-bronze border border-bronze/30' :
@@ -805,7 +809,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-1 text-center text-xs">
+                  <div className={`grid grid-cols-5 gap-1 text-center text-xs py-3 rounded-xl ${
+                    darkMode ? 'bg-white/[0.02]' : 'bg-gray-50/80'
+                  }`}>
                     {[
                       { label: 'GP', value: row.played, type: null },
                       { label: 'W', value: row.wins, cls: 'text-win', type: 'wins' },
@@ -832,7 +838,7 @@ export default function Dashboard() {
                     {row.gameIds.map(gid => {
                       const game = games.find(g => g.id === gid);
                       return game ? (
-                        <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
+                        <span key={gid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs ${darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-500'}`}>
                           {game.emoji}
                         </span>
                       ) : null;
@@ -847,8 +853,8 @@ export default function Dashboard() {
 
       {/* Recent Results */}
       {recentResults.length > 0 && (
-        <div className="mt-6">
-          <h3 className={`section-heading mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Recent Results</h3>
+        <div className="mt-8">
+          <h3 className={`section-heading mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Recent Results</h3>
           <div className="space-y-2">
             {recentResults.map(m => {
               const resultStripe = m.result === 'draw' ? 'border-l-draw' :
@@ -856,22 +862,22 @@ export default function Dashboard() {
                 m.isKnockout ? 'border-l-accent' : 'border-l-win';
 
               return (
-                <div key={m.id} className={`rounded-lg p-3 flex items-center gap-3 border-l-[3px] ${resultStripe} ${
+                <div key={m.id} className={`rounded-xl p-3.5 flex items-center gap-3 border-l-[3px] ${resultStripe} transition-colors duration-150 ${
                   darkMode
-                    ? 'bg-navy-800/40 backdrop-blur border border-white/5 border-l-[3px]'
-                    : 'bg-white/80 backdrop-blur border border-gray-200 border-l-[3px]'
+                    ? 'bg-navy-850/40 backdrop-blur border border-white/[0.05] border-l-[3px] hover:bg-navy-850/60'
+                    : 'bg-white/80 backdrop-blur border border-gray-200/80 border-l-[3px] hover:bg-white'
                 }`}>
                   {m.game && <span className="text-lg">{m.game.emoji}</span>}
-                  {m.isKnockout && <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent font-bold">KO</span>}
+                  {m.isKnockout && <span className="text-[10px] px-2 py-0.5 rounded-lg bg-accent/15 text-accent font-bold">KO</span>}
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <TeamLogo team={m.teamA} size={24} />
                     <span className={`text-sm font-medium truncate ${m.result === 'teamA' ? 'text-win font-bold' : m.result === 'bye' && m.absentTeamId === m.teamAId ? 'text-gray-500 line-through' : ''}`}>
                       {m.teamA?.shortCode || '?'}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                      m.result === 'draw' ? 'bg-draw/20 text-draw' :
-                      m.result === 'bye' ? 'bg-bye/20 text-bye' :
-                      darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'
+                    <span className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
+                      m.result === 'draw' ? 'bg-draw/15 text-draw' :
+                      m.result === 'bye' ? 'bg-bye/15 text-bye' :
+                      darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-500'
                     }`}>
                       {m.result === 'draw' ? 'DRAW' : m.result === 'bye' ? 'BYE' : 'vs'}
                     </span>
@@ -881,10 +887,10 @@ export default function Dashboard() {
                     <TeamLogo team={m.teamB} size={24} />
                   </div>
                   {m.pool && (
-                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{m.pool.name}</span>
+                    <span className={`text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{m.pool.name}</span>
                   )}
                   {m.isKnockout && m.round && (
-                    <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span className={`text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                       {m.round === 'qf' ? 'QF' : m.round === 'sf' ? 'SF' : m.round === 'final' ? 'Final' : m.round === 'third' ? '3rd' : m.round.toUpperCase()}
                     </span>
                   )}

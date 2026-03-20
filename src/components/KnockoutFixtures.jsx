@@ -141,7 +141,7 @@ export default function KnockoutFixtures({ gameId }) {
 
   if (gameMatches.length === 0) {
     return (
-      <div className={`rounded-xl p-8 text-center ${darkMode ? 'bg-navy-800/40 backdrop-blur' : 'bg-gray-50'}`}>
+      <div className={`rounded-2xl p-8 text-center ${darkMode ? 'bg-navy-850/40 backdrop-blur backdrop-blur-xl' : 'bg-gray-50'}`}>
         <p className={darkMode ? 'text-gray-500' : 'text-gray-400'}>No knockout matches yet.</p>
       </div>
     );
@@ -153,10 +153,10 @@ export default function KnockoutFixtures({ gameId }) {
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         <button
           onClick={() => setFilterRound('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
             filterRound === 'all'
               ? 'bg-accent text-navy-900 shadow-md shadow-accent/20'
-              : darkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              : darkMode ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.06]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
           }`}
         >
           All Rounds
@@ -165,10 +165,10 @@ export default function KnockoutFixtures({ gameId }) {
           <button
             key={round}
             onClick={() => setFilterRound(round)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
               filterRound === round
                 ? round === 'final' ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 text-gold shadow-md shadow-gold/10' : 'bg-accent text-navy-900 shadow-md shadow-accent/20'
-                : darkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                : darkMode ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.06]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}
           >
             {ROUND_LABELS[round]}
@@ -180,7 +180,7 @@ export default function KnockoutFixtures({ gameId }) {
       <div className="space-y-6">
         {roundGroups.map(({ round, label, matches }) => (
           <div key={round}>
-            <h3 className={`section-heading mb-3 flex items-center gap-2 ${
+            <h3 className={`section-heading tracking-tight mb-3 flex items-center gap-2 ${
               round === 'final' ? 'text-gold' : round === 'third' ? 'text-bronze' : darkMode ? 'text-gray-400' : 'text-gray-500'
             }`}>
               {round === 'final' && '🏆'} {label}
@@ -200,10 +200,10 @@ export default function KnockoutFixtures({ gameId }) {
                   : 'border-l-transparent';
 
                 return (
-                  <div key={m.id} className={`rounded-xl p-3 border border-l-[3px] flex items-center gap-3 transition-all ${statusStripe} ${
+                  <div key={m.id} className={`rounded-xl p-3 border border-l-[3px] flex items-center gap-3 transition-all duration-200 ${statusStripe} ${
                     darkMode
-                      ? 'bg-navy-800/40 backdrop-blur border-white/5 hover:bg-navy-800/60'
-                      : 'bg-white/80 backdrop-blur border-gray-200 hover:bg-white'
+                      ? 'bg-navy-850/40 backdrop-blur backdrop-blur-xl border-white/[0.06] hover:bg-navy-850/60'
+                      : 'bg-white/80 backdrop-blur border-gray-200/80 hover:bg-white'
                   }`}>
                     <span className={`text-[10px] font-mono w-8 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>
                       M{m.matchNumber}
@@ -214,7 +214,7 @@ export default function KnockoutFixtures({ gameId }) {
                         {teamA ? (
                           <>
                             <TeamLogo team={teamA} size={24} />
-                            <span className={`text-sm font-medium truncate ${
+                            <span className={`text-sm font-semibold truncate ${
                               m.result === 'teamA' ? 'text-win font-bold' : ''
                             }`}>
                               {teamA.shortCode}
@@ -232,7 +232,7 @@ export default function KnockoutFixtures({ gameId }) {
                       <div className="flex items-center gap-1.5 flex-1 justify-end">
                         {teamB ? (
                           <>
-                            <span className={`text-sm font-medium truncate ${
+                            <span className={`text-sm font-semibold truncate ${
                               m.result === 'teamB' ? 'text-win font-bold' : ''
                             }`}>
                               {teamB.shortCode}
@@ -248,7 +248,7 @@ export default function KnockoutFixtures({ gameId }) {
                     {isAdmin && canEdit && (
                       <button
                         onClick={() => openEdit(m)}
-                        className="px-3 py-1 rounded-lg bg-accent/20 text-accent text-xs font-bold hover:bg-accent/30 transition-colors"
+                        className="px-3 py-1 rounded-xl bg-accent/20 text-accent text-xs font-bold hover:bg-accent/30 transition-all duration-200 shadow-sm shadow-accent/20"
                       >
                         Enter Result
                       </button>
@@ -256,8 +256,8 @@ export default function KnockoutFixtures({ gameId }) {
                     {isAdmin && m.status === 'completed' && (
                       <button
                         onClick={() => openEdit(m)}
-                        className={`p-1.5 rounded-lg text-sm transition-colors ${
-                          darkMode ? 'hover:bg-white/10 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'
+                        className={`p-1.5 rounded-xl text-sm transition-all duration-200 ${
+                          darkMode ? 'hover:bg-white/[0.06] text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-700'
                         }`}
                         title="Edit result"
                       >
@@ -297,7 +297,7 @@ export default function KnockoutFixtures({ gameId }) {
             </div>
 
             <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Winner *</label>
+              <label className={`block text-sm font-semibold mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Winner *</label>
               <p className={`text-xs mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>No draws allowed in knockout matches.</p>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -307,12 +307,12 @@ export default function KnockoutFixtures({ gameId }) {
                   <button
                     key={opt.value}
                     onClick={() => setFormResult(opt.value)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    className={`px-3 py-2.5 rounded-xl text-sm font-semibold border transition-all duration-200 ${
                       formResult === opt.value
                         ? 'bg-accent/20 border-accent text-accent'
                         : darkMode
-                        ? 'bg-white/5 border-white/10 text-gray-300 hover:border-white/20'
-                        : 'bg-gray-50 border-gray-300 text-gray-700 hover:border-gray-400'
+                        ? 'bg-white/[0.04] border-white/[0.06] text-gray-300 hover:border-white/[0.15]'
+                        : 'bg-gray-50 border-gray-300/80 text-gray-700 hover:border-gray-400'
                     }`}
                   >
                     {opt.label}
@@ -351,15 +351,15 @@ export default function KnockoutFixtures({ gameId }) {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setEditMatch(null)}
-                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                  darkMode ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`flex-1 px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                  darkMode ? 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.1]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveResult}
-                className="flex-1 px-4 py-2 rounded-lg bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-xl bg-accent text-navy-900 font-bold hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20"
               >
                 Save Result
               </button>

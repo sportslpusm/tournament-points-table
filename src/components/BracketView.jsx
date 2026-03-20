@@ -12,23 +12,23 @@ function MatchCard({ match, teams, darkMode }) {
   const bWon = isCompleted && match.result === 'teamB';
 
   return (
-    <div className={`rounded-lg border overflow-hidden w-52 flex-shrink-0 transition-all ${
+    <div className={`rounded-xl border overflow-hidden w-52 flex-shrink-0 transition-all duration-200 ${
       darkMode
-        ? 'bg-navy-800/60 backdrop-blur border-white/5'
-        : 'bg-white/80 backdrop-blur border-gray-200'
+        ? 'bg-navy-850/60 backdrop-blur-xl border-white/[0.06]'
+        : 'bg-white/80 backdrop-blur border-gray-200/80'
     } ${isCompleted ? '' : 'opacity-80'}`}>
       {/* Match number */}
-      <div className={`px-2 py-0.5 text-[10px] font-mono flex items-center justify-between ${
-        darkMode ? 'bg-white/[0.03] text-gray-500' : 'bg-gray-50 text-gray-400'
+      <div className={`px-2.5 py-1 text-[10px] font-mono flex items-center justify-between ${
+        darkMode ? 'bg-white/[0.02] text-gray-500' : 'bg-gray-50 text-gray-400'
       }`}>
         <span>M{match.matchNumber}</span>
-        {match.penalties && <span className="text-draw">PEN</span>}
-        {match.extraTime && !match.penalties && <span className="text-draw">AET</span>}
+        {match.penalties && <span className="text-draw font-semibold">PEN</span>}
+        {match.extraTime && !match.penalties && <span className="text-draw font-semibold">AET</span>}
       </div>
 
       {/* Team A */}
-      <div className={`flex items-center gap-2 px-2 py-1.5 border-b ${
-        darkMode ? 'border-white/5' : 'border-gray-100'
+      <div className={`flex items-center gap-2 px-2.5 py-2 border-b ${
+        darkMode ? 'border-white/[0.06]' : 'border-gray-100'
       } ${aWon ? 'bg-win/10 border-l-[3px] border-l-win' : 'border-l-[3px] border-l-transparent'}`}>
         {teamA ? (
           <>
@@ -44,7 +44,7 @@ function MatchCard({ match, teams, darkMode }) {
       </div>
 
       {/* Team B */}
-      <div className={`flex items-center gap-2 px-2 py-1.5 ${
+      <div className={`flex items-center gap-2 px-2.5 py-2 ${
         bWon ? 'bg-win/10 border-l-[3px] border-l-win' : 'border-l-[3px] border-l-transparent'
       }`}>
         {teamB ? (
@@ -97,7 +97,7 @@ export default function BracketView({ gameId }) {
 
   if (gameMatches.length === 0) {
     return (
-      <div className={`rounded-xl p-8 text-center ${darkMode ? 'bg-navy-800/40 backdrop-blur' : 'bg-gray-50'}`}>
+      <div className={`rounded-2xl p-8 text-center ${darkMode ? 'bg-navy-850/40 backdrop-blur-xl border border-white/[0.06]' : 'bg-gray-50'}`}>
         <p className={darkMode ? 'text-gray-500' : 'text-gray-400'}>No bracket generated yet. Advance to knockout stage to see the bracket.</p>
       </div>
     );
@@ -111,10 +111,10 @@ export default function BracketView({ gameId }) {
           {roundGroups.map(({ round, label, matches }) => (
             <div key={round} className="flex flex-col items-center">
               {/* Round header */}
-              <div className={`text-xs font-bold uppercase tracking-wider mb-3 px-4 py-1.5 rounded-full ${
+              <div className={`text-xs font-bold uppercase tracking-wider mb-3 px-4 py-1.5 rounded-full transition-all duration-200 ${
                 round === 'final'
-                  ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 text-gold shadow-lg shadow-gold/10'
-                  : darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 text-gold shadow-lg shadow-gold/10 ring-1 ring-gold/20'
+                  : darkMode ? 'bg-white/[0.04] text-gray-400 border border-white/[0.06]' : 'bg-gray-100 text-gray-500'
               }`}>
                 {label}
               </div>
@@ -144,8 +144,8 @@ export default function BracketView({ gameId }) {
 
       {/* 3rd Place Match */}
       {thirdMatch && (
-        <div className={`rounded-xl p-4 border ${
-          darkMode ? 'bg-navy-800/40 backdrop-blur border-white/5' : 'bg-gray-50 border-gray-200'
+        <div className={`rounded-2xl p-4 border ${
+          darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-gray-50 border-gray-200/80'
         }`}>
           <h4 className="text-xs font-bold uppercase tracking-wider text-bronze mb-3">
             3rd Place Match

@@ -8,10 +8,10 @@ const SESSION_KEY = 'points_explainer_open';
 function WhyGoldSixPoints({ darkMode }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`mt-3 rounded-lg border ${darkMode ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50/50'}`}>
+    <div className={`mt-3 rounded-xl border ${darkMode ? 'border-white/[0.06] bg-white/[0.02]' : 'border-gray-200/80 bg-gray-50/50'}`}>
       <button
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold transition-colors ${
+        className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left text-xs font-semibold transition-all duration-200 ${
           darkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'
         }`}
       >
@@ -24,7 +24,7 @@ function WhyGoldSixPoints({ darkMode }) {
         </svg>
       </button>
       {open && (
-        <div className={`px-3 pb-3 text-[11px] leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+        <div className={`px-4 pb-3 text-[11px] leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           Team sports accrue points per match (4 pts per win) as they advance through a bracket.
           Individual sports, however, only award points for final placements.
           Awarding 6 points for an Individual Gold ensures Individual disciplines remain mathematically
@@ -77,10 +77,10 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
   const showLobby = filterType === 'all' || filterType === 'lobby';
   const specificLobbyConfig = gameId ? (lobbyPointsConfig[gameId] || DEFAULT_LOBBY_POINTS) : null;
 
-  const cardCls = `rounded-xl border transition-all ${
+  const cardCls = `rounded-2xl border transition-all ${
     darkMode
-      ? 'bg-navy-800/60 backdrop-blur border-white/5'
-      : 'bg-white/80 backdrop-blur border-gray-200'
+      ? 'bg-navy-850/60 backdrop-blur-xl border-white/[0.06]'
+      : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
   }`;
 
   const thCls = `px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wider ${
@@ -94,12 +94,12 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
     <div className="mb-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
           isOpen
             ? 'bg-accent/15 text-accent border border-accent/30'
             : darkMode
-              ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-300 border border-white/5'
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-600 border border-gray-200'
+              ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.06] hover:text-gray-300 border border-white/[0.06]'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-600 border border-gray-200/80'
         }`}
       >
         <span className="text-base">ℹ️</span>
@@ -114,7 +114,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
 
       {isOpen && (
         <div className={`mt-3 ${cardCls} overflow-hidden animate-slideUp`}>
-          <div className="p-4 space-y-5">
+          <div className="p-5 space-y-6">
 
             {/* ── SECTION A: Team Games ── */}
             {showTeam && (
@@ -142,7 +142,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                         { label: 'Bye / Walkover', detail: `${byePresentPts} pts (equal to a win — structural fairness)`, color: 'text-bye' },
                         { label: 'Bye (absent)', detail: `0 pts (not present = no points)`, color: darkMode ? 'text-gray-500' : 'text-gray-400' },
                       ].map((row, i) => (
-                        <tr key={i} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                        <tr key={i} className={`border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}`}>
                           <td className={tdCls}>
                             <span className={`font-semibold ${row.color}`}>{row.label}</span>
                           </td>
@@ -166,7 +166,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                         { label: 'Final Win', value: specificKoConfig.bonusPoints.final || 0 },
                         { label: '3rd Place Win', value: specificKoConfig.bonusPoints.third || 0 },
                       ].map((b, i) => (
-                        <div key={i} className={`px-3 py-2 rounded-lg text-center ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                        <div key={i} className={`px-3 py-2.5 rounded-xl text-center ${darkMode ? 'bg-white/[0.04]' : 'bg-gray-50'}`}>
                           <div className="font-mono font-bold text-accent text-lg">+{b.value}</div>
                           <div className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{b.label}</div>
                         </div>
@@ -184,7 +184,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                       const bp = cfg.bonusPoints;
                       return (
                         <div key={g.id} className="mb-2">
-                          <div className={`text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          <div className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             {g.emoji} {g.name}
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -194,7 +194,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                               { label: 'Final Win', value: bp.final || 0 },
                               { label: '3rd Place Win', value: bp.third || 0 },
                             ].map((b, i) => (
-                              <div key={i} className={`px-2 py-1.5 rounded-lg text-center ${darkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                              <div key={i} className={`px-2.5 py-2 rounded-xl text-center ${darkMode ? 'bg-white/[0.04]' : 'bg-gray-50'}`}>
                                 <div className="font-mono font-bold text-accent">+{b.value}</div>
                                 <div className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{b.label}</div>
                               </div>
@@ -237,7 +237,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                         const cfg = individualPointsConfig[g.id] || DEFAULT_INDIVIDUAL_POINTS;
                         return (
                           <div key={g.id} className="mb-3">
-                            <div className={`text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <div className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                               {g.emoji} {g.name}
                             </div>
                             <IndividualTable config={cfg} thCls={thCls} tdCls={tdCls} darkMode={darkMode} />
@@ -283,7 +283,7 @@ export default function PointsExplainer({ filterType = 'all', gameId = null }) {
                         const cfg = lobbyPointsConfig[g.id] || DEFAULT_LOBBY_POINTS;
                         return (
                           <div key={g.id} className="mb-3">
-                            <div className={`text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <div className={`text-xs font-semibold mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                               {g.emoji} {g.name}
                             </div>
                             <LobbyTable config={cfg} thCls={thCls} tdCls={tdCls} darkMode={darkMode} />
@@ -344,7 +344,7 @@ function IndividualTable({ config, thCls, tdCls, darkMode }) {
             { label: 'Participated', detail: `0 pts + ${p} participation = ${p} total`, color: darkMode ? 'text-gray-300' : 'text-gray-600' },
             { label: 'Absent / DNS', detail: `0 pts (not present = no points)`, color: darkMode ? 'text-gray-500' : 'text-gray-400' },
           ].map((row, i) => (
-            <tr key={i} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+            <tr key={i} className={`border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}`}>
               <td className={tdCls}><span className={`font-semibold ${row.color}`}>{row.label}</span></td>
               <td className={tdCls}>{row.detail}</td>
             </tr>
@@ -373,7 +373,7 @@ function LobbyTable({ config, thCls, tdCls, darkMode }) {
             { label: '\u{1F949} 3rd Place', detail: `${config.third} pts + ${p} participation = ${config.third + p} total`, color: 'text-bronze' },
             { label: 'Participated', detail: `0 pts + ${p} participation = ${p} total`, color: darkMode ? 'text-gray-300' : 'text-gray-600' },
           ].map((row, i) => (
-            <tr key={i} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+            <tr key={i} className={`border-t ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}`}>
               <td className={tdCls}><span className={`font-semibold ${row.color}`}>{row.label}</span></td>
               <td className={tdCls}>{row.detail}</td>
             </tr>
