@@ -615,9 +615,9 @@ export default function LobbyGameView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {standings.map((s, i) => (
+                  {standings.map((s) => (
                     <tr key={s.teamId} className={`border-t ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
-                      <td className={`px-3 py-2 font-mono ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{i + 1}</td>
+                      <td className={`px-3 py-2 font-mono ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{s.rank}</td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
                           <TeamLogo team={s.team} size={20} />

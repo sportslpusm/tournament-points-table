@@ -13,6 +13,7 @@ export default function EmptyState({ icon, title, description, action }) {
       <p className={`text-center max-w-md mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{description}</p>
       {action && (
         <button
+          type="button"
           onClick={action.onClick}
           className="px-6 py-3 bg-accent hover:bg-accent-dark text-navy-900 font-bold rounded-lg transition-colors"
         >

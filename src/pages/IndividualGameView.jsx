@@ -539,8 +539,8 @@ export default function IndividualGameView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {standings.map((row, i) => {
-                    const rank = i + 1;
+                  {standings.map((row) => {
+                    const rank = row.rank;
                     const rowBg = rank === 1 ? (darkMode ? 'bg-yellow-500/5' : 'bg-yellow-50/50') :
                                   rank === 2 ? (darkMode ? 'bg-gray-400/5' : 'bg-gray-50/50') :
                                   rank === 3 ? (darkMode ? 'bg-orange-500/5' : 'bg-orange-50/50') : '';

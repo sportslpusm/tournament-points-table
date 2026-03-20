@@ -20,6 +20,31 @@
 //   NEVER Head-to-Head. NEVER Alphabetical.
 // ═══════════════════════════════════════════════════════════════
 
+/** Safely coerce a value to a non-negative finite number. Returns 0 on NaN/null/undefined/negative. */
+export function safeNum(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v < 0) return 0;
+  return v;
+}
+
+/**
+ * Compute dense ranks for a pre-sorted array.
+ * Ties get the same rank; next distinct value gets rank+1 (dense, no gaps).
+ * @param {Array} sorted - Pre-sorted array (best first)
+ * @param {Function} isTied - (a, b) => boolean — true if a and b should share a rank
+ * @returns {number[]} - Array of rank numbers aligned with input indices
+ */
+export function denseRank(sorted, isTied) {
+  if (sorted.length === 0) return [];
+  const ranks = [1];
+  let currentRank = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    if (!isTied(sorted[i - 1], sorted[i])) currentRank++;
+    ranks.push(currentRank);
+  }
+  return ranks;
+}
+
 export function getMatchPoints(match, teamId) {
   if (match.status !== 'completed') return 0;
 

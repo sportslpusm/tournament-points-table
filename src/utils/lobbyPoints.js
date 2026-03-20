@@ -18,6 +18,8 @@
  *   Where first/second/third are entry IDs, and participantEntryIds includes ALL entries that competed.
  */
 
+import { safeNum, denseRank } from './points';
+
 /**
  * Default lobby point config — mirrors individual sport values.
  */
@@ -67,17 +69,21 @@ export function getLobbyPointsForTeam(teamId, lobbyResults, lobbyEntries, points
     for (const session of sessions) {
       const participantEntryIds = session.participantEntryIds || [];
 
-      // Check placements
+      // Check placements (safeNum guards against NaN/negative config values)
       const placements = session.placements || {};
-      if (myEntryIds.has(placements.first)) { total += config.first; golds++; }
-      if (myEntryIds.has(placements.second)) { total += config.second; silvers++; }
-      if (myEntryIds.has(placements.third)) { total += config.third; bronzes++; }
+      if (myEntryIds.has(placements.first)) { total += safeNum(config.first); golds++; }
+      if (myEntryIds.has(placements.second)) { total += safeNum(config.second); silvers++; }
+      if (myEntryIds.has(placements.third)) { total += safeNum(config.third); bronzes++; }
 
       // Participation point — one per ENTRY per session, capped per game
+      // Deduplicate participantEntryIds to prevent double-counting
+      const seenEntries = new Set();
       for (const entryId of participantEntryIds) {
         if (!myEntryIds.has(entryId)) continue;
+        if (seenEntries.has(entryId)) continue; // dedup
+        seenEntries.add(entryId);
         if (gameParticipationCount < cap) {
-          total += config.participation;
+          total += safeNum(config.participation);
           gameParticipationCount++;
         }
       }
@@ -140,26 +146,30 @@ export function getLobbyGameStandings(gameId, lobbyResults, lobbyEntries, teams,
 
     if (firstSchool) {
       const e = getOrCreateTeamEntry(firstSchool);
-      if (e) { e.totalPoints += config.first; e.golds++; }
+      if (e) { e.totalPoints += safeNum(config.first); e.golds++; }
     }
     if (secondSchool) {
       const e = getOrCreateTeamEntry(secondSchool);
-      if (e) { e.totalPoints += config.second; e.silvers++; }
+      if (e) { e.totalPoints += safeNum(config.second); e.silvers++; }
     }
     if (thirdSchool) {
       const e = getOrCreateTeamEntry(thirdSchool);
-      if (e) { e.totalPoints += config.third; e.bronzes++; }
+      if (e) { e.totalPoints += safeNum(config.third); e.bronzes++; }
     }
 
     // Participation — one per ENTRY per session, capped per game per school
+    // Deduplicate to prevent double-counting if same entry appears twice
+    const seenEntries = new Set();
     for (const entryId of participantEntryIds) {
+      if (seenEntries.has(entryId)) continue;
+      seenEntries.add(entryId);
       const schoolId = entryToTeam.get(entryId);
       if (!schoolId) continue;
       schoolsInSession.add(schoolId);
       const e = getOrCreateTeamEntry(schoolId);
       if (!e) continue;
       if (e.participationCount < cap) {
-        e.totalPoints += config.participation;
+        e.totalPoints += safeNum(config.participation);
         e.participationCount++;
       }
     }
@@ -179,6 +189,13 @@ export function getLobbyGameStandings(gameId, lobbyResults, lobbyEntries, teams,
     if (b.bronzes !== a.bronzes) return b.bronzes - a.bronzes;
     return 0;
   });
+
+  // Compute dense ranks (tied teams share rank, next team gets rank+1)
+  const ranks = denseRank(standings, (a, b) =>
+    a.totalPoints === b.totalPoints && a.golds === b.golds &&
+    a.silvers === b.silvers && a.bronzes === b.bronzes
+  );
+  standings.forEach((s, i) => { s.rank = ranks[i]; });
 
   return standings;
 }

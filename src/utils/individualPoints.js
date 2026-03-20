@@ -15,6 +15,8 @@
  *    Default: Infinity (no cap). Set to e.g. 3 to cap at 3 participation pts.
  */
 
+import { safeNum, denseRank } from './points';
+
 export const DEFAULT_INDIVIDUAL_POINTS = {
   first: 5,
   second: 3,
@@ -68,17 +70,17 @@ export function getAthletePoints(athleteId, individualResults, individualPointsC
       // Check if absent
       if ((result.absentees || []).includes(athleteId)) continue;
 
-      let pts = config.participation; // participation base
+      let pts = safeNum(config.participation); // participation base
       let placement = 'participant';
 
       if (result.placements?.first === athleteId) {
-        pts += config.first;
+        pts += safeNum(config.first);
         placement = 'first';
       } else if (result.placements?.second === athleteId) {
-        pts += config.second;
+        pts += safeNum(config.second);
         placement = 'second';
       } else if (result.placements?.third === athleteId) {
-        pts += config.third;
+        pts += safeNum(config.third);
         placement = 'third';
       }
 
@@ -130,14 +132,14 @@ export function getIndividualPointsForTeam(teamId, athletes, individualResults, 
 
         // Placement bonus is NEVER capped
         let placementBonus = 0;
-        if (result.placements?.first === athlete.id) placementBonus = config.first;
-        else if (result.placements?.second === athlete.id) placementBonus = config.second;
-        else if (result.placements?.third === athlete.id) placementBonus = config.third;
+        if (result.placements?.first === athlete.id) placementBonus = safeNum(config.first);
+        else if (result.placements?.second === athlete.id) placementBonus = safeNum(config.second);
+        else if (result.placements?.third === athlete.id) placementBonus = safeNum(config.third);
 
         // Participation point is capped per team per game
         let participationPts = 0;
         if (gameParticipationCount < cap) {
-          participationPts = config.participation;
+          participationPts = safeNum(config.participation);
           gameParticipationCount++;
         }
 
@@ -181,9 +183,9 @@ export function getCategoryPointsBreakdown(categoryId, individualResults, athlet
     const tid = getTeamId(result.placements.first);
     if (tid && !absentSet.has(result.placements.first)) {
       const entry = getOrCreate(tid);
-      entry.points += config.first; // placement bonus (never capped)
+      entry.points += safeNum(config.first); // placement bonus (never capped)
       if (entry.participations < cap) {
-        entry.points += config.participation;
+        entry.points += safeNum(config.participation);
         entry.participations++;
       }
       entry.golds++;
@@ -193,9 +195,9 @@ export function getCategoryPointsBreakdown(categoryId, individualResults, athlet
     const tid = getTeamId(result.placements.second);
     if (tid && !absentSet.has(result.placements.second)) {
       const entry = getOrCreate(tid);
-      entry.points += config.second;
+      entry.points += safeNum(config.second);
       if (entry.participations < cap) {
-        entry.points += config.participation;
+        entry.points += safeNum(config.participation);
         entry.participations++;
       }
       entry.silvers++;
@@ -205,9 +207,9 @@ export function getCategoryPointsBreakdown(categoryId, individualResults, athlet
     const tid = getTeamId(result.placements.third);
     if (tid && !absentSet.has(result.placements.third)) {
       const entry = getOrCreate(tid);
-      entry.points += config.third;
+      entry.points += safeNum(config.third);
       if (entry.participations < cap) {
-        entry.points += config.participation;
+        entry.points += safeNum(config.participation);
         entry.participations++;
       }
       entry.bronzes++;
@@ -215,17 +217,20 @@ export function getCategoryPointsBreakdown(categoryId, individualResults, athlet
   }
 
   // Process other participants (not in placements, not absent) — subject to cap
+  // Deduplicate to prevent double-counting from data entry errors
   const placedIds = new Set([result.placements?.first, result.placements?.second, result.placements?.third].filter(Boolean));
+  const seenParticipants = new Set();
   for (const athleteId of (result.participants || [])) {
     if (placedIds.has(athleteId) || absentSet.has(athleteId)) continue;
+    if (seenParticipants.has(athleteId)) continue; // dedup
+    seenParticipants.add(athleteId);
     const tid = getTeamId(athleteId);
     if (tid) {
       const entry = getOrCreate(tid);
       if (entry.participations < cap) {
-        entry.points += config.participation;
+        entry.points += safeNum(config.participation);
         entry.participations++;
       }
-      // If over cap, this athlete contributes 0 points
     }
   }
 
@@ -288,6 +293,13 @@ export function getIndividualGameTeamStandings(gameId, athletes, categories, ind
     if (b.bronzes !== a.bronzes) return b.bronzes - a.bronzes;
     return 0; // never alphabetical
   });
+
+  // Compute dense ranks (tied teams share rank, next team gets rank+1)
+  const ranks = denseRank(standings, (a, b) =>
+    a.totalPoints === b.totalPoints && a.golds === b.golds &&
+    a.silvers === b.silvers && a.bronzes === b.bronzes
+  );
+  standings.forEach((s, i) => { s.rank = ranks[i]; });
 
   return standings;
 }

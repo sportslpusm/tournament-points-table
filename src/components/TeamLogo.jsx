@@ -15,14 +15,18 @@ export default function TeamLogo({ team, size = 40, className = '' }) {
   if (!team) return null;
 
   const sizeClass = {
+    20: 'w-5 h-5 text-[8px]',
     24: 'w-6 h-6 text-[10px]',
+    28: 'w-7 h-7 text-[10px]',
     32: 'w-8 h-8 text-xs',
+    36: 'w-9 h-9 text-xs',
     40: 'w-10 h-10 text-sm',
     48: 'w-12 h-12 text-base',
+    56: 'w-14 h-14 text-base',
     64: 'w-16 h-16 text-lg',
   }[size] || `text-sm`;
 
-  const style = size in { 24:1, 32:1, 40:1, 48:1, 64:1 } ? {} : { width: size, height: size };
+  const style = sizeClass !== 'text-sm' ? {} : { width: size, height: size };
 
   if (team.logo) {
     return (
@@ -35,14 +39,15 @@ export default function TeamLogo({ team, size = 40, className = '' }) {
     );
   }
 
-  const initials = team.name
+  const initials = (team.name || '')
     .split(' ')
+    .filter(w => w.length > 0)
     .map(w => w[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || '?';
 
-  const bg = COLORS[hashCode(team.name) % COLORS.length];
+  const bg = COLORS[hashCode(team.name || 'team') % COLORS.length];
 
   return (
     <div

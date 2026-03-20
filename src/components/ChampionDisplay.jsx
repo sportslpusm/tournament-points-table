@@ -21,6 +21,7 @@ export default function ChampionDisplay({ gameId }) {
   if (!podium.first) return null;
 
   const firstTeam = teams.find(t => t.id === podium.first);
+  if (!firstTeam) return null; // guard: team data not loaded yet
   const secondTeam = teams.find(t => t.id === podium.second);
   const thirdTeam = podium.third ? teams.find(t => t.id === podium.third) : null;
 
