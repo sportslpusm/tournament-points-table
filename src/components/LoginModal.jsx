@@ -5,7 +5,7 @@ import { validatePassword, MAX_PASSWORD_LENGTH } from '../utils/auth';
 import Modal from './Modal';
 
 export default function LoginModal({ isOpen, onClose }) {
-  const { login, recoverPassword, lockout, getLockoutRemainingMs } = useAuth();
+  const { login, recoverPassword, setupPassword, authData, lockout, getLockoutRemainingMs } = useAuth();
   const { darkMode } = useTournament();
 
   const [password, setPassword] = useState('');
@@ -13,6 +13,13 @@ export default function LoginModal({ isOpen, onClose }) {
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // No password set — setup mode
+  const noPasswordSet = !authData?.passwordHash;
+  const [setupMode, setSetupMode] = useState(false);
+  const [setupPw, setSetupPw] = useState('');
+  const [setupPwConfirm, setSetupPwConfirm] = useState('');
+  const [setupError, setSetupError] = useState('');
 
   // Recovery mode
   const [showRecovery, setShowRecovery] = useState(false);
@@ -37,6 +44,10 @@ export default function LoginModal({ isOpen, onClose }) {
       setError('');
       setShake(false);
       setShowRecovery(false);
+      setSetupMode(noPasswordSet);
+      setSetupPw('');
+      setSetupPwConfirm('');
+      setSetupError('');
       setRecoveryKey('');
       setNewPassword('');
       setConfirmNewPassword('');
@@ -44,7 +55,7 @@ export default function LoginModal({ isOpen, onClose }) {
       setRecoverySuccess(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen]);
+  }, [isOpen, noPasswordSet]);
 
   // Update lockout countdown
   useEffect(() => {
@@ -107,9 +118,77 @@ export default function LoginModal({ isOpen, onClose }) {
     }
   }
 
+  async function handleSetupPassword() {
+    setSetupError('');
+    const pwValidation = validatePassword(setupPw);
+    if (pwValidation) {
+      setSetupError(pwValidation);
+      return;
+    }
+    if (setupPw !== setupPwConfirm) {
+      setSetupError('Passwords do not match');
+      return;
+    }
+    setLoading(true);
+    await setupPassword(setupPw, null);
+    setLoading(false);
+    onClose();
+  }
+
   const isLocked = lockoutRemaining > 0;
   const lockoutMinutes = Math.ceil(lockoutRemaining / 60000);
   const lockoutSeconds = Math.ceil((lockoutRemaining % 60000) / 1000);
+
+  // No password set — show setup form
+  if (setupMode || noPasswordSet) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Set Admin Password" size="sm">
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="text-3xl mb-1.5">🔐</div>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              No admin password is set. Create one to manage your tournament.
+            </p>
+          </div>
+          <div>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password (min 6 characters)</label>
+            <input
+              type="password"
+              value={setupPw}
+              onChange={e => { setSetupPw(e.target.value); setSetupError(''); }}
+              onKeyDown={e => e.key === 'Enter' && setupPwConfirm && handleSetupPassword()}
+              placeholder="Enter new password"
+              className={inputCls}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm Password</label>
+            <input
+              type="password"
+              value={setupPwConfirm}
+              onChange={e => { setSetupPwConfirm(e.target.value); setSetupError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleSetupPassword()}
+              placeholder="Confirm password"
+              className={inputCls}
+            />
+          </div>
+          {setupError && <p className="text-red-400 text-sm">{setupError}</p>}
+          <button
+            onClick={handleSetupPassword}
+            disabled={loading || !setupPw || !setupPwConfirm}
+            className={`w-full px-4 py-2.5 font-bold rounded-xl transition-all duration-200 ${
+              loading || !setupPw || !setupPwConfirm
+                ? darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20'
+            }`}
+          >
+            {loading ? 'Setting up...' : 'Set Password & Login'}
+          </button>
+        </div>
+      </Modal>
+    );
+  }
 
   if (showRecovery) {
     return (
