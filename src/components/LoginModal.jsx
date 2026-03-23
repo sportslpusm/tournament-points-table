@@ -287,7 +287,10 @@ export default function LoginModal({ isOpen, onClose }) {
             </div>
           </div>
         ) : (
-          <>
+          <form autoComplete="off" onSubmit={e => { e.preventDefault(); handleLogin(); }}>
+            {/* Hidden dummy fields to trick Chrome's autofill */}
+            <input type="text" name="fake-user" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
+            <input type="password" name="fake-pass" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
             <div>
               <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password</label>
               <div className="relative">
@@ -296,7 +299,6 @@ export default function LoginModal({ isOpen, onClose }) {
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
                   placeholder="Enter admin password"
                   className={`${inputCls} pr-10 ${error ? 'border-red-500!' : ''}`}
                   disabled={loading}
@@ -313,27 +315,28 @@ export default function LoginModal({ isOpen, onClose }) {
               </div>
             </div>
             {error && <p className="text-red-400 text-sm">{error}</p>}
-          </>
+
+            <button
+              type="submit"
+              disabled={isLocked || loading || !password}
+              className={`w-full px-4 py-2.5 font-bold rounded-xl transition-all duration-200 ${
+                isLocked || loading || !password
+                  ? darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5'
+              }`}
+            >
+              {loading ? 'Verifying...' : 'Login'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowRecovery(true)}
+              className={`w-full text-xs transition-colors duration-200 ${darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Forgot password? Use recovery key
+            </button>
+          </form>
         )}
-
-        <button
-          onClick={handleLogin}
-          disabled={isLocked || loading || !password}
-          className={`w-full px-4 py-2.5 font-bold rounded-xl transition-all duration-200 ${
-            isLocked || loading || !password
-              ? darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20 hover:shadow-accent/30 hover:-translate-y-0.5'
-          }`}
-        >
-          {loading ? 'Verifying...' : 'Login'}
-        </button>
-
-        <button
-          onClick={() => setShowRecovery(true)}
-          className={`w-full text-xs transition-colors duration-200 ${darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'}`}
-        >
-          Forgot password? Use recovery key
-        </button>
       </div>
     </Modal>
   );
