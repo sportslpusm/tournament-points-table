@@ -2,8 +2,6 @@
 import { initializeApp } from 'firebase/app';
 import {
   initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
   memoryLocalCache,
   terminate,
   clearIndexedDbPersistence,
@@ -21,10 +19,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Use persistent cache with multi-tab support
-// If the cache has stale/broken writes, clearAndReinit() below will fix it
+// Use memory-only cache — no IndexedDB/localStorage caching
+// Data always comes fresh from the server on each page load
 let db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  localCache: memoryLocalCache(),
 });
 
 /**
@@ -35,20 +33,12 @@ export async function clearAndReinit() {
   try {
     await terminate(db);
     await clearIndexedDbPersistence(db);
-    // Cleared stale Firestore cache
-  } catch (err) {
-    // Failed to clear persistence — falling back to memory cache
-  }
-  // Reinitialize — try persistent first, fall back to memory
-  try {
-    db = initializeFirestore(app, {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-    });
   } catch {
-    db = initializeFirestore(app, {
-      localCache: memoryLocalCache(),
-    });
+    // Clear failed — no issue since we use memory cache
   }
+  db = initializeFirestore(app, {
+    localCache: memoryLocalCache(),
+  });
   return db;
 }
 
