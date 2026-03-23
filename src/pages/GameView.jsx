@@ -32,6 +32,9 @@ export default function GameView() {
   const [selectedStartRound, setSelectedStartRound] = useState('auto');
   const [showAdvanceSR, setShowAdvanceSR] = useState(false);
   const [showForceAdvanceSR, setShowForceAdvanceSR] = useState(false);
+  const [showSRSelectionModal, setShowSRSelectionModal] = useState(false);
+  const [manualSfTeams, setManualSfTeams] = useState([]);    // 3 team IDs for SF
+  const [manualPlayInTeams, setManualPlayInTeams] = useState([]); // 2 team IDs for knockout match
 
   const currentGame = games.find(g => g.id === selectedGameId) || games[0];
   const gameId = currentGame?.id;
@@ -199,27 +202,60 @@ export default function GameView() {
       setShowForceAdvanceSR(true);
       return;
     }
-    doAdvanceFromSecondRound();
+    openSRSelectionModal();
+  }
+
+  function openSRSelectionModal() {
+    // Pre-fill with auto-calculated results
+    const { semiFinalTeams, playInTeams } = getSecondRoundResults(secondRoundStandings);
+    setManualSfTeams([...semiFinalTeams]);
+    setManualPlayInTeams([...playInTeams]);
+    setShowSRSelectionModal(true);
+    setShowForceAdvanceSR(false);
+  }
+
+  function toggleTeamSelection(teamId) {
+    const inSf = manualSfTeams.includes(teamId);
+    const inPlayIn = manualPlayInTeams.includes(teamId);
+
+    if (inSf) {
+      // Move from SF to play-in (if play-in has room)
+      setManualSfTeams(prev => prev.filter(id => id !== teamId));
+      if (manualPlayInTeams.length < 2) {
+        setManualPlayInTeams(prev => [...prev, teamId]);
+      }
+    } else if (inPlayIn) {
+      // Remove from play-in (unselect)
+      setManualPlayInTeams(prev => prev.filter(id => id !== teamId));
+    } else {
+      // Add to SF if room, else play-in if room
+      if (manualSfTeams.length < 3) {
+        setManualSfTeams(prev => [...prev, teamId]);
+      } else if (manualPlayInTeams.length < 2) {
+        setManualPlayInTeams(prev => [...prev, teamId]);
+      }
+    }
   }
 
   function doAdvanceFromSecondRound() {
-    if (!gameId || secondRoundStandings.length < 2) return;
+    if (!gameId) return;
+    if (manualSfTeams.length < 2) {
+      showToast('Select at least 2 teams for Semifinals', 'error');
+      return;
+    }
 
-    const { semiFinalTeams, playInTeams } = getSecondRoundResults(secondRoundStandings);
     const allKoMatches = [];
 
-    if (playInTeams.length === 2) {
-      // Generate play-in match (bottom 2)
-      const playInMatch = generatePlayInMatch(playInTeams[0], playInTeams[1], gameId, localGenId);
+    if (manualPlayInTeams.length === 2) {
+      // Generate play-in match (2 selected teams)
+      const playInMatch = generatePlayInMatch(manualPlayInTeams[0], manualPlayInTeams[1], gameId, localGenId);
       allKoMatches.push(playInMatch);
 
-      // Generate SF bracket with top 3 + placeholder for play-in winner
-      // Play-in winner will be the 4th SF team
-      const sfBracket = generatePostSecondRoundBracket(
-        [...semiFinalTeams, null], // 4th slot filled when play-in completes
-        gameId,
-        localGenId
-      );
+      // Generate SF bracket with SF teams + placeholder for play-in winner
+      const sfTeamIds = manualSfTeams.length === 3
+        ? [...manualSfTeams, null] // 4th slot filled when play-in completes
+        : [...manualSfTeams];
+      const sfBracket = generatePostSecondRoundBracket(sfTeamIds, gameId, localGenId);
 
       // Link play-in to SF match (slot for 4th team = teamB of SF1)
       const sf1 = sfBracket.find(m => m.round === 'sf' && m.matchNumber === 1);
@@ -230,8 +266,8 @@ export default function GameView() {
 
       allKoMatches.push(...sfBracket);
     } else {
-      // All teams go directly to SF (4 or fewer)
-      const sfBracket = generatePostSecondRoundBracket(semiFinalTeams, gameId, localGenId);
+      // All selected teams go directly to SF
+      const sfBracket = generatePostSecondRoundBracket(manualSfTeams, gameId, localGenId);
       allKoMatches.push(...sfBracket);
     }
 
@@ -242,8 +278,7 @@ export default function GameView() {
 
     showToast(`${currentGame.name}: Advanced to Knockout stage`);
     setActiveTab('knockout');
-    setShowAdvanceSR(false);
-    setShowForceAdvanceSR(false);
+    setShowSRSelectionModal(false);
   }
 
   function handleResetToPool() {
@@ -826,10 +861,183 @@ export default function GameView() {
               Cancel
             </button>
             <button
-              onClick={doAdvanceFromSecondRound}
+              onClick={openSRSelectionModal}
               className="flex-1 px-4 py-2.5 rounded-xl bg-draw text-navy-900 font-bold hover:bg-draw/80 transition-colors"
             >
               Force Advance
+            </button>
+          </div>
+        </div>
+      </Modal>}
+
+      {/* Second Round → Knockout Team Selection Modal - admin only */}
+      {isAdmin && <Modal
+        isOpen={showSRSelectionModal}
+        onClose={() => setShowSRSelectionModal(false)}
+        title="Select Teams for Knockout Stage"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Choose which teams qualify for Semifinals and which 2 play the Knockout Match. Tap a team to change its assignment.
+          </p>
+
+          {/* Semifinal slots */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-win"></span>
+              <span className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Semifinals ({manualSfTeams.length}/3)
+              </span>
+            </div>
+            <div className={`rounded-xl p-2 min-h-[40px] border-2 border-dashed ${
+              manualSfTeams.length === 3
+                ? 'border-win/30 bg-win/[0.04]'
+                : 'border-white/[0.08] bg-white/[0.02]'
+            }`}>
+              {manualSfTeams.length === 0 ? (
+                <p className={`text-xs text-center py-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Click teams below to add</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {manualSfTeams.map((tid, idx) => {
+                    const t = teams.find(x => x.id === tid);
+                    return (
+                      <button
+                        key={tid}
+                        onClick={() => toggleTeamSelection(tid)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-win/15 text-win text-sm font-semibold hover:bg-win/25 transition-colors"
+                      >
+                        <span className="text-xs font-mono text-win/60">SF{idx + 1}</span>
+                        <TeamLogo team={t} size={18} />
+                        {t?.shortCode || '?'}
+                        <span className="text-win/40 ml-0.5">✕</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Knockout Match slots */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-draw"></span>
+              <span className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Knockout Match ({manualPlayInTeams.length}/2)
+              </span>
+            </div>
+            <div className={`rounded-xl p-2 min-h-[40px] border-2 border-dashed ${
+              manualPlayInTeams.length === 2
+                ? 'border-draw/30 bg-draw/[0.04]'
+                : 'border-white/[0.08] bg-white/[0.02]'
+            }`}>
+              {manualPlayInTeams.length === 0 ? (
+                <p className={`text-xs text-center py-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>Click teams below to add</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {manualPlayInTeams.map(tid => {
+                    const t = teams.find(x => x.id === tid);
+                    return (
+                      <button
+                        key={tid}
+                        onClick={() => toggleTeamSelection(tid)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-draw/15 text-draw text-sm font-semibold hover:bg-draw/25 transition-colors"
+                      >
+                        <TeamLogo team={t} size={18} />
+                        {t?.shortCode || '?'}
+                        <span className="text-draw/40 ml-0.5">✕</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Team list from standings */}
+          <div>
+            <div className={`text-xs font-bold mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              SECOND ROUND STANDINGS — tap to assign
+            </div>
+            <div className="space-y-1">
+              {secondRoundStandings.map((row, i) => {
+                const inSf = manualSfTeams.includes(row.teamId);
+                const inPlayIn = manualPlayInTeams.includes(row.teamId);
+                const assigned = inSf || inPlayIn;
+
+                return (
+                  <button
+                    key={row.teamId}
+                    onClick={() => toggleTeamSelection(row.teamId)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 ${
+                      inSf
+                        ? 'bg-win/10 border border-win/30'
+                        : inPlayIn
+                        ? 'bg-draw/10 border border-draw/30'
+                        : darkMode
+                        ? 'bg-white/[0.02] border border-white/[0.06] hover:bg-white/[0.05]'
+                        : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className={`w-5 text-center font-mono text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{i + 1}</span>
+                    <TeamLogo team={row.team} size={24} />
+                    <span className="font-medium text-sm flex-1">{row.teamName}</span>
+                    <span className={`text-xs font-mono ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {row.points}pts {row.goalDifference >= 0 ? '+' : ''}{row.goalDifference}gd
+                    </span>
+                    {inSf && <span className="text-[10px] font-bold text-win bg-win/15 px-2 py-0.5 rounded-lg">SF</span>}
+                    {inPlayIn && <span className="text-[10px] font-bold text-draw bg-draw/15 px-2 py-0.5 rounded-lg">KO</span>}
+                    {!assigned && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-lg ${darkMode ? 'text-gray-600 bg-white/[0.04]' : 'text-gray-400 bg-gray-100'}`}>
+                        {manualSfTeams.length < 3 ? '+SF' : manualPlayInTeams.length < 2 ? '+KO' : '—'}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Validation message */}
+          {(manualSfTeams.length + manualPlayInTeams.length) < 4 && (
+            <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+              Select 3 teams for Semifinals + 2 for Knockout Match ({5 - manualSfTeams.length - manualPlayInTeams.length} more needed)
+            </p>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setShowSRSelectionModal(false)}
+              className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+                darkMode ? 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.10]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                // Reset to auto suggestion
+                const { semiFinalTeams, playInTeams } = getSecondRoundResults(secondRoundStandings);
+                setManualSfTeams([...semiFinalTeams]);
+                setManualPlayInTeams([...playInTeams]);
+              }}
+              className={`px-4 py-2.5 rounded-xl font-medium transition-colors ${
+                darkMode ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+              }`}
+            >
+              Auto
+            </button>
+            <button
+              onClick={doAdvanceFromSecondRound}
+              disabled={manualSfTeams.length < 2 || (manualSfTeams.length === 3 && manualPlayInTeams.length !== 2)}
+              className={`flex-1 px-4 py-2.5 rounded-xl font-bold transition-all duration-200 ${
+                manualSfTeams.length >= 2 && (manualSfTeams.length < 3 || manualPlayInTeams.length === 2)
+                  ? 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20'
+                  : darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              Confirm & Advance
             </button>
           </div>
         </div>
