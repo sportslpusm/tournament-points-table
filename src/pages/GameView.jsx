@@ -35,10 +35,10 @@ export default function GameView() {
   const [showSRSelectionModal, setShowSRSelectionModal] = useState(false);
   const [manualSfTeams, setManualSfTeams] = useState([]);    // 3 team IDs for SF
   const [manualPlayInTeams, setManualPlayInTeams] = useState([]); // 2 team IDs for knockout match
-  // Regular knockout manual selection
+  // Regular knockout manual matchup builder
   const [showKoSelectionModal, setShowKoSelectionModal] = useState(false);
-  const [koSelectedTeams, setKoSelectedTeams] = useState([]); // ordered list of teams for bracket
   const [koQualifiers, setKoQualifiers] = useState([]);
+  const [koMatchups, setKoMatchups] = useState([]); // [{teamAId, teamBId}, ...]
 
   const currentGame = games.find(g => g.id === selectedGameId) || games[0];
   const gameId = currentGame?.id;
@@ -141,49 +141,84 @@ export default function GameView() {
       return;
     }
 
-    // Calculate qualifiers and open selection modal
+    // Calculate qualifiers and build initial matchups
     const qualifiers = calculateQualifiers(gamePools, matches, teams, config?.qualifyCount || 2);
     setKoQualifiers(qualifiers);
-    setKoSelectedTeams(qualifiers.map(q => q.teamId));
+
+    // Auto-generate initial matchups using cross-pool seeding
+    const startRound = (config?.startingRound && config.startingRound !== 'auto')
+      ? config.startingRound
+      : getStartingRound(qualifiers.length);
+    const numMatches = startRound ? { ro32: 16, ro16: 8, qf: 4, sf: 2, final: 1 }[startRound] || 2 : 2;
+    const initialMatchups = [];
+    const ids = qualifiers.map(q => q.teamId);
+    for (let i = 0; i < numMatches; i++) {
+      initialMatchups.push({
+        teamAId: ids[i] || null,
+        teamBId: ids[ids.length - 1 - i] || null,
+      });
+    }
+    setKoMatchups(initialMatchups);
     setShowKoSelectionModal(true);
     setShowAdvanceConfirm(false);
     setShowForceAdvance(false);
   }
 
   function doConfirmKoAdvance() {
-    if (!gameId || koSelectedTeams.length < 2) return;
+    if (!gameId) return;
+    // Validate all slots filled
+    const validMatchups = koMatchups.filter(m => m.teamAId && m.teamBId);
+    if (validMatchups.length === 0) return;
 
-    // Build qualifiers in the order the admin selected
-    const orderedQualifiers = koSelectedTeams.map((tid, idx) => {
+    // Build knockout matches directly from matchups
+    const startRound = (config?.startingRound && config.startingRound !== 'auto')
+      ? config.startingRound
+      : getStartingRound(validMatchups.length * 2);
+    if (!startRound) return;
+
+    // Construct qualifiers from the matchup selections for record-keeping
+    const allTeamIds = new Set();
+    validMatchups.forEach(m => { allTeamIds.add(m.teamAId); allTeamIds.add(m.teamBId); });
+    const orderedQualifiers = [...allTeamIds].map((tid, idx) => {
       const orig = koQualifiers.find(q => q.teamId === tid);
       return orig || { teamId: tid, poolId: null, rank: idx + 1, manual: true };
     });
+    // Reorder qualifiers so bracket seeding matches the admin's matchups
+    // matchup[0].teamA vs matchup[0].teamB, matchup[1].teamA vs matchup[1].teamB, etc.
+    const seededOrder = [];
+    for (const m of validMatchups) {
+      seededOrder.push(m.teamAId);
+    }
+    for (const m of [...validMatchups].reverse()) {
+      seededOrder.push(m.teamBId);
+    }
+    const finalQualifiers = seededOrder.map((tid, idx) => {
+      const orig = koQualifiers.find(q => q.teamId === tid);
+      return { teamId: tid, poolId: orig?.poolId || null, rank: idx + 1, manual: true };
+    });
 
-    dispatch({ type: 'SET_QUALIFIED_TEAMS', payload: { gameId, teams: orderedQualifiers } });
-
-    const bracketMatches = generateBracket(orderedQualifiers, gamePools, gameId, localGenId, config?.startingRound);
+    dispatch({ type: 'SET_QUALIFIED_TEAMS', payload: { gameId, teams: finalQualifiers } });
+    const bracketMatches = generateBracket(finalQualifiers, gamePools, gameId, localGenId, startRound);
     dispatch({ type: 'SET_KNOCKOUT_MATCHES', payload: { gameId, matches: bracketMatches } });
     dispatch({ type: 'ADVANCE_TO_KNOCKOUT', payload: { gameId } });
 
-    showToast(`${currentGame.name}: Advanced to knockout stage with ${koSelectedTeams.length} teams`);
+    showToast(`${currentGame.name}: Advanced to knockout stage`);
     setActiveTab('knockout');
     setShowKoSelectionModal(false);
   }
 
-  function moveKoTeam(idx, direction) {
-    const newList = [...koSelectedTeams];
-    const swapIdx = idx + direction;
-    if (swapIdx < 0 || swapIdx >= newList.length) return;
-    [newList[idx], newList[swapIdx]] = [newList[swapIdx], newList[idx]];
-    setKoSelectedTeams(newList);
+  function updateMatchup(idx, slot, teamId) {
+    setKoMatchups(prev => prev.map((m, i) =>
+      i === idx ? { ...m, [slot]: teamId || null } : m
+    ));
   }
 
-  function toggleKoTeam(teamId) {
-    if (koSelectedTeams.includes(teamId)) {
-      setKoSelectedTeams(prev => prev.filter(id => id !== teamId));
-    } else {
-      setKoSelectedTeams(prev => [...prev, teamId]);
-    }
+  function addMatchup() {
+    setKoMatchups(prev => [...prev, { teamAId: null, teamBId: null }]);
+  }
+
+  function removeMatchup(idx) {
+    setKoMatchups(prev => prev.filter((_, i) => i !== idx));
   }
 
   function doAdvanceToSecondRound() {
@@ -901,49 +936,86 @@ export default function GameView() {
         </div>
       </Modal>}
 
-      {/* Regular Knockout Team Selection Modal - admin only */}
+      {/* Regular Knockout Matchup Builder Modal - admin only */}
       {isAdmin && <Modal
         isOpen={showKoSelectionModal}
         onClose={() => setShowKoSelectionModal(false)}
-        title="Select Teams for Knockout"
+        title="Set Knockout Matchups"
         size="sm"
       >
         <div className="space-y-4">
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Tap to select or deselect teams. Only selected teams will advance.
+            Pick who plays who. Use the dropdowns to set each match.
           </p>
 
-          <div className="space-y-1.5">
-            {koQualifiers.map(q => {
-              const t = teams.find(x => x.id === q.teamId);
-              const pool = gamePools.find(p => p.id === q.poolId);
-              const selected = koSelectedTeams.includes(q.teamId);
+          {/* Matchup rows */}
+          <div className="space-y-3">
+            {koMatchups.map((matchup, idx) => {
+              const roundLabel = koMatchups.length <= 1 ? 'Final' : koMatchups.length <= 2 ? `SF ${idx + 1}` : koMatchups.length <= 4 ? `QF ${idx + 1}` : `Match ${idx + 1}`;
+              // Teams already used in OTHER matchups (not this one)
+              const usedIds = new Set();
+              koMatchups.forEach((m, i) => {
+                if (i === idx) return;
+                if (m.teamAId) usedIds.add(m.teamAId);
+                if (m.teamBId) usedIds.add(m.teamBId);
+              });
+              const availableTeams = koQualifiers.filter(q => !usedIds.has(q.teamId) || q.teamId === matchup.teamAId || q.teamId === matchup.teamBId);
+
               return (
-                <button
-                  key={q.teamId}
-                  onClick={() => toggleKoTeam(q.teamId)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-150 ${
-                    selected
-                      ? 'bg-win/10 border-win/30'
-                      : darkMode
-                      ? 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] opacity-50'
-                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100 opacity-50'
-                  }`}
-                >
-                  <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-xs ${
-                    selected
-                      ? 'bg-win border-win text-white'
-                      : darkMode ? 'border-gray-600' : 'border-gray-300'
-                  }`}>
-                    {selected && '✓'}
-                  </span>
-                  <TeamLogo team={t} size={24} />
-                  <span className="font-medium text-sm flex-1">{t?.shortCode || '?'}</span>
-                  {pool && <span className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{pool.name} #{q.rank}</span>}
-                </button>
+                <div key={idx} className={`rounded-xl p-3 border ${darkMode ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-accent">{roundLabel}</span>
+                    {koMatchups.length > 1 && (
+                      <button onClick={() => removeMatchup(idx)} className="text-xs text-red-400 hover:text-red-300">Remove</button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={matchup.teamAId || ''}
+                      onChange={e => updateMatchup(idx, 'teamAId', e.target.value)}
+                      className={`flex-1 px-2.5 py-2 rounded-lg text-sm border ${
+                        darkMode
+                          ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800'
+                          : 'bg-white border-gray-200 text-gray-900'
+                      }`}
+                    >
+                      <option value="">Select team</option>
+                      {availableTeams.filter(q => q.teamId !== matchup.teamBId).map(q => {
+                        const t = teams.find(x => x.id === q.teamId);
+                        return <option key={q.teamId} value={q.teamId}>{t?.shortCode || t?.name || '?'}</option>;
+                      })}
+                    </select>
+                    <span className="text-xs font-bold text-accent px-1">VS</span>
+                    <select
+                      value={matchup.teamBId || ''}
+                      onChange={e => updateMatchup(idx, 'teamBId', e.target.value)}
+                      className={`flex-1 px-2.5 py-2 rounded-lg text-sm border ${
+                        darkMode
+                          ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800'
+                          : 'bg-white border-gray-200 text-gray-900'
+                      }`}
+                    >
+                      <option value="">Select team</option>
+                      {availableTeams.filter(q => q.teamId !== matchup.teamAId).map(q => {
+                        const t = teams.find(x => x.id === q.teamId);
+                        return <option key={q.teamId} value={q.teamId}>{t?.shortCode || t?.name || '?'}</option>;
+                      })}
+                    </select>
+                  </div>
+                </div>
               );
             })}
           </div>
+
+          {/* Add match button */}
+          <button
+            onClick={addMatchup}
+            className={`w-full px-3 py-2 rounded-xl text-sm font-medium border border-dashed transition-colors ${
+              darkMode ? 'border-white/[0.1] text-gray-400 hover:bg-white/[0.03]' : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            + Add Match
+          </button>
 
           <div className="flex gap-3 pt-2">
             <button
@@ -956,14 +1028,14 @@ export default function GameView() {
             </button>
             <button
               onClick={doConfirmKoAdvance}
-              disabled={koSelectedTeams.length < 2}
+              disabled={!koMatchups.some(m => m.teamAId && m.teamBId)}
               className={`flex-1 px-4 py-2.5 rounded-xl font-bold transition-all duration-200 ${
-                koSelectedTeams.length >= 2
+                koMatchups.some(m => m.teamAId && m.teamBId)
                   ? 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20'
                   : darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              Advance ({koSelectedTeams.length} teams)
+              Confirm & Advance
             </button>
           </div>
         </div>
