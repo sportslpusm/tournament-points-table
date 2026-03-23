@@ -44,7 +44,7 @@ export default function LoginModal({ isOpen, onClose }) {
       setError('');
       setShake(false);
       setShowRecovery(false);
-      setSetupMode(noPasswordSet);
+      setSetupMode(!authData?.passwordHash);
       setSetupPw('');
       setSetupPwConfirm('');
       setSetupError('');
@@ -55,7 +55,8 @@ export default function LoginModal({ isOpen, onClose }) {
       setRecoverySuccess(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, noPasswordSet]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Update lockout countdown
   useEffect(() => {
