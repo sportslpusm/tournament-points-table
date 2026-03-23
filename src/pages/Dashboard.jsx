@@ -494,6 +494,8 @@ export default function Dashboard() {
             placeholder="Search teams..."
             value={search}
             onChange={e => setSearch(e.target.value)}
+            autoComplete="off"
+            name="team-search-filter"
             className={`px-3.5 py-2 rounded-xl text-sm border transition-all duration-200 ${
               darkMode
                 ? 'bg-white/[0.04] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent/40 focus:bg-white/[0.06]'
