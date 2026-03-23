@@ -37,6 +37,7 @@ export default function GameView() {
   const [manualPlayInTeams, setManualPlayInTeams] = useState([]); // 2 team IDs for knockout match
   // Regular knockout manual matchup builder
   const [showKoSelectionModal, setShowKoSelectionModal] = useState(false);
+  const [koMode, setKoMode] = useState('auto'); // 'auto' or 'manual'
   const [koQualifiers, setKoQualifiers] = useState([]);
   const [koMatchups, setKoMatchups] = useState([]); // [{teamAId, teamBId}, ...]
 
@@ -159,6 +160,7 @@ export default function GameView() {
       });
     }
     setKoMatchups(initialMatchups);
+    setKoMode('auto');
     setShowKoSelectionModal(true);
     setShowAdvanceConfirm(false);
     setShowForceAdvance(false);
@@ -166,6 +168,18 @@ export default function GameView() {
 
   function doConfirmKoAdvance() {
     if (!gameId) return;
+
+    // Auto mode — use the standard bracket generation
+    if (koMode === 'auto') {
+      dispatch({ type: 'SET_QUALIFIED_TEAMS', payload: { gameId, teams: koQualifiers } });
+      const bracketMatches = generateBracket(koQualifiers, gamePools, gameId, localGenId, config?.startingRound);
+      dispatch({ type: 'SET_KNOCKOUT_MATCHES', payload: { gameId, matches: bracketMatches } });
+      dispatch({ type: 'ADVANCE_TO_KNOCKOUT', payload: { gameId } });
+      showToast(`${currentGame.name}: Advanced to knockout stage with ${koQualifiers.length} teams`);
+      setActiveTab('knockout');
+      setShowKoSelectionModal(false);
+      return;
+    }
     // Validate all slots filled
     const validMatchups = koMatchups.filter(m => m.teamAId && m.teamBId);
     if (validMatchups.length === 0) return;
@@ -940,82 +954,114 @@ export default function GameView() {
       {isAdmin && <Modal
         isOpen={showKoSelectionModal}
         onClose={() => setShowKoSelectionModal(false)}
-        title="Set Knockout Matchups"
+        title="Advance to Knockout"
         size="sm"
       >
         <div className="space-y-4">
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Pick who plays who. Use the dropdowns to set each match.
-          </p>
-
-          {/* Matchup rows */}
-          <div className="space-y-3">
-            {koMatchups.map((matchup, idx) => {
-              const roundLabel = koMatchups.length <= 1 ? 'Final' : koMatchups.length <= 2 ? `SF ${idx + 1}` : koMatchups.length <= 4 ? `QF ${idx + 1}` : `Match ${idx + 1}`;
-              // Teams already used in OTHER matchups (not this one)
-              const usedIds = new Set();
-              koMatchups.forEach((m, i) => {
-                if (i === idx) return;
-                if (m.teamAId) usedIds.add(m.teamAId);
-                if (m.teamBId) usedIds.add(m.teamBId);
-              });
-              const availableTeams = koQualifiers.filter(q => !usedIds.has(q.teamId) || q.teamId === matchup.teamAId || q.teamId === matchup.teamBId);
-
-              return (
-                <div key={idx} className={`rounded-xl p-3 border ${darkMode ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-gray-50 border-gray-200'}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-accent">{roundLabel}</span>
-                    {koMatchups.length > 1 && (
-                      <button onClick={() => removeMatchup(idx)} className="text-xs text-red-400 hover:text-red-300">Remove</button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={matchup.teamAId || ''}
-                      onChange={e => updateMatchup(idx, 'teamAId', e.target.value)}
-                      className={`flex-1 px-2.5 py-2 rounded-lg text-sm border ${
-                        darkMode
-                          ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800'
-                          : 'bg-white border-gray-200 text-gray-900'
-                      }`}
-                    >
-                      <option value="">Select team</option>
-                      {availableTeams.filter(q => q.teamId !== matchup.teamBId).map(q => {
-                        const t = teams.find(x => x.id === q.teamId);
-                        return <option key={q.teamId} value={q.teamId}>{t?.shortCode || t?.name || '?'}</option>;
-                      })}
-                    </select>
-                    <span className="text-xs font-bold text-accent px-1">VS</span>
-                    <select
-                      value={matchup.teamBId || ''}
-                      onChange={e => updateMatchup(idx, 'teamBId', e.target.value)}
-                      className={`flex-1 px-2.5 py-2 rounded-lg text-sm border ${
-                        darkMode
-                          ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800'
-                          : 'bg-white border-gray-200 text-gray-900'
-                      }`}
-                    >
-                      <option value="">Select team</option>
-                      {availableTeams.filter(q => q.teamId !== matchup.teamAId).map(q => {
-                        const t = teams.find(x => x.id === q.teamId);
-                        return <option key={q.teamId} value={q.teamId}>{t?.shortCode || t?.name || '?'}</option>;
-                      })}
-                    </select>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Auto / Manual toggle */}
+          <div className="flex gap-2">
+            {['auto', 'manual'].map(mode => (
+              <button
+                key={mode}
+                onClick={() => setKoMode(mode)}
+                className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  koMode === mode
+                    ? 'bg-accent text-navy-900 shadow-md shadow-accent/20'
+                    : darkMode ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}
+              >
+                {mode === 'auto' ? 'Auto Seeding' : 'Manual Matchups'}
+              </button>
+            ))}
           </div>
 
-          {/* Add match button */}
-          <button
-            onClick={addMatchup}
-            className={`w-full px-3 py-2 rounded-xl text-sm font-medium border border-dashed transition-colors ${
-              darkMode ? 'border-white/[0.1] text-gray-400 hover:bg-white/[0.03]' : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            + Add Match
-          </button>
+          {koMode === 'auto' ? (
+            /* Auto mode — just show summary */
+            <div className={`rounded-xl p-4 ${darkMode ? 'bg-white/[0.02] border border-white/[0.06]' : 'bg-gray-50 border border-gray-200'}`}>
+              <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                System will automatically generate the bracket using cross-pool seeding with <strong>{koQualifiers.length} qualified teams</strong>.
+              </p>
+              <div className={`mt-3 flex flex-wrap gap-1.5`}>
+                {koQualifiers.map(q => {
+                  const t = teams.find(x => x.id === q.teamId);
+                  return (
+                    <span key={q.teamId} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                      darkMode ? 'bg-white/[0.04] text-gray-300' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <TeamLogo team={t} size={14} />
+                      {t?.shortCode || '?'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            /* Manual mode — matchup dropdowns */
+            <>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                Pick who plays who in each match.
+              </p>
+              <div className="space-y-3">
+                {koMatchups.map((matchup, idx) => {
+                  const roundLabel = koMatchups.length <= 1 ? 'Final' : koMatchups.length <= 2 ? `SF ${idx + 1}` : koMatchups.length <= 4 ? `QF ${idx + 1}` : `Match ${idx + 1}`;
+                  const usedIds = new Set();
+                  koMatchups.forEach((m, i) => {
+                    if (i === idx) return;
+                    if (m.teamAId) usedIds.add(m.teamAId);
+                    if (m.teamBId) usedIds.add(m.teamBId);
+                  });
+                  const availableTeams = koQualifiers.filter(q => !usedIds.has(q.teamId) || q.teamId === matchup.teamAId || q.teamId === matchup.teamBId);
+                  return (
+                    <div key={idx} className={`rounded-xl p-3 border ${darkMode ? 'bg-white/[0.02] border-white/[0.06]' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-accent">{roundLabel}</span>
+                        {koMatchups.length > 1 && (
+                          <button onClick={() => removeMatchup(idx)} className="text-xs text-red-400 hover:text-red-300">Remove</button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={matchup.teamAId || ''}
+                          onChange={e => updateMatchup(idx, 'teamAId', e.target.value)}
+                          className={`flex-1 px-2.5 py-2 rounded-lg text-sm border ${
+                            darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800' : 'bg-white border-gray-200 text-gray-900'
+                          }`}
+                        >
+                          <option value="">Select team</option>
+                          {availableTeams.filter(q => q.teamId !== matchup.teamBId).map(q => {
+                            const t = teams.find(x => x.id === q.teamId);
+                            return <option key={q.teamId} value={q.teamId}>{t?.shortCode || t?.name || '?'}</option>;
+                          })}
+                        </select>
+                        <span className="text-xs font-bold text-accent px-1">VS</span>
+                        <select
+                          value={matchup.teamBId || ''}
+                          onChange={e => updateMatchup(idx, 'teamBId', e.target.value)}
+                          className={`flex-1 px-2.5 py-2 rounded-lg text-sm border ${
+                            darkMode ? 'bg-navy-800 border-white/[0.08] text-white [&>option]:bg-navy-800' : 'bg-white border-gray-200 text-gray-900'
+                          }`}
+                        >
+                          <option value="">Select team</option>
+                          {availableTeams.filter(q => q.teamId !== matchup.teamAId).map(q => {
+                            const t = teams.find(x => x.id === q.teamId);
+                            return <option key={q.teamId} value={q.teamId}>{t?.shortCode || t?.name || '?'}</option>;
+                          })}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                onClick={addMatchup}
+                className={`w-full px-3 py-2 rounded-xl text-sm font-medium border border-dashed transition-colors ${
+                  darkMode ? 'border-white/[0.1] text-gray-400 hover:bg-white/[0.03]' : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                + Add Match
+              </button>
+            </>
+          )}
 
           <div className="flex gap-3 pt-2">
             <button
@@ -1028,9 +1074,9 @@ export default function GameView() {
             </button>
             <button
               onClick={doConfirmKoAdvance}
-              disabled={!koMatchups.some(m => m.teamAId && m.teamBId)}
+              disabled={koMode === 'manual' && !koMatchups.some(m => m.teamAId && m.teamBId)}
               className={`flex-1 px-4 py-2.5 rounded-xl font-bold transition-all duration-200 ${
-                koMatchups.some(m => m.teamAId && m.teamBId)
+                koMode === 'auto' || koMatchups.some(m => m.teamAId && m.teamBId)
                   ? 'bg-accent text-navy-900 hover:bg-accent-dark shadow-sm shadow-accent/20'
                   : darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
