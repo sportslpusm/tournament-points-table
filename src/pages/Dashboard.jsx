@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker, getTeamCombinedStats } from '../utils/points';
 import { getTeamFurthestRound, getChampion } from '../utils/knockout';
@@ -15,7 +15,19 @@ export default function Dashboard() {
   const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyEntries: rawLobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus } = state;
   const lobbyEntries = Array.isArray(rawLobbyEntries) ? rawLobbyEntries : [];
   const [search, setSearch] = useState('');
+  const searchRef = useRef(null);
   const [viewMode, setViewMode] = useState('table');
+
+  // Force clear browser autofill on the search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchRef.current && searchRef.current.value && !search) {
+        searchRef.current.value = '';
+        setSearch('');
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
   const [compareTeams, setCompareTeams] = useState([null, null]);
   const [showCompare, setShowCompare] = useState(false);
   const tableRef = useRef(null);
@@ -490,12 +502,15 @@ export default function Dashboard() {
         <h2 className={`text-lg font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Standings</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <input
-            type="text"
+            ref={searchRef}
+            type="search"
             placeholder="Search teams..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             autoComplete="off"
             name="team-search-filter"
+            data-form-type="other"
+            data-lpignore="true"
             className={`px-3.5 py-2 rounded-xl text-sm border transition-all duration-200 ${
               darkMode
                 ? 'bg-white/[0.04] border-white/[0.08] text-white placeholder-gray-500 focus:border-accent/40 focus:bg-white/[0.06]'
