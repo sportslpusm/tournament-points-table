@@ -161,6 +161,7 @@ export default function LoginModal({ isOpen, onClose }) {
               placeholder="Enter new password"
               className={inputCls}
               autoFocus
+              autoComplete="new-password"
             />
           </div>
           <div>
@@ -172,6 +173,7 @@ export default function LoginModal({ isOpen, onClose }) {
               onKeyDown={e => e.key === 'Enter' && handleSetupPassword()}
               placeholder="Confirm password"
               className={inputCls}
+              autoComplete="new-password"
             />
           </div>
           {setupError && <p className="text-red-400 text-sm">{setupError}</p>}
@@ -232,6 +234,7 @@ export default function LoginModal({ isOpen, onClose }) {
                 value={newPassword}
                 onChange={e => { setNewPassword(e.target.value); setRecoveryError(''); }}
                 className={inputCls}
+                autoComplete="new-password"
               />
             </div>
             <div>
@@ -241,6 +244,7 @@ export default function LoginModal({ isOpen, onClose }) {
                 value={confirmNewPassword}
                 onChange={e => { setConfirmNewPassword(e.target.value); setRecoveryError(''); }}
                 className={inputCls}
+                autoComplete="new-password"
               />
             </div>
             {recoveryError && <p className="text-red-400 text-sm">{recoveryError}</p>}
@@ -296,6 +300,8 @@ export default function LoginModal({ isOpen, onClose }) {
                   placeholder="Enter admin password"
                   className={`${inputCls} pr-10 ${error ? 'border-red-500!' : ''}`}
                   disabled={loading}
+                  autoComplete="off"
+                  name="tournament-admin-pw"
                 />
                 <button
                   type="button"
