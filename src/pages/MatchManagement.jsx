@@ -27,6 +27,8 @@ export default function MatchManagement() {
   const [formStatus, setFormStatus] = useState('upcoming');
   const [formResult, setFormResult] = useState(null);
   const [formAbsent, setFormAbsent] = useState('');
+  const [formScoreA, setFormScoreA] = useState('');
+  const [formScoreB, setFormScoreB] = useState('');
 
   // Enriched pool matches
   const enrichedMatches = useMemo(() => {
@@ -35,7 +37,8 @@ export default function MatchManagement() {
       const game = pool ? games.find(g => g.id === pool.gameId) : null;
       const teamA = teams.find(t => t.id === m.teamAId);
       const teamB = teams.find(t => t.id === m.teamBId);
-      return { ...m, pool, game, teamA, teamB, matchType: 'pool' };
+      const isSecondRound = pool?.isSecondRound || false;
+      return { ...m, pool, game, teamA, teamB, matchType: isSecondRound ? 'secondRound' : 'pool', isSecondRound };
     });
 
     const koEnriched = knockoutMatches.map(m => {
@@ -49,6 +52,7 @@ export default function MatchManagement() {
       if (filterGame !== 'all' && m.game?.id !== filterGame) return false;
       if (filterStatus !== 'all' && m.status !== filterStatus) return false;
       if (filterType === 'pool' && m.matchType !== 'pool') return false;
+      if (filterType === 'secondRound' && m.matchType !== 'secondRound') return false;
       if (filterType === 'knockout' && m.matchType !== 'knockout') return false;
       return true;
     });
@@ -61,6 +65,8 @@ export default function MatchManagement() {
     setFormStatus('upcoming');
     setFormResult(null);
     setFormAbsent('');
+    setFormScoreA('');
+    setFormScoreB('');
   }
 
   function openAdd() {
@@ -77,6 +83,8 @@ export default function MatchManagement() {
     setFormStatus(match.status);
     setFormResult(match.result);
     setFormAbsent(match.absentTeamId || '');
+    setFormScoreA(match.scoreA != null ? String(match.scoreA) : '');
+    setFormScoreB(match.scoreB != null ? String(match.scoreB) : '');
     setShowAddModal(true);
   }
 
@@ -110,6 +118,8 @@ export default function MatchManagement() {
           status: formStatus,
           result: formStatus === 'completed' ? formResult : null,
           absentTeamId: formResult === 'bye' ? formAbsent : null,
+          scoreA: formScoreA !== '' ? Number(formScoreA) : null,
+          scoreB: formScoreB !== '' ? Number(formScoreB) : null,
         },
       });
       showToast('Match added successfully');
@@ -160,6 +170,8 @@ export default function MatchManagement() {
           status: formStatus,
           result: formStatus === 'completed' ? formResult : null,
           absentTeamId: formResult === 'bye' ? formAbsent : null,
+          scoreA: formScoreA !== '' ? Number(formScoreA) : null,
+          scoreB: formScoreB !== '' ? Number(formScoreB) : null,
         },
       });
       showToast('Match updated successfully');
@@ -209,6 +221,8 @@ export default function MatchManagement() {
           status: 'completed',
           result: data.result,
           absentTeamId: data.result === 'bye' ? data.absentTeamId : null,
+          scoreA: data.scoreA != null && data.scoreA !== '' ? Number(data.scoreA) : null,
+          scoreB: data.scoreB != null && data.scoreB !== '' ? Number(data.scoreB) : null,
         },
       });
       count++;
@@ -284,6 +298,7 @@ export default function MatchManagement() {
         <select value={filterType} onChange={e => setFilterType(e.target.value)} className={selectCls} style={{width: 'auto'}}>
           <option value="all">All Types</option>
           <option value="pool">Pool Matches</option>
+          <option value="secondRound">Second Round</option>
           <option value="knockout">Knockout Matches</option>
         </select>
       </div>
@@ -314,6 +329,9 @@ export default function MatchManagement() {
                     {m.matchType === 'knockout' && (
                       <span className="text-[10px] px-2 py-0.5 rounded-lg bg-accent/15 text-accent font-bold">KO</span>
                     )}
+                    {m.isSecondRound && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-lg bg-blue-500/15 text-blue-400 font-bold">SR</span>
+                    )}
                   </div>
                   <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold ${statusBg}`}>
                     {m.status.toUpperCase()}
@@ -341,7 +359,9 @@ export default function MatchManagement() {
                       m.result ? (darkMode ? 'bg-white/[0.04] text-gray-400' : 'bg-gray-100 text-gray-500') :
                       darkMode ? 'bg-white/[0.03] text-gray-600' : 'bg-gray-50 text-gray-300'
                     }`}>
-                      {m.result === 'draw' ? 'DRAW' : m.result === 'bye' ? 'BYE' : 'vs'}
+                      {m.scoreA != null && m.scoreB != null && m.status === 'completed'
+                        ? `${m.scoreA} - ${m.scoreB}`
+                        : m.result === 'draw' ? 'DRAW' : m.result === 'bye' ? 'BYE' : 'vs'}
                     </div>
                     <div className="flex items-center gap-2 flex-1 justify-end">
                       {m.teamB ? (
@@ -498,6 +518,41 @@ export default function MatchManagement() {
                   </button>
                 ))}
               </div>
+              {/* Score inputs - shown for team wins and draws */}
+              {formResult && formResult !== 'bye' && (
+                <div className="mt-3">
+                  <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Score (optional)</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`block text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {teams.find(t => t.id === (editMatch?.teamAId || formTeamA))?.shortCode || 'A'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formScoreA}
+                        onChange={e => setFormScoreA(e.target.value)}
+                        placeholder="0"
+                        className={inputCls}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {teams.find(t => t.id === (editMatch?.teamBId || formTeamB))?.shortCode || 'B'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={formScoreB}
+                        onChange={e => setFormScoreB(e.target.value)}
+                        placeholder="0"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {formResult === 'bye' && !isEditingKnockout && (
                 <div className="mt-3">
                   <label className={`block text-sm font-semibold mb-1.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Absent Team *</label>
@@ -578,6 +633,37 @@ export default function MatchManagement() {
                   <option value={m.teamAId}>{m.teamA?.shortCode}</option>
                   <option value={m.teamBId}>{m.teamB?.shortCode}</option>
                 </select>
+              )}
+              {bulkResults[m.id]?.result && bulkResults[m.id]?.result !== 'bye' && (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={bulkResults[m.id]?.scoreA ?? ''}
+                    onChange={e => setBulkResults(prev => ({
+                      ...prev,
+                      [m.id]: { ...prev[m.id], scoreA: e.target.value },
+                    }))}
+                    className={`w-12 px-2 py-2 rounded-xl text-xs text-center border ${
+                      darkMode ? 'bg-navy-800 border-white/[0.08] text-white' : 'bg-white border-gray-200 text-gray-900'
+                    }`}
+                  />
+                  <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-300'}`}>-</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={bulkResults[m.id]?.scoreB ?? ''}
+                    onChange={e => setBulkResults(prev => ({
+                      ...prev,
+                      [m.id]: { ...prev[m.id], scoreB: e.target.value },
+                    }))}
+                    className={`w-12 px-2 py-2 rounded-xl text-xs text-center border ${
+                      darkMode ? 'bg-navy-800 border-white/[0.08] text-white' : 'bg-white border-gray-200 text-gray-900'
+                    }`}
+                  />
+                </div>
               )}
             </div>
           ))}

@@ -1,11 +1,12 @@
 import { getTeamStatsForMatches, sortTeamsByTiebreaker } from './points';
 
 // Round labels and ordering
-export const ROUND_ORDER = ['ro32', 'ro16', 'qf', 'sf', 'third', 'final'];
+export const ROUND_ORDER = ['ro32', 'ro16', 'qf', 'playIn', 'sf', 'third', 'final'];
 export const ROUND_LABELS = {
   ro32: 'Round of 32',
   ro16: 'Round of 16',
   qf: 'Quarter Finals',
+  playIn: 'Knockout Match',
   sf: 'Semi Finals',
   third: '3rd Place Match',
   final: 'Final',

@@ -152,7 +152,7 @@ export default function GamePoolManagement() {
             const gameAthletes = athletes.filter(a => a.gameId === game.id);
             const gameCategories = categories.filter(c => c.gameId === game.id);
             const gameLobbyEntries = lobbyEntries.filter(e => e.gameId === game.id);
-            const stageLabel = isIndividual ? 'Individual' : isLobby ? 'Lobby' : cfg.stage === 'knockout' ? 'Knockout' : cfg.stage === 'completed' ? 'Completed' : 'Pool';
+            const stageLabel = isIndividual ? 'Individual' : isLobby ? 'Lobby' : cfg.stage === 'secondRound' ? 'Second Round' : cfg.stage === 'knockout' ? 'Knockout' : cfg.stage === 'completed' ? 'Completed' : 'Pool';
 
             return (
               <div key={game.id} className={`rounded-2xl border overflow-hidden ${
@@ -181,6 +181,7 @@ export default function GamePoolManagement() {
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                       isIndividual ? 'bg-purple-500/10 text-purple-400' :
                       isLobby ? 'bg-emerald-500/10 text-emerald-400' :
+                      stageLabel === 'Second Round' ? 'bg-blue-500/10 text-blue-400' :
                       stageLabel === 'Knockout' ? 'bg-accent/10 text-accent' :
                       stageLabel === 'Completed' ? 'bg-win/10 text-win' :
                       darkMode ? 'bg-white/[0.04] text-gray-500' : 'bg-gray-100 text-gray-400'
@@ -595,6 +596,23 @@ export default function GamePoolManagement() {
                 />
                 <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Two-leg matches (aggregate)</span>
               </label>
+
+              <div className={`rounded-xl p-4 border ${darkMode ? 'bg-accent/5 border-accent/20' : 'bg-blue-50 border-blue-200'}`}>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={koConfig.secondRoundEnabled || false}
+                    onChange={e => updateKoConfig(showKoSettings, { secondRoundEnabled: e.target.checked })}
+                    className="rounded"
+                  />
+                  <div>
+                    <span className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>Enable Second Round</span>
+                    <p className={`text-xs mt-0.5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Pool toppers enter a single Second Round group. Top 3 qualify for Semifinals; bottom 2 play a Knockout Match for the last spot.
+                    </p>
+                  </div>
+                </label>
+              </div>
             </>
           )}
 

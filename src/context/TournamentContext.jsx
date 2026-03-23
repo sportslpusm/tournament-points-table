@@ -58,7 +58,7 @@ const ADMIN_ACTIONS = new Set([
   'UPDATE_KNOCKOUT_CONFIG',
   'SET_KNOCKOUT_MATCHES', 'UPDATE_KNOCKOUT_MATCH', 'DELETE_KNOCKOUT_MATCH',
   'SET_QUALIFIED_TEAMS',
-  'ADVANCE_TO_KNOCKOUT', 'COMPLETE_GAME', 'RESET_TO_POOL',
+  'ADVANCE_TO_KNOCKOUT', 'ADVANCE_TO_SECOND_ROUND', 'ADVANCE_FROM_SECOND_ROUND', 'COMPLETE_GAME', 'RESET_TO_POOL',
   'ADD_ATHLETE', 'UPDATE_ATHLETE', 'DELETE_ATHLETE',
   'ADD_CATEGORY', 'UPDATE_CATEGORY', 'DELETE_CATEGORY',
   'SET_INDIVIDUAL_RESULT', 'UPDATE_INDIVIDUAL_POINTS_CONFIG',
@@ -417,17 +417,50 @@ function tournamentReducer(state, action) {
       };
     }
 
-    // Reset game to pool stage
-    case 'RESET_TO_POOL': {
-      const { gameId } = action.payload;
+    // Advance game to second round stage
+    case 'ADVANCE_TO_SECOND_ROUND': {
+      const { gameId, secondRoundPoolId, secondRoundMatches: srMatches, qualifiedTeams: srQualified } = action.payload;
       return {
         ...state,
         knockoutConfig: {
           ...state.knockoutConfig,
-          [gameId]: { ...(state.knockoutConfig[gameId] || {}), stage: 'pool' },
+          [gameId]: { ...(state.knockoutConfig[gameId] || {}), stage: 'secondRound', secondRoundPoolId },
+        },
+        pools: [...state.pools, action.payload.pool],
+        matches: [...state.matches, ...srMatches],
+        qualifiedTeams: { ...state.qualifiedTeams, [gameId]: srQualified },
+      };
+    }
+
+    // Advance from second round to knockout (SF bracket)
+    case 'ADVANCE_FROM_SECOND_ROUND': {
+      const { gameId, knockoutMatches: newKoMatches } = action.payload;
+      const filtered = state.knockoutMatches.filter(m => m.gameId !== gameId);
+      return {
+        ...state,
+        knockoutConfig: {
+          ...state.knockoutConfig,
+          [gameId]: { ...(state.knockoutConfig[gameId] || {}), stage: 'knockout' },
+        },
+        knockoutMatches: [...filtered, ...newKoMatches],
+      };
+    }
+
+    // Reset game to pool stage
+    case 'RESET_TO_POOL': {
+      const { gameId } = action.payload;
+      const srPoolId = state.knockoutConfig[gameId]?.secondRoundPoolId;
+      return {
+        ...state,
+        knockoutConfig: {
+          ...state.knockoutConfig,
+          [gameId]: { ...(state.knockoutConfig[gameId] || {}), stage: 'pool', secondRoundPoolId: null },
         },
         knockoutMatches: state.knockoutMatches.filter(m => m.gameId !== gameId),
         qualifiedTeams: { ...state.qualifiedTeams, [gameId]: [] },
+        // Remove second round pool and its matches
+        pools: srPoolId ? state.pools.filter(p => p.id !== srPoolId) : state.pools,
+        matches: srPoolId ? state.matches.filter(m => m.poolId !== srPoolId) : state.matches,
       };
     }
 

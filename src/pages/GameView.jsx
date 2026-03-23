@@ -3,6 +3,7 @@ import { useTournament, useDispatch } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker } from '../utils/points';
 import { calculateQualifiers, generateBracket, getPoolMatchesRemaining, isKnockoutComplete, getStartingRound, getAvailableStartingRounds } from '../utils/knockout';
+import { getSecondRoundQualifiers, generateSecondRoundMatches, getSecondRoundTeamStats, sortSecondRoundTeams, getSecondRoundResults, generatePostSecondRoundBracket, generatePlayInMatch } from '../utils/secondRound';
 import TeamLogo from '../components/TeamLogo';
 import EmptyState from '../components/EmptyState';
 import BracketView from '../components/BracketView';
@@ -29,6 +30,8 @@ export default function GameView() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showChangeRound, setShowChangeRound] = useState(false);
   const [selectedStartRound, setSelectedStartRound] = useState('auto');
+  const [showAdvanceSR, setShowAdvanceSR] = useState(false);
+  const [showForceAdvanceSR, setShowForceAdvanceSR] = useState(false);
 
   const currentGame = games.find(g => g.id === selectedGameId) || games[0];
   const gameId = currentGame?.id;
@@ -36,10 +39,39 @@ export default function GameView() {
   const stage = config?.stage || 'pool';
   const knockoutEnabled = config?.enabled !== false;
 
+  const secondRoundEnabled = config?.secondRoundEnabled || false;
+  const secondRoundPoolId = config?.secondRoundPoolId || null;
+
   const gamePools = useMemo(() => {
     if (!currentGame) return [];
-    return pools.filter(p => p.gameId === currentGame.id);
+    return pools.filter(p => p.gameId === currentGame.id && !p.isSecondRound);
   }, [currentGame, pools]);
+
+  const secondRoundPool = useMemo(() => {
+    if (!secondRoundPoolId) return null;
+    return pools.find(p => p.id === secondRoundPoolId) || null;
+  }, [secondRoundPoolId, pools]);
+
+  const secondRoundMatchesList = useMemo(() => {
+    if (!secondRoundPoolId) return [];
+    return matches.filter(m => m.poolId === secondRoundPoolId);
+  }, [secondRoundPoolId, matches]);
+
+  const secondRoundStandings = useMemo(() => {
+    if (!secondRoundPool) return [];
+    const srTeams = secondRoundPool.teamIds
+      .map(tid => teams.find(t => t.id === tid))
+      .filter(Boolean);
+    const stats = srTeams.map(team => {
+      const s = getSecondRoundTeamStats(secondRoundMatchesList, team.id);
+      return { teamId: team.id, teamName: team.name, team, ...s };
+    });
+    return sortSecondRoundTeams(stats);
+  }, [secondRoundPool, secondRoundMatchesList, teams]);
+
+  const remainingSecondRoundMatches = useMemo(() => {
+    return secondRoundMatchesList.filter(m => m.status !== 'completed').length;
+  }, [secondRoundMatchesList]);
 
   const poolData = useMemo(() => {
     return gamePools.map(pool => {
@@ -80,6 +112,12 @@ export default function GameView() {
     }
   }, [koComplete, stage, gameId, dispatch]);
 
+  // Auto-set tab when stage changes
+  useEffect(() => {
+    if (stage === 'secondRound') setActiveTab('secondRound');
+    else if (stage === 'knockout') setActiveTab('knockout');
+  }, [stage]);
+
   function handleAdvance() {
     if (remainingPoolMatches > 0) {
       setShowForceAdvance(true);
@@ -90,6 +128,12 @@ export default function GameView() {
 
   function doAdvance() {
     if (!gameId) return;
+
+    if (secondRoundEnabled) {
+      // Advance to Second Round instead of knockout
+      doAdvanceToSecondRound();
+      return;
+    }
 
     // Calculate qualifiers
     const qualifiers = calculateQualifiers(gamePools, matches, teams, config?.qualifyCount || 2);
@@ -106,6 +150,100 @@ export default function GameView() {
     setActiveTab('knockout');
     setShowAdvanceConfirm(false);
     setShowForceAdvance(false);
+  }
+
+  function doAdvanceToSecondRound() {
+    if (!gameId) return;
+
+    // Get pool toppers (rank 1 from each pool)
+    const qualifiers = getSecondRoundQualifiers(gamePools, matches, teams);
+    const qualifiedTeamIds = qualifiers.map(q => q.teamId);
+
+    if (qualifiedTeamIds.length < 2) {
+      showToast('Need at least 2 pool toppers for Second Round', 'error');
+      return;
+    }
+
+    // Create a second round pool
+    const srPoolId = localGenId('srp');
+    const srPool = {
+      id: srPoolId,
+      gameId,
+      name: 'Second Round',
+      teamIds: qualifiedTeamIds,
+      isSecondRound: true,
+    };
+
+    // Generate round-robin matches
+    const srMatches = generateSecondRoundMatches(qualifiedTeamIds, srPoolId, gameId, localGenId);
+
+    dispatch({
+      type: 'ADVANCE_TO_SECOND_ROUND',
+      payload: {
+        gameId,
+        secondRoundPoolId: srPoolId,
+        pool: srPool,
+        secondRoundMatches: srMatches,
+        qualifiedTeams: qualifiers,
+      },
+    });
+
+    showToast(`${currentGame.name}: Advanced to Second Round with ${qualifiedTeamIds.length} pool toppers`);
+    setActiveTab('secondRound');
+    setShowAdvanceConfirm(false);
+    setShowForceAdvance(false);
+  }
+
+  function handleAdvanceFromSecondRound() {
+    if (remainingSecondRoundMatches > 0) {
+      setShowForceAdvanceSR(true);
+      return;
+    }
+    doAdvanceFromSecondRound();
+  }
+
+  function doAdvanceFromSecondRound() {
+    if (!gameId || secondRoundStandings.length < 2) return;
+
+    const { semiFinalTeams, playInTeams } = getSecondRoundResults(secondRoundStandings);
+    const allKoMatches = [];
+
+    if (playInTeams.length === 2) {
+      // Generate play-in match (bottom 2)
+      const playInMatch = generatePlayInMatch(playInTeams[0], playInTeams[1], gameId, localGenId);
+      allKoMatches.push(playInMatch);
+
+      // Generate SF bracket with top 3 + placeholder for play-in winner
+      // Play-in winner will be the 4th SF team
+      const sfBracket = generatePostSecondRoundBracket(
+        [...semiFinalTeams, null], // 4th slot filled when play-in completes
+        gameId,
+        localGenId
+      );
+
+      // Link play-in to SF match (slot for 4th team = teamB of SF1)
+      const sf1 = sfBracket.find(m => m.round === 'sf' && m.matchNumber === 1);
+      if (sf1) {
+        playInMatch.nextMatchId = sf1.id;
+        playInMatch.slot = 'teamB';
+      }
+
+      allKoMatches.push(...sfBracket);
+    } else {
+      // All teams go directly to SF (4 or fewer)
+      const sfBracket = generatePostSecondRoundBracket(semiFinalTeams, gameId, localGenId);
+      allKoMatches.push(...sfBracket);
+    }
+
+    dispatch({
+      type: 'ADVANCE_FROM_SECOND_ROUND',
+      payload: { gameId, knockoutMatches: allKoMatches },
+    });
+
+    showToast(`${currentGame.name}: Advanced to Knockout stage`);
+    setActiveTab('knockout');
+    setShowAdvanceSR(false);
+    setShowForceAdvanceSR(false);
   }
 
   function handleResetToPool() {
@@ -211,11 +349,14 @@ export default function GameView() {
             : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
         }`}>
           <div className="flex items-center gap-3">
-            {['pool', 'knockout', 'completed'].map((s, i) => {
-              const labels = { pool: 'Pool Stage', knockout: 'Knockout Stage', completed: 'Completed' };
-              const icons = { pool: '🏊', knockout: '⚔️', completed: '🏆' };
+            {(secondRoundEnabled
+              ? ['pool', 'secondRound', 'knockout', 'completed']
+              : ['pool', 'knockout', 'completed']
+            ).map((s, i, arr) => {
+              const labels = { pool: 'Pool Stage', secondRound: 'Second Round', knockout: 'Knockout Stage', completed: 'Completed' };
+              const icons = { pool: '🏊', secondRound: '🔄', knockout: '⚔️', completed: '🏆' };
               const isCurrent = stage === s;
-              const isPast = ['pool', 'knockout', 'completed'].indexOf(stage) > i;
+              const isPast = arr.indexOf(stage) > i;
 
               return (
                 <div key={s} className="flex items-center gap-2">
@@ -244,7 +385,25 @@ export default function GameView() {
                 onClick={handleAdvance}
                 className="px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20"
               >
+                {secondRoundEnabled ? 'Advance to Second Round' : 'Advance to Knockout'}
+              </button>
+            )}
+            {isAdmin && stage === 'secondRound' && (
+              <button
+                onClick={handleAdvanceFromSecondRound}
+                className="px-4 py-2.5 bg-accent text-navy-900 font-bold text-sm rounded-xl hover:bg-accent-dark transition-all duration-200 shadow-sm shadow-accent/20"
+              >
                 Advance to Knockout
+              </button>
+            )}
+            {isAdmin && stage === 'secondRound' && (
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className={`px-3.5 py-2 text-xs rounded-xl font-medium transition-all duration-200 ${
+                  darkMode ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}
+              >
+                Reset to Pool
               </button>
             )}
             {isAdmin && (stage === 'knockout' || stage === 'completed') && (
@@ -270,12 +429,15 @@ export default function GameView() {
       )}
 
       {/* Stage Tabs */}
-      {knockoutEnabled && (stage === 'knockout' || stage === 'completed') && (
+      {knockoutEnabled && (stage === 'secondRound' || stage === 'knockout' || stage === 'completed') && (
         <div className="flex gap-1.5 mb-6">
           {[
             { key: 'pool', label: 'Pool Stage' },
-            { key: 'knockout', label: 'Knockout Stage' },
-            { key: 'bracket', label: 'Full Bracket' },
+            ...(secondRoundEnabled ? [{ key: 'secondRound', label: 'Second Round' }] : []),
+            ...((stage === 'knockout' || stage === 'completed') ? [
+              { key: 'knockout', label: 'Knockout Stage' },
+              { key: 'bracket', label: 'Full Bracket' },
+            ] : []),
           ].map(tab => (
             <button
               key={tab.key}
@@ -444,6 +606,143 @@ export default function GameView() {
         </>
       )}
 
+      {/* Second Round Tab */}
+      {activeTab === 'secondRound' && (stage === 'secondRound' || stage === 'knockout' || stage === 'completed') && secondRoundPool && (
+        <div className="space-y-6">
+          {/* Second Round Standings */}
+          <div className={`rounded-2xl overflow-hidden border ${
+            darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
+          }`}>
+            <div className={`px-5 py-3.5 font-bold text-sm flex items-center justify-between ${
+              darkMode ? 'bg-white/[0.02]' : 'bg-gray-50/80'
+            }`}>
+              <span>🔄 Second Round Standings</span>
+              <span className={`text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                {secondRoundPool.teamIds.length} teams · {secondRoundMatchesList.length} matches
+                {remainingSecondRoundMatches > 0 && ` · ${remainingSecondRoundMatches} remaining`}
+              </span>
+            </div>
+
+            {secondRoundStandings.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className={darkMode ? 'bg-white/[0.02]' : 'bg-gray-50/50'}>
+                      <th className={`px-3 py-2.5 text-left section-heading w-8 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>#</th>
+                      <th className={`px-3 py-2.5 text-left section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Team</th>
+                      <th className={`px-3 py-2.5 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>P</th>
+                      <th className="px-3 py-2.5 text-center section-heading text-win">W</th>
+                      <th className="px-3 py-2.5 text-center section-heading text-loss">L</th>
+                      <th className="px-3 py-2.5 text-center section-heading text-draw">D</th>
+                      <th className={`px-3 py-2.5 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GF</th>
+                      <th className={`px-3 py-2.5 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GA</th>
+                      <th className={`px-3 py-2.5 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>GD</th>
+                      <th className={`px-3 py-2.5 text-center section-heading ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Pts</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {secondRoundStandings.map((row, i) => {
+                      const isTop3 = i < 3;
+                      const isBottom2 = secondRoundStandings.length >= 5 && i >= 3 && i < 5;
+
+                      return (
+                        <tr key={row.teamId} className={`border-t transition-colors duration-150 ${
+                          darkMode ? 'border-white/[0.04] hover:bg-white/[0.02]' : 'border-gray-100 hover:bg-gray-50/80'
+                        } ${
+                          isTop3 ? 'border-l-[3px] border-l-win bg-win/[0.04]' :
+                          isBottom2 ? 'border-l-[3px] border-l-draw bg-draw/[0.04]' :
+                          'border-l-[3px] border-l-transparent'
+                        }`}>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1">
+                              <span className={`font-mono ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{i + 1}</span>
+                              {isTop3 && <span className="w-2 h-2 rounded-full bg-win" title="Qualifies for Semifinals" />}
+                              {isBottom2 && <span className="w-2 h-2 rounded-full bg-draw" title="Knockout Match" />}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <TeamLogo team={row.team} size={24} />
+                              <span className="font-medium whitespace-nowrap">{row.teamName}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-mono">{row.played}</td>
+                          <td className="px-3 py-2.5 text-center font-mono font-bold text-win">{row.wins}</td>
+                          <td className="px-3 py-2.5 text-center font-mono font-bold text-loss">{row.losses}</td>
+                          <td className="px-3 py-2.5 text-center font-mono font-bold text-draw">{row.draws}</td>
+                          <td className="px-3 py-2.5 text-center font-mono">{row.goalsFor}</td>
+                          <td className="px-3 py-2.5 text-center font-mono">{row.goalsAgainst}</td>
+                          <td className={`px-3 py-2.5 text-center font-mono font-bold ${row.goalDifference > 0 ? 'text-win' : row.goalDifference < 0 ? 'text-loss' : ''}`}>
+                            {row.goalDifference > 0 ? '+' : ''}{row.goalDifference}
+                          </td>
+                          <td className="px-3 py-2.5 text-center font-mono font-black text-lg">{row.points}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Legend */}
+                <div className={`px-5 py-2.5 flex gap-4 text-[10px] font-medium ${darkMode ? 'bg-white/[0.02] text-gray-500' : 'bg-gray-50/50 text-gray-400'}`}>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-win"></span> Qualifies for Semifinals</span>
+                  {secondRoundStandings.length >= 5 && (
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-draw"></span> Knockout Match</span>
+                  )}
+                  <span>Ranking: Points → Goal Difference → Goals Scored</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Second Round Fixtures */}
+          {secondRoundMatchesList.length > 0 && (
+            <div className={`rounded-2xl overflow-hidden border ${
+              darkMode ? 'bg-navy-850/40 backdrop-blur-xl border-white/[0.06]' : 'bg-white/80 backdrop-blur-xl border-gray-200/80'
+            }`}>
+              <div className={`px-5 py-3.5 font-bold text-sm ${darkMode ? 'bg-white/[0.02]' : 'bg-gray-50/80'}`}>
+                Fixtures
+              </div>
+              <div className={`divide-y ${darkMode ? 'divide-white/[0.04]' : 'divide-gray-100'}`}>
+                {secondRoundMatchesList.map(m => {
+                  const teamA = teams.find(t => t.id === m.teamAId);
+                  const teamB = teams.find(t => t.id === m.teamBId);
+                  const result = getResultDisplay(m);
+                  const statusStripe = m.status === 'completed'
+                    ? m.result === 'draw' ? 'border-l-draw' : m.result === 'bye' ? 'border-l-bye' : 'border-l-win'
+                    : 'border-l-transparent';
+
+                  return (
+                    <div key={m.id} className={`px-5 py-3 flex items-center gap-3 border-l-[3px] ${statusStripe} transition-colors duration-150 ${
+                      darkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-gray-50/80'
+                    }`}>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <TeamLogo team={teamA} size={24} />
+                        <span className={`text-sm font-medium ${m.result === 'teamA' ? 'text-win font-bold' : ''}`}>
+                          {teamA?.shortCode || '?'}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        {m.status === 'completed' && m.scoreA != null && m.scoreB != null ? (
+                          <span className="text-sm font-bold">{m.scoreA} - {m.scoreB}</span>
+                        ) : (
+                          <span className={`text-xs font-bold ${result.cls}`}>{result.label}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                        <span className={`text-sm font-medium ${m.result === 'teamB' ? 'text-win font-bold' : ''}`}>
+                          {teamB?.shortCode || '?'}
+                        </span>
+                        <TeamLogo team={teamB} size={24} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Knockout Stage Tab */}
       {activeTab === 'knockout' && (stage === 'knockout' || stage === 'completed') && (
         <div className="space-y-6">
@@ -500,6 +799,41 @@ export default function GameView() {
         title="Reset to Pool Stage"
         message="This will delete all knockout matches, brackets, and qualification data for this game. Pool stage data will be preserved."
       />}
+
+      {/* Force Advance from Second Round - admin only */}
+      {isAdmin && <Modal
+        isOpen={showForceAdvanceSR}
+        onClose={() => setShowForceAdvanceSR(false)}
+        title="Incomplete Second Round"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className={`rounded-xl p-4 ${darkMode ? 'bg-draw/10 border border-draw/20' : 'bg-yellow-50 border border-yellow-200'}`}>
+            <p className="text-sm text-draw font-semibold">
+              {remainingSecondRoundMatches} second round match{remainingSecondRoundMatches !== 1 ? 'es' : ''} remaining
+            </p>
+            <p className={`text-xs mt-1.5 leading-relaxed ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              Advancing now will use current standings to determine which teams qualify for Semifinals and which play the Knockout Match.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowForceAdvanceSR(false)}
+              className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${
+                darkMode ? 'bg-white/[0.06] text-gray-300 hover:bg-white/[0.10]' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={doAdvanceFromSecondRound}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-draw text-navy-900 font-bold hover:bg-draw/80 transition-colors"
+            >
+              Force Advance
+            </button>
+          </div>
+        </div>
+      </Modal>}
 
       {/* Change Starting Round Modal - admin only */}
       {isAdmin && <Modal
