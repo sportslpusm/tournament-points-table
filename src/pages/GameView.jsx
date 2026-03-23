@@ -905,102 +905,44 @@ export default function GameView() {
       {isAdmin && <Modal
         isOpen={showKoSelectionModal}
         onClose={() => setShowKoSelectionModal(false)}
-        title="Select & Arrange Teams for Knockout"
-        size="md"
+        title="Select Teams for Knockout"
+        size="sm"
       >
         <div className="space-y-4">
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Select which teams advance to knockout and drag to reorder seeding. Top seeds play bottom seeds (1 vs last, 2 vs second-last, etc).
+            Tap to select or deselect teams. Only selected teams will advance.
           </p>
 
-          {/* Selected teams — ordered for bracket seeding */}
-          <div>
-            <div className={`text-xs font-bold mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-              SELECTED TEAMS — use arrows to reorder seeding
-            </div>
-            <div className="space-y-1">
-              {koSelectedTeams.map((tid, idx) => {
-                const t = teams.find(x => x.id === tid);
-                const q = koQualifiers.find(x => x.teamId === tid);
-                const pool = q ? gamePools.find(p => p.id === q.poolId) : null;
-                return (
-                  <div
-                    key={tid}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-150 ${
-                      darkMode ? 'bg-win/[0.06] border-win/20' : 'bg-green-50 border-green-200'
-                    }`}
-                  >
-                    <span className="w-6 text-center font-mono text-xs font-bold text-win">{idx + 1}</span>
-                    <TeamLogo team={t} size={22} />
-                    <span className="font-medium text-sm flex-1">{t?.name || '?'}</span>
-                    {pool && <span className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{pool.name}</span>}
-                    <div className="flex gap-0.5">
-                      <button
-                        onClick={() => moveKoTeam(idx, -1)}
-                        disabled={idx === 0}
-                        className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${
-                          idx === 0
-                            ? darkMode ? 'text-gray-700' : 'text-gray-300'
-                            : darkMode ? 'text-gray-300 hover:bg-white/[0.08]' : 'text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >▲</button>
-                      <button
-                        onClick={() => moveKoTeam(idx, 1)}
-                        disabled={idx === koSelectedTeams.length - 1}
-                        className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${
-                          idx === koSelectedTeams.length - 1
-                            ? darkMode ? 'text-gray-700' : 'text-gray-300'
-                            : darkMode ? 'text-gray-300 hover:bg-white/[0.08]' : 'text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >▼</button>
-                    </div>
-                    <button
-                      onClick={() => toggleKoTeam(tid)}
-                      className="text-red-400 hover:text-red-300 text-sm px-1"
-                    >✕</button>
-                  </div>
-                );
-              })}
-            </div>
-            {koSelectedTeams.length === 0 && (
-              <p className={`text-xs text-center py-3 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>No teams selected. Click teams below to add.</p>
-            )}
-          </div>
-
-          {/* Unselected qualified teams */}
-          {koQualifiers.filter(q => !koSelectedTeams.includes(q.teamId)).length > 0 && (
-            <div>
-              <div className={`text-xs font-bold mb-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                AVAILABLE TEAMS — tap to add
-              </div>
-              <div className="space-y-1">
-                {koQualifiers.filter(q => !koSelectedTeams.includes(q.teamId)).map(q => {
-                  const t = teams.find(x => x.id === q.teamId);
-                  const pool = gamePools.find(p => p.id === q.poolId);
-                  return (
-                    <button
-                      key={q.teamId}
-                      onClick={() => toggleKoTeam(q.teamId)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all duration-150 ${
-                        darkMode
-                          ? 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05]'
-                          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                      }`}
-                    >
-                      <span className={`w-6 text-center font-mono text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>—</span>
-                      <TeamLogo team={t} size={22} />
-                      <span className="font-medium text-sm flex-1">{t?.name || '?'}</span>
-                      {pool && <span className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{pool.name} #{q.rank}</span>}
-                      <span className={`text-[10px] px-2 py-0.5 rounded-lg ${darkMode ? 'text-accent bg-accent/10' : 'text-blue-600 bg-blue-50'}`}>+ Add</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className={`rounded-xl p-3 text-xs ${darkMode ? 'bg-white/[0.02] text-gray-500' : 'bg-gray-50 text-gray-400'}`}>
-            Seed 1 plays Seed {koSelectedTeams.length}, Seed 2 plays Seed {koSelectedTeams.length - 1}, etc. Reorder to control matchups.
+          <div className="space-y-1.5">
+            {koQualifiers.map(q => {
+              const t = teams.find(x => x.id === q.teamId);
+              const pool = gamePools.find(p => p.id === q.poolId);
+              const selected = koSelectedTeams.includes(q.teamId);
+              return (
+                <button
+                  key={q.teamId}
+                  onClick={() => toggleKoTeam(q.teamId)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-150 ${
+                    selected
+                      ? 'bg-win/10 border-win/30'
+                      : darkMode
+                      ? 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.05] opacity-50'
+                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100 opacity-50'
+                  }`}
+                >
+                  <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-xs ${
+                    selected
+                      ? 'bg-win border-win text-white'
+                      : darkMode ? 'border-gray-600' : 'border-gray-300'
+                  }`}>
+                    {selected && '✓'}
+                  </span>
+                  <TeamLogo team={t} size={24} />
+                  <span className="font-medium text-sm flex-1">{t?.shortCode || '?'}</span>
+                  {pool && <span className={`text-[10px] ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{pool.name} #{q.rank}</span>}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -1013,14 +955,6 @@ export default function GameView() {
               Cancel
             </button>
             <button
-              onClick={() => { setKoSelectedTeams(koQualifiers.map(q => q.teamId)); }}
-              className={`px-4 py-2.5 rounded-xl font-medium transition-colors ${
-                darkMode ? 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
-              }`}
-            >
-              Reset
-            </button>
-            <button
               onClick={doConfirmKoAdvance}
               disabled={koSelectedTeams.length < 2}
               className={`flex-1 px-4 py-2.5 rounded-xl font-bold transition-all duration-200 ${
@@ -1029,7 +963,7 @@ export default function GameView() {
                   : darkMode ? 'bg-white/[0.04] text-gray-600 cursor-not-allowed' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
               }`}
             >
-              Confirm ({koSelectedTeams.length} teams)
+              Advance ({koSelectedTeams.length} teams)
             </button>
           </div>
         </div>
