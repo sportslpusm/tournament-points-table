@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker } from '../utils/points';
-import { calculateQualifiers, generateBracket, getPoolMatchesRemaining, isKnockoutComplete, getStartingRound, getAvailableStartingRounds } from '../utils/knockout';
+import { calculateQualifiers, generateBracket, generateBracketFromMatchups, getPoolMatchesRemaining, isKnockoutComplete, getStartingRound, getAvailableStartingRounds } from '../utils/knockout';
 import { getSecondRoundQualifiers, generateSecondRoundMatches, getSecondRoundTeamStats, sortSecondRoundTeams, getSecondRoundResults, generatePostSecondRoundBracket, generatePlayInMatch } from '../utils/secondRound';
 import TeamLogo from '../components/TeamLogo';
 import EmptyState from '../components/EmptyState';
@@ -184,35 +184,22 @@ export default function GameView() {
     const validMatchups = koMatchups.filter(m => m.teamAId && m.teamBId);
     if (validMatchups.length === 0) return;
 
-    // Build knockout matches directly from matchups
+    // Build knockout matches directly from manual matchups (no re-seeding)
     const startRound = (config?.startingRound && config.startingRound !== 'auto')
       ? config.startingRound
       : getStartingRound(validMatchups.length * 2);
     if (!startRound) return;
 
-    // Construct qualifiers from the matchup selections for record-keeping
+    // Construct qualifiers for record-keeping
     const allTeamIds = new Set();
     validMatchups.forEach(m => { allTeamIds.add(m.teamAId); allTeamIds.add(m.teamBId); });
-    const orderedQualifiers = [...allTeamIds].map((tid, idx) => {
+    const finalQualifiers = [...allTeamIds].map((tid, idx) => {
       const orig = koQualifiers.find(q => q.teamId === tid);
       return orig || { teamId: tid, poolId: null, rank: idx + 1, manual: true };
     });
-    // Reorder qualifiers so bracket seeding matches the admin's matchups
-    // matchup[0].teamA vs matchup[0].teamB, matchup[1].teamA vs matchup[1].teamB, etc.
-    const seededOrder = [];
-    for (const m of validMatchups) {
-      seededOrder.push(m.teamAId);
-    }
-    for (const m of [...validMatchups].reverse()) {
-      seededOrder.push(m.teamBId);
-    }
-    const finalQualifiers = seededOrder.map((tid, idx) => {
-      const orig = koQualifiers.find(q => q.teamId === tid);
-      return { teamId: tid, poolId: orig?.poolId || null, rank: idx + 1, manual: true };
-    });
 
     dispatch({ type: 'SET_QUALIFIED_TEAMS', payload: { gameId, teams: finalQualifiers } });
-    const bracketMatches = generateBracket(finalQualifiers, gamePools, gameId, localGenId, startRound);
+    const bracketMatches = generateBracketFromMatchups(validMatchups, gameId, localGenId, startRound);
     dispatch({ type: 'SET_KNOCKOUT_MATCHES', payload: { gameId, matches: bracketMatches } });
     dispatch({ type: 'ADVANCE_TO_KNOCKOUT', payload: { gameId } });
 

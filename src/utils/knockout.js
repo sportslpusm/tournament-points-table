@@ -267,6 +267,108 @@ export function generateBracket(qualifiers, pools, gameId, genIdFn, customStartR
   return allMatches;
 }
 
+// Generate bracket directly from admin-defined matchups (no re-seeding)
+export function generateBracketFromMatchups(matchups, gameId, genIdFn, customStartRound) {
+  const teamCount = matchups.length * 2;
+  const startRound = customStartRound && customStartRound !== 'auto'
+    ? customStartRound
+    : getStartingRound(teamCount);
+  if (!startRound) return [];
+
+  const rounds = getRoundsNeeded(startRound);
+  const allMatches = [];
+  let matchNumber = 1;
+
+  // First round: directly from matchups — no cross-pool seeding
+  const firstRoundMatches = [];
+  for (const m of matchups) {
+    const match = {
+      id: genIdFn('km'),
+      gameId,
+      round: rounds[0],
+      matchNumber: matchNumber++,
+      teamAId: m.teamAId,
+      teamBId: m.teamBId,
+      status: 'upcoming',
+      result: null,
+      absentTeamId: null,
+      extraTime: false,
+      penalties: false,
+      nextMatchId: null,
+      slot: null,
+    };
+    firstRoundMatches.push(match);
+    allMatches.push(match);
+  }
+
+  // Subsequent rounds
+  let prevRoundMatches = firstRoundMatches;
+  for (let ri = 1; ri < rounds.length; ri++) {
+    const round = rounds[ri];
+    if (round === 'third') continue;
+
+    const sourceMatches = round === 'final'
+      ? allMatches.filter(m => m.round === 'sf')
+      : prevRoundMatches;
+    const roundMatches = [];
+
+    for (let i = 0; i < sourceMatches.length; i += 2) {
+      const match = {
+        id: genIdFn('km'),
+        gameId,
+        round,
+        matchNumber: matchNumber++,
+        teamAId: null,
+        teamBId: null,
+        status: 'upcoming',
+        result: null,
+        absentTeamId: null,
+        extraTime: false,
+        penalties: false,
+        nextMatchId: null,
+        slot: null,
+      };
+      if (sourceMatches[i]) {
+        sourceMatches[i].nextMatchId = match.id;
+        sourceMatches[i].slot = 'teamA';
+      }
+      if (sourceMatches[i + 1]) {
+        sourceMatches[i + 1].nextMatchId = match.id;
+        sourceMatches[i + 1].slot = 'teamB';
+      }
+      roundMatches.push(match);
+      allMatches.push(match);
+    }
+    prevRoundMatches = roundMatches;
+  }
+
+  // 3rd place match
+  if (rounds.includes('third')) {
+    const sfMatches = allMatches.filter(m => m.round === 'sf');
+    if (sfMatches.length === 2) {
+      const thirdMatch = {
+        id: genIdFn('km'),
+        gameId,
+        round: 'third',
+        matchNumber: matchNumber++,
+        teamAId: null,
+        teamBId: null,
+        status: 'upcoming',
+        result: null,
+        absentTeamId: null,
+        extraTime: false,
+        penalties: false,
+        nextMatchId: null,
+        slot: null,
+      };
+      thirdMatch._sfMatchIds = sfMatches.map(m => m.id);
+      allMatches.push(thirdMatch);
+    }
+  }
+
+  return allMatches;
+}
+
 // Cross-pool seeding: A1 vs B2, B1 vs A2, etc.
 function crossPoolSeed(poolMap, poolIds, teamCount, startRound) {
   const teams = [];
