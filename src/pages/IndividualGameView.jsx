@@ -340,7 +340,7 @@ export default function IndividualGameView() {
           {gameCategories.length === 0 ? (
             <EmptyState icon="📁" title="No categories" description="Add weight classes, events, or divisions for this game." action={isAdmin ? { label: 'Add Category', onClick: openAddCategory } : undefined} />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
               {gameCategories.map(cat => {
                 const result = gameResults.find(r => r.categoryId === cat.id);
                 const isExpanded = expandedCat === cat.id;
