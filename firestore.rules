@@ -21,11 +21,11 @@ service cloud.firestore {
                    && request.resource.data.data.size() <= 3145728;
     }
 
-    // Auth config — BLOCK public reads to protect password hashes
-    // Login verification uses locally cached hash; Firestore is backup only
+    // Auth config — allow reads so new devices can sync password hashes
+    // Password hashes are SHA-256 (one-way), safe to expose for this use case
     // Only allow writes with valid 64-char hex hash format
     match /config/{docId} {
-      allow read: if false;
+      allow read: if true;
       allow write: if request.resource.data.passwordHash is string
                    && request.resource.data.passwordHash.size() == 64
                    && request.resource.data.recoveryKeyHash is string

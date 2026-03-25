@@ -400,6 +400,7 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 ### Auth
 - **Provider:** Client-side SHA-256 hashing (no Firebase Auth)
 - **Roles:** Single role (Admin)
+- **Auth sync:** localStorage is primary store; Firestore `config/auth` is read/write backup. New devices auto-recover auth from Firestore on mount.
 - **Custom hooks:** Inactivity timeout (30 min), lockout (5 attempts → 5 min)
 
 ### Storage
@@ -513,7 +514,7 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 
 ### Database vs Code Mismatches
 
-8. **`loadAuthData()` will always fail:** Firestore rules block reads on `config/auth` (`allow read: if false`). The code tries to read it on mount but catches the error and falls back to localStorage. This is by design (comment in code: "reads are blocked to protect password hashes") but means auth data cannot be recovered if localStorage is cleared.
+8. **~~`loadAuthData()` will always fail~~ (FIXED):** Firestore rules now allow reads on `config/auth`. On mount, AuthContext tries localStorage first; if empty, loads auth from Firestore and syncs to localStorage. Auth is now recoverable across devices.
 
 9. **Lobby games have `knockoutConfig` entries:** ESports-BGMI (`gmmx5azkk`) and Real Cricket 26 (`gmmyl39wj`) both have `knockoutConfig` with `stage: 'pool'`. Lobby games don't use knockout brackets, so these configs are unused dead data.
 
@@ -547,11 +548,11 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 **Files:** `src/utils/breakdownData.js` (function `getTeamIndividualGameBreakdown`)
 **Severity:** Medium (data accuracy in breakdown popover)
 
-### Bug 3: Recovery Key Auth Recovery Impossible After localStorage Clear
-**Description:** If user clears browser localStorage, auth data (password hash + recovery key hash) is lost. Firestore `config/auth` reads are blocked by security rules, so the app cannot recover auth data from the server.
-**Root cause:** By-design tradeoff — rules block reads to protect hashes, but this means no server-side recovery path.
+### Bug 3: ~~Recovery Key Auth Recovery Impossible After localStorage Clear~~ (FIXED)
+**Description:** If user clears browser localStorage, auth data (password hash + recovery key hash) is lost. ~~Firestore `config/auth` reads are blocked by security rules, so the app cannot recover auth data from the server.~~
+**Root cause:** Firestore rules blocked reads on `config/auth`. Now fixed — rules allow reads, and AuthContext auto-recovers auth from Firestore on mount.
 **Files:** `firestore.rules`, `src/context/AuthContext.jsx`
-**Severity:** High (admin access permanently lost unless Firestore rules are temporarily modified via Firebase Console)
+**Severity:** ~~High~~ Fixed (2026-03-25, FIX-001)
 
 ---
 
@@ -569,6 +570,8 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 - [ ] Password recovery with correct recovery key
 - [ ] Password recovery with wrong key (lockout applies)
 - [ ] Password change (current + new)
+- [ ] New device login: shows login form (not "Set Admin Password") when password exists in Firestore
+- [ ] Auth recovery: clearing localStorage and refreshing still allows login (auth loaded from Firestore)
 - [ ] Admin-only views redirect to dashboard when not logged in
 
 ### Dashboard
@@ -672,7 +675,8 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 | BUG-001 | Settings page shows bye=2pts instead of 4pts | Hardcoded wrong value in JSX | Open | — | 2026-03-25 | — | src/pages/Settings.jsx |
 | BUG-002 | Settings page shows wrong tiebreaker rules | Hardcoded "H2H, Alphabetical" instead of actual rules | Open | — | 2026-03-25 | — | src/pages/Settings.jsx |
 | BUG-003 | Individual points breakdown ignores participation cap | breakdownData.js doesn't enforce maxParticipationCap | Open | — | 2026-03-25 | — | src/utils/breakdownData.js |
-| BUG-004 | Auth unrecoverable after localStorage clear | Firestore config/auth reads blocked by design | Open | — | 2026-03-25 | — | firestore.rules, src/context/AuthContext.jsx |
+| BUG-004 | Auth unrecoverable after localStorage clear | Firestore config/auth reads blocked by design | Fixed | Enabled Firestore auth reads + auto-sync to localStorage on mount | 2026-03-25 | 2026-03-25 | firestore.rules, src/context/AuthContext.jsx |
+| BUG-005 | New device shows "Set Admin Password" instead of login form | No localStorage auth on new device, Firestore reads blocked, LoginModal defaults to setup mode | Fixed | Enabled Firestore config/auth reads; AuthContext now loads auth from Firestore when localStorage is empty and syncs it locally | 2026-03-25 | 2026-03-25 | firestore.rules, src/context/AuthContext.jsx |
 
 ---
 
@@ -680,7 +684,7 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 
 | Fix ID | What Was Broken | What Caused It | How It Was Fixed | Exact Code Changes | Date Fixed | Side Effects Checked |
 |--------|----------------|----------------|-----------------|-------------------|------------|---------------------|
-| — | — | — | — | — | — | — |
+| FIX-001 | New device shows "Set Admin Password" instead of login form (BUG-005). Also fixes BUG-004 (auth unrecoverable after localStorage clear). | Firestore security rules blocked reads on `config/auth` (`allow read: if false`). On a new device with no localStorage, AuthContext couldn't recover auth hashes, so LoginModal defaulted to setup mode. | 1. Changed Firestore rules to allow reads on `config/auth`. 2. Updated AuthContext mount effect: when localStorage has no auth, load from Firestore via `loadAuthData()`, sync result to localStorage via `setAuthData()`, and update React state. LoginModal then sees `authData.passwordHash` and shows login form instead of setup. | `firestore.rules` line 28: `allow read: if false` → `allow read: if true`. `AuthContext.jsx` mount effect: added `loadAuthData()` call in the `else` branch (no local auth), with `setAuthData(firestoreAuth)` + `setAuthDataState(firestoreAuth)` to sync recovered auth. | 2026-03-25 | All 56 existing tests pass. Build succeeds. Login flow verified: existing device unaffected (localStorage path unchanged). New device flow: Firestore auth loaded → synced to localStorage → LoginModal shows login form → `login()` reads hash from localStorage → works. No regressions in scoring, knockout, individual, lobby logic. |
 
 ---
 
@@ -688,4 +692,4 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 
 | Date | What Changed | Files Modified | Tests Passed | Anything Broke |
 |------|-------------|----------------|--------------|----------------|
-| — | — | — | — | — |
+| 2026-03-25 | FIX-001: Fixed cross-device login bug. New devices now recover auth from Firestore instead of showing "Set Admin Password". Also fixes auth recovery after localStorage clear. | `firestore.rules`, `src/context/AuthContext.jsx`, `SYSTEM_REFERENCE.md` | All 56 tests pass | No — existing device login flow unchanged, build succeeds |

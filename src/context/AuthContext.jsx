@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
   const needsSetup = !authData?.passwordHash && !hasExistingTournament;
 
   // ── Load auth on mount ───────────────
-  // Auth reads from Firestore are blocked by security rules to protect password hashes.
-  // We use localStorage as the primary auth store. Firestore is write-only backup.
+  // localStorage is primary auth store; Firestore is the sync backup.
+  // On new devices (no localStorage), we recover auth from Firestore.
   useEffect(() => {
     let cancelled = false;
     async function loadAuth() {
@@ -42,14 +42,27 @@ export function AuthProvider({ children }) {
           if (getAdminSession() && !isSessionExpired()) {
             setIsAdmin(true);
           }
-          // Try to sync to Firestore as backup (write-only, reads are blocked)
+          // Sync to Firestore as backup
           try {
             await saveAuthData(localAuth);
           } catch {
             // Firestore sync is best-effort
           }
         } else {
-          // No local auth — check if tournament data exists (auth may have been lost)
+          // No local auth — try to recover from Firestore (new device scenario)
+          try {
+            const firestoreAuth = await loadAuthData();
+            if (!cancelled && firestoreAuth?.passwordHash) {
+              // Found auth in Firestore — sync to localStorage
+              setAuthData(firestoreAuth);
+              setAuthDataState(firestoreAuth);
+              return; // auth recovered, no need to check tournament
+            }
+          } catch {
+            // Firestore auth load failed — fall through to tournament check
+          }
+
+          // No auth anywhere — check if tournament data exists
           try {
             const tournamentData = await loadTournamentData();
             if (!cancelled && tournamentData && (tournamentData.teams?.length > 0 || tournamentData.games?.length > 0)) {
