@@ -1,785 +1,691 @@
 # SYSTEM_REFERENCE.md — Tournament Points Table
 
-> **Last updated:** 2026-03-24
+> **Last updated:** 2026-03-25
 > **Purpose:** Permanent reference document for AI-assisted development. Read before every change.
+> **Audit sources:** Full codebase read, live Firestore database queries, dev server inspection.
 
 ---
 
-## 1. Project Overview
+## 1. PROJECT OVERVIEW
 
-Tournament Points Table is a professional tournament management web app for university/school sports events. It manages multi-game tournaments with team games (pool stage + knockout brackets), individual athlete competitions, and lobby/battle-royale-style events. All data persists to Firebase Firestore with real-time sync across devices.
+**What this app does:** A tournament management web application for organizing multi-sport inter-school/department championships. Tracks team games (Cricket, Badminton, Kabaddi, Football), individual sports (Powerlifting with weight categories), and lobby/esports games (BGMI, Real Cricket 26) with a unified master leaderboard.
 
-The app is used by the **Uni Sports Council (USC)** — evidenced by branding, logos, and the Vercel CSP headers allowing iframe embedding on `unisportscouncil.in`.
+**Who uses it:**
+- **Public viewers** (no login): View the leaderboard, game standings, pool tables, knockout brackets, match results. Read-only access.
+- **Admin** (password-protected): Manages all tournament data — teams, games, pools, matches, athletes, categories, results, knockout advancement, import/export, settings.
 
----
-
-## 2. Full Tech Stack (Exact Versions)
-
-| Technology | Version | Purpose |
-|---|---|---|
-| React | ^19.2.4 | UI framework |
-| React DOM | ^19.2.4 | DOM rendering |
-| Vite | ^8.0.0 | Build tool + dev server |
-| Tailwind CSS | ^4.2.1 | Utility CSS (via `@tailwindcss/vite` plugin ^4.2.1) |
-| Firebase | ^12.10.0 | Backend (Firestore database) |
-| html2canvas | ^1.4.1 | Client-side screenshot/export |
-| Node.js | >=22.0.0 | Runtime (enforced in `engines`) |
-| ESLint | ^9.39.4 | Linting |
-| @vitejs/plugin-react | ^6.0.0 | React Vite plugin |
-
-**Deployment targets:** Netlify (siteId: `f06ea037-66cf-4832-86ac-b10d9dbad7e3`), Vercel (rewrites + security headers)
-
-**No backend server.** The entire app is a static SPA. Firebase Firestore is the only persistence layer, accessed directly from the browser via the Firebase JS SDK.
+**What problem it solves:** Provides a real-time, centralized points tracking system for the "General Sports Championship 2025-26" at Lovely Professional University (LPU), organized by the Uni Sports Council (USC) and Student Welfare Wing (SWW). Replaces manual spreadsheet tracking with live scoring, automatic point calculation, knockout bracket management, and a public-facing leaderboard.
 
 ---
 
-## 3. Complete Project File Tree
+## 2. LIVE SITE URL
+
+- **Primary deployment:** Netlify (site ID: `f06ea037-66cf-4832-86ac-b10d9dbad7e3`)
+- **Vercel config exists** (`vercel.json`) with headers allowing iframe embedding from `unisportscouncil.in`, `*.wix.com`, `*.wixsite.com`
+- **Embedded in:** `https://www.unisportscouncil.in/` (Wix site, via iframe)
+- **Staging/preview:** None configured
+
+---
+
+## 3. TECH STACK
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Framework | React | 19.2.4 |
+| Build tool | Vite | 8.0.0 |
+| CSS | Tailwind CSS (Vite plugin) | 4.2.1 |
+| Backend/DB | Firebase Firestore | firebase 12.10.0 |
+| Screenshot export | html2canvas | 1.4.1 |
+| Linting | ESLint | 9.39.4 |
+| React plugin | @vitejs/plugin-react | 6.0.0 |
+| Node.js | >= 22.0.0 (engines field) | |
+| Deployment | Netlify + Vercel (dual config) | |
+| Fonts | Inter, JetBrains Mono (Google Fonts) | |
+
+**No server-side code.** Pure client-side SPA. All data stored in Firestore. Auth is client-side (SHA-256 hash in localStorage + Firestore backup).
+
+---
+
+## 4. PROJECT FILE TREE
 
 ```
 tournament-app/
-├── .claude/
-│   └── launch.json                    # Claude Preview dev server config
-├── .gitignore                         # Standard ignores (node_modules, dist, .netlify)
+├── .claude/launch.json            — Dev server config for Claude Preview
+├── .gitignore                     — Standard React/Vite ignores
 ├── .netlify/
-│   ├── netlify.toml                   # Generated Netlify build config
-│   └── state.json                     # Netlify site ID binding
-├── .npmrc                             # legacy-peer-deps=true
-├── dev.mjs                            # Custom Vite dev server launcher (host: true)
-├── dist/                              # Production build output
-├── dist.zip                           # Zipped dist for manual deployment
-├── eslint.config.js                   # ESLint flat config (react-hooks, react-refresh)
-├── firestore.rules                    # Firestore security rules (tournaments, logos, config)
-├── index.html                         # SPA entry point with meta tags and font preconnects
-├── netlify.toml                       # Netlify build + SPA redirect config
-├── package.json                       # Dependencies, scripts, engine requirements
-├── package-lock.json                  # Lockfile
+│   ├── netlify.toml               — Auto-generated Netlify build config
+│   └── state.json                 — Netlify site ID binding
+├── .npmrc                         — legacy-peer-deps=true
+├── dev.mjs                        — Custom Vite dev server launcher (host: true)
+├── eslint.config.js               — ESLint flat config with React hooks/refresh plugins
+├── firestore.rules                — Firestore security rules (public read tournaments/logos, blocked config reads)
+├── index.html                     — SPA entry point with meta tags, Google Fonts, OG tags
+├── netlify.toml                   — Netlify build config (npm run build, publish dist, SPA redirect)
+├── package.json                   — Dependencies and scripts (dev, build, lint, preview)
+├── vercel.json                    — Vercel rewrites + security headers (X-Frame-Options, CSP for USC embedding)
+├── vite.config.js                 — Vite config with React + Tailwind plugins, no sourcemaps
 ├── public/
-│   ├── favicon.svg                    # App favicon
-│   ├── icons.svg                      # SVG icon sprite
-│   ├── SWW and USC.png                # Organization logo (SWW + USC)
-│   ├── USC.png                        # USC logo
-│   └── _redirects                     # Netlify SPA fallback redirect
-├── README.md                          # Default Vite template readme
-├── vercel.json                        # Vercel rewrites + security headers (CSP, X-Frame-Options)
-├── vite.config.js                     # Vite config (react plugin, tailwindcss plugin, no sourcemaps)
-│
+│   ├── _redirects                 — Netlify SPA catch-all redirect
+│   ├── favicon.svg                — Gold trophy SVG favicon
+│   ├── icons.svg                  — SVG icon sprite (unused in code)
+│   ├── SWW and USC.png            — Student Welfare Wing + USC combined logo
+│   └── USC.png                    — Uni Sports Council logo
 ├── src/
-│   ├── main.jsx                       # React root render (StrictMode)
-│   ├── App.jsx                        # Root component: providers + routing + auth gate
-│   ├── index.css                      # Tailwind imports + custom theme + animations + utilities
-│   │
+│   ├── main.jsx                   — React 19 createRoot entry with StrictMode
+│   ├── App.jsx                    — Root component: providers (Error→Sync→Tournament→Auth), router
+│   ├── index.css                  — Tailwind imports, custom theme (navy palette), animations, glass utilities
 │   ├── assets/
-│   │   ├── hero.png                   # Hero image asset
-│   │   ├── react.svg                  # React logo (unused)
-│   │   └── vite.svg                   # Vite logo (unused)
-│   │
+│   │   ├── hero.png               — Hero image (unused in code)
+│   │   ├── react.svg              — React logo (unused)
+│   │   └── vite.svg               — Vite logo (unused)
 │   ├── context/
-│   │   ├── AuthContext.jsx            # Auth provider: login, logout, password management, lockout
-│   │   ├── SyncContext.jsx            # Sync status provider: save status, online state, progress
-│   │   └── TournamentContext.jsx      # Main state: useReducer + Firestore sync + auto-save
-│   │
+│   │   ├── AuthContext.jsx         — Auth state: login/logout, password setup, recovery, lockout, inactivity timeout
+│   │   ├── SyncContext.jsx         — Save status tracking: saving/saved/error, progress, online/offline
+│   │   └── TournamentContext.jsx   — Main state store: useReducer with all tournament data, Firestore sync, auto-save
 │   ├── components/
-│   │   ├── BracketView.jsx            # Horizontal knockout bracket visualization
-│   │   ├── ChampionDisplay.jsx        # Champion banner with confetti + podium
-│   │   ├── EmptyState.jsx             # Reusable empty state with icon/title/action
-│   │   ├── ErrorBoundary.jsx          # React error boundary with recovery UI
-│   │   ├── FirstTimeSetup.jsx         # 3-step setup wizard (name, password, recovery key)
-│   │   ├── ImageUpload.jsx            # Image upload with compression (200x200 PNG)
-│   │   ├── KnockoutFixtures.jsx       # Knockout match list with result entry
-│   │   ├── Layout.jsx                 # App shell: sidebar, mobile nav, responsive layout
-│   │   ├── LoadingScreen.jsx          # Full-screen loading with USC branding
-│   │   ├── LoginModal.jsx             # Admin login, recovery, and setup modal
-│   │   ├── Modal.jsx                  # Reusable modal with focus trap + ConfirmDialog
-│   │   ├── OfflineBanner.jsx          # Offline connectivity banner
-│   │   ├── PointsBreakdownPopover.jsx # Clickable points with detailed breakdown modal
-│   │   ├── PointsExplainer.jsx        # "How Points Work" expandable explainer
-│   │   ├── QualificationPanel.jsx     # Pool qualification status display
-│   │   ├── SaveIndicator.jsx          # Cloud save status with progress bar
-│   │   ├── TeamLogo.jsx               # Team logo or colored initials fallback
-│   │   └── Toast.jsx                  # Toast notification system (auto-dismiss)
-│   │
+│   │   ├── BracketView.jsx         — Horizontal knockout bracket visualization by round
+│   │   ├── ChampionDisplay.jsx     — Podium display (1st/2nd/3rd) with confetti animation
+│   │   ├── EmptyState.jsx          — Empty data placeholder with icon/title/action
+│   │   ├── ErrorBoundary.jsx       — React error boundary with recovery UI
+│   │   ├── FirstTimeSetup.jsx      — 3-step setup wizard (tournament info → password → recovery key)
+│   │   ├── ImageUpload.jsx         — Image upload with compression (200×200 PNG)
+│   │   ├── KnockoutFixtures.jsx    — Knockout match list with result entry (admin) and round tabs
+│   │   ├── Layout.jsx              — App shell: sidebar (desktop), bottom nav (mobile), USC branding
+│   │   ├── LoadingScreen.jsx       — Initial loading screen with USC logo and progress bar
+│   │   ├── LoginModal.jsx          — Admin login modal with lockout, recovery, and setup modes
+│   │   ├── Modal.jsx               — Reusable modal + ConfirmDialog components with focus trap
+│   │   ├── OfflineBanner.jsx       — Offline status banner
+│   │   ├── PointsBreakdownPopover.jsx — Click-to-expand detailed points breakdown per team/game/stat
+│   │   ├── PointsExplainer.jsx     — "How Points Work" expandable panel with scoring tables
+│   │   ├── QualificationPanel.jsx  — Qualified teams summary per pool
+│   │   ├── SaveIndicator.jsx       — Cloud sync status indicator with progress bar
+│   │   ├── TeamLogo.jsx            — Team logo image or initials fallback with deterministic colors
+│   │   └── Toast.jsx               — Toast notification system (success/warning/error, 3s auto-dismiss)
 │   ├── pages/
-│   │   ├── Dashboard.jsx              # Main leaderboard, stats, team comparison
-│   │   ├── GameView.jsx               # Team game view: pool→second round→knockout flow
-│   │   ├── IndividualGameView.jsx     # Individual game: categories, athletes, results, points
-│   │   ├── LobbyGameView.jsx          # Lobby game: entries, sessions, standings
-│   │   ├── MatchManagement.jsx        # All matches list with CRUD + bulk entry
-│   │   ├── TeamManagement.jsx         # Team CRUD with logos and profiles
-│   │   ├── AthleteManagement.jsx      # Athlete CRUD with reg number validation
-│   │   ├── GamePoolManagement.jsx     # Game + pool + knockout configuration
-│   │   └── Settings.jsx               # Tournament settings, password, export/import, sync
-│   │
+│   │   ├── Dashboard.jsx           — Master leaderboard with combined standings, progress, comparison
+│   │   ├── GameView.jsx            — Per-game view: pool standings, knockout advancement, bracket
+│   │   ├── IndividualGameView.jsx  — Individual sport management: categories, athletes, results, standings
+│   │   ├── LobbyGameView.jsx       — Lobby/esports game: entries, sessions, placements, standings
+│   │   ├── MatchManagement.jsx     — Match CRUD: pool + knockout, bulk entry, auto-advancement
+│   │   ├── TeamManagement.jsx      — Team CRUD with logos and per-game stats
+│   │   ├── AthleteManagement.jsx   — Athlete CRUD with reg number validation and category assignment
+│   │   ├── GamePoolManagement.jsx  — Game/pool/knockout configuration and management
+│   │   └── Settings.jsx            — Tournament settings, password change, import/export, dark mode
 │   └── utils/
-│       ├── auth.js                    # SHA-256 hashing, lockout, session, activity tracking
-│       ├── breakdownData.js           # Per-team points breakdown calculations
-│       ├── database.js                # Firestore CRUD, logo management, debounced save, subscriptions
-│       ├── firebase.js                # Firebase init (memory cache, clearAndReinit)
-│       ├── imageCompression.js        # Canvas-based PNG compression (200x200, <500KB)
-│       ├── individualPoints.js        # Individual game scoring (placement + participation + cap)
-│       ├── knockout.js                # Bracket generation, seeding, advancement, bonus points
-│       ├── lobbyPoints.js             # Lobby game scoring (entry-based, podium stacking)
-│       ├── points.js                  # Core scoring: match points, tiebreaker, combined stats
-│       ├── sampleData.js              # Demo data generator (8 teams, 3 games)
-│       ├── secondRound.js             # Second round stage logic (round-robin, play-in)
-│       ├── validation.js              # Input validation, import validation, sanitization
+│       ├── auth.js                 — SHA-256 hashing, password validation, lockout, session management
+│       ├── breakdownData.js        — Detailed per-team points breakdown computation
+│       ├── database.js             — Firestore CRUD: load/save tournament data, logos, auth, debounced save
+│       ├── firebase.js             — Firebase app initialization with memory-only cache
+│       ├── imageCompression.js     — Canvas-based PNG compression (200×200, progressive reduction)
+│       ├── individualPoints.js     — Individual sport points: placements, participation, caps, per-category config
+│       ├── knockout.js             — Knockout bracket: generation, seeding, advancement, podium, bonus points
+│       ├── lobbyPoints.js          — Lobby game scoring: entries, sessions, participation caps, standings
+│       ├── points.js               — Core scoring: match points, team stats, tiebreaker, combined stats
+│       ├── sampleData.js           — Demo tournament data generator (8 teams, 3 games)
+│       ├── secondRound.js          — Second round logic: pool toppers → round-robin → SF/play-in
+│       ├── validation.js           — Input validation: team/game/athlete names, import data, image files
 │       └── __tests__/
-│           ├── edge-cases.test.js     # NaN guards, dense ranking, empty inputs, dedup
-│           ├── scoring-hotfix.test.js # Spam cap, bye=4pts, tiebreaker protocol
-│           └── scoring-v2.test.js     # Shared ranking, lobby scoring, cap clarification
+│           ├── edge-cases.test.js  — safeNum, denseRank, empty arrays, NaN guards
+│           ├── scoring-hotfix.test.js — Participation cap, bye=4pts, tiebreaker tests
+│           └── scoring-v2.test.js  — Shared ranking, lobby scoring, podium stacking tests
 ```
 
 ---
 
-## 4. Complete Database Schema (Firebase Firestore)
+## 5. DATABASE SCHEMA
 
-### Collection: `tournaments`
+### Backend: Firebase Firestore (project: `tournament-points-table`)
 
-**Document:** `tournaments/main` (single document storing all tournament data)
+#### Collections & Documents
 
-| Field | Type | Description |
-|---|---|---|
-| `tournament` | Object | `{ name: string, logo: null (stored separately), startDate: string, endDate: string }` |
-| `teams` | Array<Object> | Each: `{ id, name, shortCode, logo: null (stored separately) }` |
-| `games` | Array<Object> | Each: `{ id, name, emoji, type: 'team'|'individual'|'lobby' }` |
-| `pools` | Array<Object> | Each: `{ id, name, gameId, teamIds: string[], isSecondRound?: boolean }` |
-| `matches` | Array<Object> | Pool matches. Each: `{ id, poolId, teamAId, teamBId, status, result, absentTeamId, scoreA?, scoreB?, isSecondRound? }` |
-| `knockoutConfig` | Object | Keyed by gameId. Each: `{ enabled, qualifyCount, seedingFormat, stage, bonusPoints: {enabled, qf, sf, final, third}, twoLeg, secondRoundPoolId? }` |
-| `knockoutMatches` | Array<Object> | Each: `{ id, gameId, round, matchNumber, teamAId, teamBId, status, result, absentTeamId, extraTime, penalties, nextMatchId, slot, _sfMatchIds? }` |
-| `qualifiedTeams` | Object | Keyed by gameId. Each value: Array<`{ teamId, poolId, rank, manual }`> |
-| `athletes` | Array<Object> | Each: `{ id, name, regNumber (8 digits), teamId, gameId }` |
-| `categories` | Array<Object> | Each: `{ id, name, gameId, status, athleteIds: string[] }` |
-| `individualResults` | Array<Object> | Each: `{ id, gameId, categoryId, placements: {first, second, third}, participants: string[], absentees: string[] }` |
-| `individualPointsConfig` | Object | Keyed by gameId. Each: `{ first, second, third, participation, maxParticipationCap, categoryOverrides?: { [catId]: {...} } }` |
-| `lobbyEntries` | Array<Object> | Each: `{ id, gameId, teamId, entryName }` |
-| `lobbyResults` | Array<Object> | Each: `{ id, gameId, sessionName, placements: {first, second, third}, participantEntryIds: string[] }` |
-| `lobbyPointsConfig` | Object | Keyed by gameId. Each: `{ first, second, third, participation, maxParticipationCap, maxEntriesPerSchool? }` |
-| `lobbyGameStatus` | Object | Keyed by gameId. Values: `'active'` or `'completed'` |
-| `_updatedAt` | Timestamp | Server timestamp, set on every save |
-
-### Collection: `logos`
-
-Each document stores a single logo as a base64 data URL.
-
-| Document ID | Field | Type | Description |
-|---|---|---|---|
-| `tournament` | `data` | string | Tournament logo (base64 PNG) |
-| `{teamId}` | `data` | string | Team logo (base64 PNG) |
-| (any) | `_updatedAt` | Timestamp | Server timestamp |
-
-**Why logos are separate:** Logos are stored in individual documents to avoid exceeding Firestore's 1MB document limit. They are compressed to <500KB PNG and loaded/saved separately from main tournament data.
-
-### Collection: `config`
-
-**Document:** `config/auth`
+##### `tournaments/main` (Single document — all tournament data)
 
 | Field | Type | Description |
-|---|---|---|
-| `passwordHash` | string (64 hex chars) | SHA-256 hash of admin password (salted) |
-| `recoveryKeyHash` | string (64 hex chars) | SHA-256 hash of recovery key (salted) |
+|-------|------|-------------|
+| `tournament` | Map | `{ name: string, logo: null, startDate: string, endDate: string }` |
+| `teams` | Array<Map> | `[{ id, name, shortCode, logo: null }]` — logos stripped out, stored separately |
+| `games` | Array<Map> | `[{ id, name, emoji, type?: 'team'│'individual'│'lobby' }]` |
+| `pools` | Array<Map> | `[{ id, name, gameId, teamIds: string[] }]` |
+| `matches` | Array<Map> | `[{ id, poolId, teamAId, teamBId, status, result, absentTeamId, scoreA?, scoreB?, isSecondRound? }]` |
+| `knockoutConfig` | Map | `{ [gameId]: { enabled, qualifyCount, stage, seedingFormat, startingRound?, twoLeg, bonusPoints: { enabled, qf, sf, final, third }, secondRoundPoolId? } }` |
+| `knockoutMatches` | Array<Map> | `[{ id, gameId, round, matchNumber, teamAId, teamBId, status, result, absentTeamId?, nextMatchId?, slot?, extraTime?, penalties?, _sfMatchIds? }]` |
+| `qualifiedTeams` | Map | `{ [gameId]: [{ teamId, poolId, rank, manual }] }` |
+| `athletes` | Array<Map> | `[{ id, name, regNumber, teamId, gameId }]` |
+| `categories` | Array<Map> | `[{ id, name, gameId, status, athleteIds: string[] }]` |
+| `individualResults` | Array<Map> | `[{ id, gameId, categoryId, placements: { first, second, third }, participants: string[], absentees: string[] }]` |
+| `individualPointsConfig` | Map | `{ [gameId]: { first, second, third, participation, maxParticipationCap?, categoryOverrides?: { [catId]: {...} } } }` |
+| `lobbyEntries` | Array<Map> | `[{ id, gameId, teamId, entryName }]` |
+| `lobbyResults` | Array<Map> | `[{ id, gameId, sessionName, placements: { first, second, third }, participantEntryIds: string[] }]` |
+| `lobbyPointsConfig` | Map | `{ [gameId]: { first, second, third, participation, maxParticipationCap?, maxEntriesPerSchool? } }` |
+| `lobbyGameStatus` | Map | `{ [gameId]: 'active'│'completed' }` |
+| `_updatedAt` | Timestamp | Server timestamp on each save |
+
+**Firestore rules constraints:**
+- `teams` array max 64 items
+- `games` array max 20 items
+- `matches` array max 500 items
+- All three fields (`teams`, `games`, `matches`) required for writes
+
+##### `logos/{logoId}` (One document per logo)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `data` | String | Base64 PNG data URL (max 3MB per Firestore rules) |
 | `_updatedAt` | Timestamp | Server timestamp |
 
-### Firestore Security Rules
+**Current logos in database:** 3 documents (tmmrlyws4: CSE ~10KB, tmmrlyws6: AGR ~12KB, tmmrlyws8: BIO ~14KB)
 
-```
-tournaments/{docId}: read=public, write=validated (requires teams/games/matches arrays, size limits)
-logos/{logoId}: read=public, write=validated (string data <=3MB)
-config/{docId}: read=BLOCKED, write=validated (64-char hex hashes only)
-Everything else: denied
-```
+##### `config/auth` (Single document — auth data)
 
-**Critical:** `config/auth` reads are blocked. Auth is stored in localStorage as primary, Firestore is write-only backup.
+| Field | Type | Description |
+|-------|------|-------------|
+| `passwordHash` | String | 64-char hex SHA-256 hash |
+| `recoveryKeyHash` | String | 64-char hex SHA-256 hash |
+| `_updatedAt` | Timestamp | Server timestamp |
 
-### No RLS Policies / No RPC Functions / No Triggers
+**Firestore rules:** Read BLOCKED (`allow read: if false`). Write allowed only if both hashes are exactly 64-char hex strings.
 
-This is Firestore, not Supabase. Security is handled by Firestore rules only. There are no server-side triggers, functions, or stored procedures.
+#### Indexes
+No custom composite indexes defined. Firestore auto-indexes all fields.
+
+#### RLS / Access Policies (Firestore Security Rules)
+- `tournaments/{docId}`: Public read, validated writes (must have teams/games/matches arrays within size limits)
+- `logos/{logoId}`: Public read, validated writes (data must be string ≤ 3MB)
+- `config/{docId}`: **Read BLOCKED** (protects password hashes), validated writes (hash format enforcement)
+- Everything else: **Denied** (`allow read, write: if false`)
+
+#### Triggers / Functions / Views / Stored Procedures
+**None.** No server-side Firebase Functions, Cloud Functions, or triggers are deployed.
+
+#### Realtime Subscriptions
+- `tournaments/main`: Real-time `onSnapshot` listener with `includeMetadataChanges: true`. Filters out local pending writes.
+- `logos` collection: Real-time `onSnapshot` listener for logo changes. Merges with cached main document data.
 
 ---
 
-## 5. Auth Flow
+## 6. AUTH FLOW
 
-### Roles
+### Single Role: Admin
 
-There are only **two roles**: Admin (authenticated) and Viewer (unauthenticated, read-only).
+**Authentication method:** Client-side password hashing (SHA-256 with salt `tournament-app-v1-salt::`)
 
-There are no "verifier" or "student" roles. This is a tournament management app, not a student check-in system.
+**Login flow:**
+1. User clicks lock icon → `LoginModal` opens
+2. User enters password → `hashPassword(password)` generates SHA-256 hash
+3. Hash compared against `localStorage` key `tournament_auth.passwordHash`
+4. On match: `sessionStorage.tournament_admin_session = 'true'`, `sessionStorage.tournament_last_activity = Date.now()`
+5. `AuthContext.isAdmin = true` → `TournamentContext.isAdminRef.current = true`
+6. Admin actions now pass the dispatch guard
 
-### First-Time Setup Flow
-
-1. App loads → `AuthProvider` checks `localStorage` for `tournament_auth`
-2. If no auth data AND no existing tournament data in Firestore → `needsSetup = true`
-3. `FirstTimeSetup` wizard renders:
-   - Step 1: Tournament name + logo → dispatches `SET_TOURNAMENT`
-   - Step 2: Admin password → `setupPassword()` → SHA-256 hash with salt `'tournament-app-v1-salt::'` → saves to localStorage + Firestore
-   - Step 3: Recovery key display (12-char, formatted XXXX-XXXX-XXXX)
-4. Admin session set in `sessionStorage`
-
-### Login Flow
-
-1. User clicks lock icon in sidebar → `LoginModal` opens
-2. User enters password → `login(password)` called
-3. Password hashed with `crypto.subtle.digest('SHA-256', SALT + password)`
-4. Hash compared against `localStorage.tournament_auth.passwordHash`
-5. On match: session set, lockout cleared, `isAdmin = true`
-6. On failure: lockout counter incremented (5 failures = 5-minute lockout)
-
-**Code path:** `Layout.jsx` → `LoginModal.jsx` → `AuthContext.login()` → `auth.js:hashPassword()` → compare against `auth.js:getAuthData()`
-
-### Session Management
-
-- Admin session stored in `sessionStorage` (key: `tournament_admin_session`)
-- Activity tracked via `sessionStorage` (key: `tournament_last_activity`)
+**Session management:**
+- Session stored in `sessionStorage` (cleared on tab close)
+- Activity tracked via mouse/keyboard/scroll/touch events
 - Inactivity timeout: 30 minutes (checked every 30 seconds)
 - On timeout: auto-logout with toast notification
 
-### Password Recovery
+**Lockout mechanism:**
+- 5 failed attempts → 5-minute lockout
+- Lockout stored in both `localStorage` (`tournament_lockout`) and React ref (defense-in-depth)
+- Same lockout applies to recovery key attempts
 
-1. User clicks "Forgot Password?" in LoginModal
-2. Enters recovery key (XXXX-XXXX-XXXX format)
-3. Key is uppercased, dashes stripped, hashed, compared against stored `recoveryKeyHash`
-4. On match: user sets new password
-5. Recovery attempts share the same lockout mechanism as login
+**Password setup (first time):**
+1. `FirstTimeSetup` wizard detects no `passwordHash` in localStorage
+2. Step 1: Tournament info (name, logo) — skipped if tournament data already exists
+3. Step 2: Set password (min 6 chars)
+4. Step 3: Recovery key generated (12 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`), displayed as `XXXX-XXXX-XXXX`
+5. Both hashes saved to localStorage + Firestore backup
 
-### Lockout Mechanism
+**Password recovery:**
+1. User enters recovery key + new password in LoginModal recovery tab
+2. Recovery key hash compared against stored `recoveryKeyHash`
+3. On match: password updated, lockout cleared
 
-- Stored in `localStorage` (key: `tournament_lockout`) AND React ref (defense-in-depth)
-- After 5 failed attempts: locked for 5 minutes
-- Clearing localStorage doesn't bypass because React state persists until page refresh
-- Countdown displayed in UI, ticks every second
-
----
-
-## 6. Features Documentation
-
-### Feature 1: Overall Leaderboard (Dashboard)
-
-**What it does:** Displays ranked standings of all teams across all games combined.
-
-**Files involved:**
-- `src/pages/Dashboard.jsx` — renders leaderboard table
-- `src/utils/points.js` — `getTeamStatsForMatches()`, `getTeamCombinedStats()`, `sortTeamsByTiebreaker()`
-- `src/utils/individualPoints.js` — `getIndividualPointsForTeam()`, `getTeamMedals()`
-- `src/utils/lobbyPoints.js` — `getLobbyPointsForTeam()`
-- `src/utils/knockout.js` — `getChampion()`, `getTeamFurthestRound()`
-
-**Database reads:** teams, games, pools, matches, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig
-
-**Data flow:**
-1. For each team, aggregate points from: pool matches + knockout matches (with bonus) + individual game points + lobby game points
-2. Sort using master tiebreaker: Points → Wins+Golds → Silvers → Bronzes
-3. Assign dense ranks (tied teams share rank, next gets rank+1)
-4. Display with team logos, stats columns (GP, W, L, D, B, PTS), champion badges
-
-### Feature 2: Team Game (Pool Stage)
-
-**What it does:** Round-robin pool stage for team-based games (Cricket, Kabaddi, Football, etc.)
-
-**Files involved:**
-- `src/pages/GameView.jsx` — pool standings display + advancement controls
-- `src/pages/MatchManagement.jsx` — match CRUD + bulk entry
-- `src/pages/GamePoolManagement.jsx` — pool creation + team assignment
-- `src/utils/points.js` — `getTeamStatsForMatches()`, `getMatchPoints()`
-- `src/context/TournamentContext.jsx` — ADD_POOL, ADD_MATCH, UPDATE_MATCH, etc.
-
-**Scoring rules (pool stage):**
-- Win: 3 base + 1 participation = **4 pts**
-- Loss: 0 base + 1 participation = **1 pt**
-- Draw: 1 base + 1 participation = **2 pts**
-- Bye/Walkover (present team): **4 pts** (equal to win)
-- No-show/Forfeit (absent team): **0 pts**
-
-### Feature 3: Team Game (Knockout Stage)
-
-**What it does:** Single-elimination bracket from qualified pool teams.
-
-**Files involved:**
-- `src/pages/GameView.jsx` — bracket generation + advancement
-- `src/components/BracketView.jsx` — bracket visualization
-- `src/components/KnockoutFixtures.jsx` — match list + result entry
-- `src/components/ChampionDisplay.jsx` — champion + podium display
-- `src/components/QualificationPanel.jsx` — qualified teams display
-- `src/utils/knockout.js` — `generateBracket()`, `advanceWinner()`, `advanceLoserToThird()`, `getKnockoutMatchPoints()`
-
-**Knockout bonus (contested wins only, NOT walkovers):**
-- QF Win: +1
-- SF Win: +2
-- Final Win: +3
-- 3rd Place Win: +1
-
-**Bracket features:**
-- Cross-pool seeding (A1 vs B2, B1 vs A2)
-- Configurable starting round (RO32/RO16/QF/SF/Final)
-- Auto-bye for odd numbers (pad to next power of 2)
-- Winner auto-advances to next match
-- SF losers auto-enter 3rd place match
-- Manual bracket customization option
-
-### Feature 4: Second Round Stage
-
-**What it does:** Optional intermediate stage between pool and knockout. Pool toppers play round-robin, top 3 + play-in winner go to semifinals.
-
-**Files involved:**
-- `src/pages/GameView.jsx` — second round tab + advancement
-- `src/utils/secondRound.js` — all second round logic
-
-**Scoring rules (second round — different from pool!):**
-- Win: **3 pts** (no participation point)
-- Loss: **0 pts**
-- Draw: **1 pt**
-- Rankings: Points → Goal Difference → Goals Scored
-
-**Flow:** Pool toppers → Second Round round-robin → Top 3 to SF + Bottom 2 play-in → Winner gets 4th SF spot
-
-### Feature 5: Individual Game Management
-
-**What it does:** Manages individual athlete competitions (e.g., Athletics, Swimming) with categories, placements, and per-athlete scoring.
-
-**Files involved:**
-- `src/pages/IndividualGameView.jsx` — full individual game UI
-- `src/pages/AthleteManagement.jsx` — athlete CRUD
-- `src/utils/individualPoints.js` — all scoring logic
-- `src/context/TournamentContext.jsx` — ADD_ATHLETE, ADD_CATEGORY, SET_INDIVIDUAL_RESULT, etc.
-
-**Default scoring:**
-- 1st place: 5 bonus + 1 participation = **6 pts**
-- 2nd place: 3 bonus + 1 participation = **4 pts**
-- 3rd place: 1 bonus + 1 participation = **2 pts**
-- Participant: 0 bonus + 1 participation = **1 pt**
-- Absent/DNS: **0 pts**
-
-**Anti-spam:** `maxParticipationCap` limits participation points per team per game. Placement bonuses are NEVER capped.
-
-**Per-category overrides:** Each category can have its own points config, falling back to game-level then default.
-
-### Feature 6: Lobby Game Management
-
-**What it does:** Manages lobby/battle-royale games (e.g., BGMI/ESports) where multiple entries compete in sessions.
-
-**Files involved:**
-- `src/pages/LobbyGameView.jsx` — full lobby game UI
-- `src/utils/lobbyPoints.js` — scoring logic
-
-**Key features:**
-- Schools register multiple "entries" (teams within a team)
-- Entries compete in "sessions" (matches)
-- Podium stacking: same school CAN win 1st, 2nd, AND 3rd
-- Participation points per ENTRY per session (not per school)
-- `maxParticipationCap` limits total participation pts per school per game
-
-### Feature 7: Points Breakdown Popover
-
-**What it does:** Clicking any points number shows a detailed modal breakdown of how those points were calculated.
-
-**Files involved:**
-- `src/components/PointsBreakdownPopover.jsx` — modal UI + calculation
-- `src/utils/breakdownData.js` — `getTeamFullBreakdown()`, `getPoolPointsBreakdown()`, `getKnockoutPointsBreakdown()`, `getGamePointsBreakdown()`, `getSpecificMatchesForStat()`
-
-**Breakdown types:** total, knockout, pool, game-specific, individual, lobby, wins, losses, draws, byes
-
-### Feature 8: Export/Import
-
-**What it does:** Export tournament data as JSON, import from JSON file.
-
-**Files involved:**
-- `src/pages/Settings.jsx` — export/import buttons
-- `src/utils/validation.js` — `validateImportData()`
-
-**Export:** Serializes all state (tournament, teams, games, pools, matches, knockoutConfig, knockoutMatches, qualifiedTeams, athletes, categories, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus). Downloads as `.json`. Auth data is exported separately via `getExportAuth()`.
-
-**Import:** Validates JSON structure, enforces size limits, sanitizes all strings, validates team/game/match structures. Replaces all existing data.
-
-### Feature 9: Screenshot Export
-
-**What it does:** Takes screenshot of the dashboard using html2canvas.
-
-**Files involved:**
-- `src/pages/Dashboard.jsx` — `handleScreenshot()` function
-- `html2canvas` library (client-side)
-
-**Flow:** Captures a DOM element as canvas → converts to PNG blob → triggers download.
-
-### Feature 10: Real-time Sync
-
-**What it does:** Changes made on one device appear on all other devices viewing the same tournament.
-
-**Files involved:**
-- `src/utils/database.js` — `subscribeToChanges()` uses Firestore `onSnapshot()`
-- `src/context/TournamentContext.jsx` — subscribes on mount, dispatches `_SYNC_FROM_FIRESTORE`
-- `src/context/SyncContext.jsx` — tracks save status + progress
-
-**Mechanism:** Firestore `onSnapshot()` listeners on both `tournaments/main` document and `logos` collection. Changes from other tabs/devices trigger re-render. Local writes are filtered out via `hasPendingWrites`.
-
-**Auto-save:** Debounced (1.5s delay, 10s on consecutive errors). Saves on every state change that isn't UI-only. Warns on page unload if unsaved changes exist.
-
-### Feature 11: Dark Mode
-
-**What it does:** Toggle between dark (default) and light themes.
-
-**Files involved:**
-- `src/context/TournamentContext.jsx` — `darkMode` state + `TOGGLE_DARK_MODE` action
-- `src/index.css` — theme variables for both modes
-- Every component — reads `darkMode` from context for conditional classes
-
-### Feature 12: Offline Support
-
-**What it does:** Shows offline banner when connection lost, queues saves.
-
-**Files involved:**
-- `src/components/OfflineBanner.jsx` — displays banner
-- `src/context/SyncContext.jsx` — `isOnline` state from browser events
-- `src/utils/database.js` — `onConnectionChange()`
-
-**Note:** Firebase is configured with `memoryLocalCache()` — no IndexedDB persistence. Data comes fresh from server on each page load. Offline edits are NOT persisted.
+**Protected routes:** `gameManagement` (GamePoolManagement) and `settings` (Settings) views redirect to dashboard if not admin. All mutation actions (`ADD_TEAM`, `UPDATE_MATCH`, etc.) are blocked at the dispatch level.
 
 ---
 
-## 7. API Routes
+## 7. FEATURES
 
-**There are no API routes.** This is a purely client-side SPA. All data access is via the Firebase JS SDK directly from the browser:
+### 7.1 Master Leaderboard (Dashboard)
+- **What it does:** Shows overall tournament standings combining points from all game types
+- **Components:** `Dashboard.jsx`, `PointsBreakdownPopover.jsx`, `PointsExplainer.jsx`, `TeamLogo.jsx`
+- **Data flow:** Reads all state → computes `getTeamCombinedStats()` for pool+KO per team game → adds `getIndividualPointsForTeam()` for individual games → adds `getLobbyPointsForTeam()` for lobby games → `sortTeamsByTiebreaker()` → dense ranking
+- **Tables:** teams, games, pools, matches, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig
+- **Live behavior (verified):** Shows 22 teams ranked by total points. CSE leads with 78 pts (13W, 2L). Columns: #, TEAM, GP, W, L, D, B, PTS (with +KO and +Lobby breakdowns). Tournament progress cards show game completion status with champion logos.
 
-| Operation | Firebase Method | Document Path |
-|---|---|---|
-| Load tournament | `getDoc()` | `tournaments/main` |
-| Save tournament | `setDoc()` | `tournaments/main` |
-| Subscribe to changes | `onSnapshot()` | `tournaments/main` + `logos/*` |
-| Load logos | `getDocs()` | `logos/*` |
-| Save logo | `setDoc()` | `logos/{id}` |
-| Delete orphan logos | `writeBatch()` | `logos/*` |
-| Load auth | `getDoc()` | `config/auth` (BLOCKED by rules) |
-| Save auth | `setDoc()` | `config/auth` |
+### 7.2 Team Games (Cricket, Badminton, Kabaddi, Football)
+- **What it does:** Pool stage round-robin → qualification → knockout bracket
+- **Components:** `GameView.jsx`, `BracketView.jsx`, `ChampionDisplay.jsx`, `KnockoutFixtures.jsx`, `QualificationPanel.jsx`
+- **Scoring:** Win=4pts (3+1 participation), Loss=1pt (participation only), Draw=2pts (1+1), Bye present=4pts, Bye absent=0pts
+- **Knockout bonus (contested wins only):** QF +1, SF +2, Final +3, 3rd Place +1
+- **Tables:** pools, matches, knockoutMatches, knockoutConfig, qualifiedTeams
+- **Live behavior:** Cricket (completed, CSE champion), Badminton (completed, MSB champion), Kabaddi (completed, SPED champion), Football (knockout stage, final + 3rd place pending)
 
----
+### 7.3 Individual Sports (Powerlifting)
+- **What it does:** Weight-category-based athlete competition with 1st/2nd/3rd placements
+- **Components:** `IndividualGameView.jsx`, `AthleteManagement.jsx`
+- **Scoring:** Configurable per-game and per-category. Default: 1st=5+1, 2nd=3+1, 3rd=1+1, Participation=1
+- **Anti-spam:** `maxParticipationCap` limits participation points per team per game
+- **Tables:** athletes, categories, individualResults, individualPointsConfig
+- **Live behavior:** Powerlifting has 9 categories (Men's 55-65kg through Women's 75+kg Open), 31 athletes registered. Status shows "0/9" — no results entered yet.
 
-## 8. How Live Stats / Realtime Works
+### 7.4 Lobby/Esports Games (BGMI, Real Cricket 26)
+- **What it does:** Multi-entry session-based competition where schools register entries (teams) that compete in lobby sessions
+- **Components:** `LobbyGameView.jsx`
+- **Scoring:** Per-session placements (1st/2nd/3rd) + participation per entry, capped per school
+- **Data model:** `lobbyEntries` (school→entry mapping) → `lobbyResults` (session placements + participant entry IDs)
+- **Tables:** lobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus
+- **Live behavior:** BGMI completed (CSE champion, 4 entries/school, 16 entries total, 1 session). Real Cricket 26 completed (AMS champion, 1 entry/school, 10 entries, 1 session). Both show "Completed" status.
 
-**Mechanism:** Firestore `onSnapshot()` — real-time listeners, NOT polling, NOT WebSocket.
+### 7.5 Match Management
+- **What it does:** Central hub for creating/editing/deleting pool and knockout matches
+- **Components:** `MatchManagement.jsx`
+- **Features:** Bulk result entry for upcoming pool matches, knockout auto-advancement (winner→next match, SF loser→3rd place), score tracking
+- **Live behavior:** 51 pool matches played, 14 knockout matches played
 
-**Implementation in `database.js:subscribeToChanges()`:**
-1. Two listeners established: one on `tournaments/main` document, one on `logos` collection
-2. `includeMetadataChanges: true` — receives events for both server and local writes
-3. `snap.metadata.hasPendingWrites` — skips events from local writes (prevents echo)
-4. On server change: merges tournament data with cached logos → calls callback
-5. `TournamentContext` dispatches `_SYNC_FROM_FIRESTORE` to update React state
-6. Uses `isSyncingRef` flag to prevent auto-save from triggering on incoming sync
+### 7.6 Team Management
+- **What it does:** CRUD for teams with logo upload
+- **Components:** `TeamManagement.jsx`, `ImageUpload.jsx`, `TeamLogo.jsx`
+- **Live behavior:** 22 teams (schools/departments at LPU) with 4-char short codes
 
----
+### 7.7 Import/Export & Settings
+- **What it does:** JSON export/import of all tournament data, password change, dark mode toggle, sample data loading, full reset
+- **Components:** `Settings.jsx`
+- **Export includes:** All tournament data + optional auth data (password/recovery hashes)
+- **Import validates:** JSON structure, array sizes, field types, sanitizes strings
 
-## 9. How Screenshot/PDF Export Works
-
-**Library:** `html2canvas` (^1.4.1) — client-side only
-
-**How it works (Dashboard.jsx):**
-1. User clicks screenshot button
-2. `html2canvas(targetElement)` captures DOM as canvas
-3. Canvas converted to PNG blob
-4. Blob wrapped in object URL
-5. Programmatic `<a>` click triggers download
-
-**There is no PDF export.** Only PNG screenshots via html2canvas.
-
----
-
-## 10. How CSV Export Works
-
-**There is no CSV export.** The only export is JSON (full tournament data) and PNG screenshot. No CSV generation exists in the codebase.
-
----
-
-## 11. Potential Bugs and Issues
-
-### High Severity
-
-1. **Firebase API key exposed in source code** (`firebase.js:11`): The Firebase config including API key is hardcoded. While Firebase API keys are designed to be public (security is in Firestore rules), this still means anyone can write to the database if they craft valid payloads.
-
-2. **Auth stored in localStorage is bypassable:** Admin auth hashes are in `localStorage`. A user can inspect and copy them, or use devtools to set `sessionStorage.tournament_admin_session = 'true'`. The lockout mechanism uses both localStorage and React ref, but a page refresh resets the ref.
-
-3. **No server-side auth validation:** Firestore rules for `tournaments` allow `write: if true` (with basic structure validation). Any client can write tournament data without being authenticated. The admin password only gates the UI, not the database.
-
-4. **`config/auth` reads blocked but writes open:** Anyone who knows the schema can overwrite the password hash in Firestore (if they can craft a valid 64-char hex string). This could lock out the legitimate admin.
-
-### Medium Severity
-
-5. **Race condition in auto-save:** `debouncedSave` uses a 1.5s timer. If two tabs edit simultaneously, the last write wins. No conflict resolution or merge strategy exists.
-
-6. **`prevStateForSaveRef` comparison is JSON.stringify:** Serializing the entire state on every render for comparison could be expensive with large tournaments (500 matches, 500 athletes).
-
-7. **Second round scoring uses different point system:** Pool stage uses 4/2/1 (W/D/L with participation), but second round uses 3/1/0 (no participation point). This inconsistency might confuse users and affect overall point calculations. The second round points don't flow back to the main leaderboard in the same way.
-
-8. **Logo compression race condition:** `ensureCompressed()` is async but `simpleHash()` is sync. The hash is computed on the original data, but the saved data is compressed. On next save, the hash comparison might not match.
-
-### Low Severity
-
-9. **`idCounter` starts from `Date.now()`:** Two tabs opened at the same millisecond could generate duplicate IDs.
-
-10. **Missing error handling in several places:** Logo load/save failures are silently swallowed. Orphan deletion failures are silent. Firebase write failures in auth sync are silent.
-
-11. **No pagination:** The entire tournament (up to 500 matches, 500 athletes) is loaded into memory at once and stored in a single Firestore document.
-
-12. **`sortTeamsByTiebreaker` passed extra arg:** In `knockout.js:calculateQualifiers()`, `sortTeamsByTiebreaker(teamStats, poolMatches)` passes `poolMatches` as second arg, but the function only takes one parameter. This is harmless but misleading.
+### 7.8 Second Round (Optional Stage)
+- **What it does:** Intermediate stage between pool and knockout. Pool toppers play round-robin → top 3 to SF, bottom 2 to play-in
+- **Components:** `GameView.jsx` (uses logic from `secondRound.js`)
+- **Scoring:** Different from pool: Win=3pts, Draw=1pt, Loss=0pts. Uses goals scored/conceded for tiebreaker.
+- **Live behavior:** Not currently used by any game in the live tournament
 
 ---
 
-## 12. Business Rules Embedded in Code
+## 8. API / SERVER ACTION ROUTES
 
-### Scoring Rules
+**There are no server-side API routes.** This is a pure client-side SPA. All data operations go directly to Firestore via the Firebase SDK.
 
-| Game Type | Outcome | Points |
-|---|---|---|
-| Team (Pool) | Win | 3 base + 1 participation = 4 |
-| Team (Pool) | Loss | 0 base + 1 participation = 1 |
-| Team (Pool) | Draw | 1 base + 1 participation = 2 |
-| Team (Pool) | Bye (present) | 4 (equal to win) |
-| Team (Pool) | Bye (absent) | 0 |
-| Knockout | Same as pool + bonus for contested wins only |
-| KO Bonus | QF: +1, SF: +2, Final: +3, 3rd Place: +1 |
-| Individual | 1st: 5+1=6, 2nd: 3+1=4, 3rd: 1+1=2, Participant: 1 |
-| Lobby | Same scale as individual, per entry |
+### Firestore Operations (database.js)
 
-### Second Round Scoring (Different!)
+| Function | Purpose | Auth Required | Collections Touched |
+|----------|---------|---------------|-------------------|
+| `loadTournamentData()` | Load main doc + all logos | No | tournaments/main, logos/* |
+| `saveTournamentData(state)` | Save main doc + changed logos + cleanup orphans | Admin (dispatch guard) | tournaments/main, logos/* |
+| `debouncedSave(state)` | Debounced save (1.5s delay, 10s if errors) | Admin | tournaments/main, logos/* |
+| `forceSave(state)` | Immediate save (bypass debounce) | Admin | tournaments/main, logos/* |
+| `subscribeToChanges(callback)` | Real-time listener for cross-tab sync | No | tournaments/main, logos/* |
+| `loadAuthData()` | Load auth config (will fail — reads blocked by rules) | No | config/auth |
+| `saveAuthData(data)` | Write auth hashes to Firestore | No (but only called during setup/password change) | config/auth |
 
-| Outcome | Points |
-|---|---|
+---
+
+## 9. REALTIME / LIVE UPDATE MECHANISM
+
+**Mechanism:** Firestore `onSnapshot` real-time listeners
+
+**How it works:**
+1. On initial load: `loadTournamentData()` fetches main doc + all logos via `getDoc()`
+2. After load: `subscribeToChanges()` attaches two `onSnapshot` listeners:
+   - Main document (`tournaments/main`): Updates on remote changes, filters out local pending writes
+   - Logos collection: Updates on logo changes, merges with cached main data
+3. On admin changes: `debouncedSave()` writes to Firestore after 1.5s debounce
+4. Cross-tab sync: Remote changes arrive via listeners, dispatched as `_SYNC_FROM_FIRESTORE`
+
+**Firestore cache:** Memory-only (`memoryLocalCache()`) — no IndexedDB persistence. Fresh data on every page load.
+
+**Verified behavior:** Data syncs across tabs. Changes by admin are visible to public viewers within seconds.
+
+---
+
+## 10. FILE EXPORTS
+
+### Screenshot Export (Dashboard)
+- **Library:** html2canvas 1.4.1
+- **Client-side:** Yes
+- **What:** Captures the standings table as a PNG image
+- **Triggered by:** Camera icon button on Dashboard
+
+### JSON Export (Settings)
+- **Format:** JSON file download
+- **Client-side:** Yes, via Blob URL + anchor click
+- **Content:** Full tournament state (tournament, teams, games, pools, matches, knockoutConfig, knockoutMatches, qualifiedTeams, athletes, categories, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus) + optional auth data
+- **Filename:** `tournament-data-YYYY-MM-DD.json`
+
+---
+
+## 11. THIRD-PARTY INTEGRATIONS
+
+| Service | Purpose | Files |
+|---------|---------|-------|
+| Firebase/Firestore | Database, real-time sync | `src/utils/firebase.js`, `src/utils/database.js` |
+| Google Fonts | Inter + JetBrains Mono fonts | `index.html` (preconnect + stylesheet links) |
+| html2canvas | Screenshot export of leaderboard | `src/pages/Dashboard.jsx` |
+| Wix/unisportscouncil.in | Iframe embedding of the app | `vercel.json` (CSP headers) |
+
+**No email, SMS, payment, or analytics integrations.** Google Analytics measurement ID (`G-LV3M0VHMBC`) is in the Firebase config but no GA SDK is loaded.
+
+---
+
+## 12. ENVIRONMENT VARIABLES
+
+**None.** All configuration is hardcoded:
+- Firebase config (API key, project ID, etc.) in `src/utils/firebase.js`
+- No `.env` file exists in the project
+
+| Hardcoded Value | Location | Notes |
+|----------------|----------|-------|
+| Firebase API Key | `src/utils/firebase.js` | `AIzaSyAms3WpTGpXjZO9N3U_wbJeYiA8bXBGdtY` |
+| Firebase Project ID | `src/utils/firebase.js` | `tournament-points-table` |
+| Firebase Auth Domain | `src/utils/firebase.js` | `tournament-points-table.firebaseapp.com` |
+| Firebase App ID | `src/utils/firebase.js` | `1:705146517748:web:3b87cfad9938ce69efc6a1` |
+| Measurement ID | `src/utils/firebase.js` | `G-LV3M0VHMBC` (unused — no GA SDK loaded) |
+| Password Salt | `src/utils/auth.js` | `tournament-app-v1-salt::` |
+
+**Security note:** Firebase API keys are designed to be public (client-side). Security is enforced by Firestore rules. The password salt is also client-side — this is a known tradeoff since auth is client-side.
+
+---
+
+## 13. BACKEND CONFIGURATION SUMMARY
+
+### Database
+- **Engine:** Cloud Firestore (Native mode)
+- **Project:** `tournament-points-table`
+- **Collections:** 3 (`tournaments`, `logos`, `config`)
+- **Documents:** 1 main tournament doc, 3 logo docs, 1 auth config doc
+- **Functions/Triggers:** None
+- **Views:** None
+- **Realtime:** Two onSnapshot listeners (main doc + logos collection)
+
+### Auth
+- **Provider:** Client-side SHA-256 hashing (no Firebase Auth)
+- **Roles:** Single role (Admin)
+- **Custom hooks:** Inactivity timeout (30 min), lockout (5 attempts → 5 min)
+
+### Storage
+- **Firebase Storage:** Not used (despite `storageBucket` in config)
+- **Logo storage:** Inline base64 data URLs in Firestore `logos` collection
+- **Public assets:** `/public/` directory with USC/SWW logos, favicon
+
+### Edge/Serverless Functions
+- **None deployed.** No Firebase Functions, Netlify Functions, or Vercel Serverless Functions.
+
+---
+
+## 14. BUSINESS RULES
+
+### Scoring Rules (Team Games)
+| Result | Points | Breakdown |
+|--------|--------|-----------|
+| Win (contested) | 4 | 3 base + 1 participation |
+| Loss (contested) | 1 | 0 base + 1 participation |
+| Draw | 2 | 1 base + 1 participation |
+| Bye/Walkover (present team) | 4 | Equal to contested win |
+| Bye/Walkover (absent team) | 0 | No points |
+
+### Knockout Bonus Points (contested wins ONLY, not walkovers)
+| Round | Bonus |
+|-------|-------|
+| Quarter Final | +1 |
+| Semi Final | +2 |
+| Final | +3 |
+| 3rd Place | +1 |
+
+### Individual Sport Scoring (Default)
+| Placement | Points | Breakdown |
+|-----------|--------|-----------|
+| 1st Place | 6 | 5 placement + 1 participation |
+| 2nd Place | 4 | 3 placement + 1 participation |
+| 3rd Place | 2 | 1 placement + 1 participation |
+| Participant | 1 | 1 participation only |
+| Absent/DNS | 0 | Nothing |
+
+### Lobby/Esports Scoring (Configurable per game)
+- Same structure as individual: placement bonus + participation per entry
+- Participation cap per school per game (`maxParticipationCap`)
+- Placement bonus **never** capped
+- Multiple entries per school allowed (`maxEntriesPerSchool`)
+
+### Master Tiebreaker (Overall Leaderboard)
+1. Total Overall Points (descending)
+2. Most Total Tournament Wins = team game wins + individual golds (descending)
+3. Most 2nd Place / Runner-Up finishes (descending)
+4. Most 3rd Place finishes (descending)
+5. **NEVER** Head-to-Head. **NEVER** Alphabetical.
+6. Remaining ties: shared rank (dense ranking, no gaps)
+
+### Second Round Scoring (Different from pool stage)
+| Result | Points |
+|--------|--------|
 | Win | 3 |
 | Draw | 1 |
 | Loss | 0 |
-| Ranking | Points → Goal Difference → Goals Scored |
+| Tiebreaker: Goal Difference → Goals Scored |
 
-### Master Tiebreaker Hierarchy
-
-1. Total Overall Points (descending)
-2. Total Tournament Wins = team game wins + individual golds (descending)
-3. Most 2nd Place / Runner-Up finishes (descending)
-4. Most 3rd Place finishes (descending)
-5. **NEVER Head-to-Head. NEVER Alphabetical.**
-
-### Validation Rules
-
-- Registration number: exactly 8 digits, unique across tournament
-- Team name: max 100 chars, unique (case-insensitive)
-- Short code: max 4 chars
-- Game name: max 100 chars, unique (case-insensitive)
-- Tournament name: max 200 chars
-- Password: 6-128 characters, not whitespace-only
-- Image: max 2MB, no SVG (security), compressed to 200x200 PNG
-- Logo data URL: max 3MB base64 string
-- Recovery key: 12 chars from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no I, O, 0, 1)
-
-### Size Limits
-
-- Max teams: 64
-- Max games: 20
-- Max pools: 40
-- Max matches: 500
-- Max knockout matches: 200
-- Max athletes: 500
-- Max categories: 100
-- Max individual results: 500
-- Max import file size: 5MB
-
-### Lockout Rules
-
-- 5 failed login/recovery attempts → 5-minute lockout
-- Applies to both password login and recovery key attempts
-- Countdown displayed in UI
-
-### Inactivity Timeout
-
-- Admin session expires after 30 minutes of inactivity
-- Activity tracked on: mousedown, keydown, scroll, touchstart
-- Checked every 30 seconds
+### Validation Limits
+| Limit | Value |
+|-------|-------|
+| MAX_TEAMS | 64 |
+| MAX_GAMES | 20 |
+| MAX_POOLS | 40 |
+| MAX_MATCHES | 500 |
+| MAX_KNOCKOUT_MATCHES | 200 |
+| MAX_ATHLETES | 500 |
+| MAX_CATEGORIES | 100 |
+| MAX_INDIVIDUAL_RESULTS | 500 |
+| MAX_REG_NUMBER_LENGTH | 8 (exactly 8 digits) |
+| MAX_NAME_LENGTH | 100 |
+| MAX_SHORT_CODE_LENGTH | 4 |
+| MAX_TOURNAMENT_NAME_LENGTH | 200 |
+| MAX_IMPORT_SIZE_BYTES | 5 MB |
+| MAX_IMAGE_SIZE_BYTES | 2 MB |
+| MAX_LOGO_DATA_URL_LENGTH | 3 MB |
+| Password min length | 6 |
+| Password max length | 128 |
+| Lockout threshold | 5 attempts |
+| Lockout duration | 5 minutes |
+| Inactivity timeout | 30 minutes |
+| Save debounce | 1.5 seconds (10s during errors) |
+| Max consecutive save errors before backoff | 3 |
+| Toast auto-dismiss | 3 seconds |
+| Recovery key length | 12 characters (XXXX-XXXX-XXXX) |
+| Recovery key charset | ABCDEFGHJKLMNPQRSTUVWXYZ23456789 |
 
 ---
 
-## 13. Environment Variables
+## 15. GAPS AND ISSUES
 
-**There are no environment variables.** The Firebase config is hardcoded in `src/utils/firebase.js`:
+### Code vs Live Site Discrepancies
 
-| Config Key | Purpose |
-|---|---|
-| `apiKey` | Firebase API key for authentication |
-| `authDomain` | Firebase Auth domain |
-| `projectId` | Firestore project: `tournament-points-table` |
-| `storageBucket` | Firebase Storage bucket |
-| `messagingSenderId` | Firebase Cloud Messaging sender |
-| `appId` | Firebase app identifier |
-| `measurementId` | Google Analytics measurement ID |
+1. **Settings.jsx points reference table is WRONG:** The Settings page hardcodes "Bye (present): 2 pts (walkover)" but the actual scoring logic in `points.js` gives bye present = 4 pts. This is a documentation bug in the Settings UI.
+
+2. **Settings.jsx tiebreaker display is WRONG:** Shows "Most wins → Head-to-head → Alphabetical" but actual tiebreaker in `points.js` is "Points → Wins+Golds → Silvers → Bronzes" with explicit "NEVER Head-to-Head, NEVER Alphabetical" comments.
+
+3. **Football knockout stage mismatch:** `knockoutConfig.gmmrnidqe.stage = 'knockout'` but the final and 3rd place matches are status `'upcoming'`. The Dashboard shows "Football: Knockout" badge correctly, not "Completed".
+
+4. **Individual results empty:** `individualResults` is an empty array/object in Firestore, but `individualPointsConfig` is also empty. The 31 athletes are registered in categories but no results have been entered. Powerlifting shows "0/9" on the dashboard (0 of 9 categories completed).
+
+5. **`icons.svg` in public folder:** Referenced in `public/` but never imported or used by any component.
+
+6. **Unused assets:** `src/assets/hero.png`, `src/assets/react.svg`, `src/assets/vite.svg` exist but are never imported.
+
+7. **Dual deployment config:** Both `netlify.toml` and `vercel.json` exist. The Netlify site ID is bound (`.netlify/state.json`) but Vercel config also exists with CSP headers for iframe embedding. It's unclear which is the primary deployment.
+
+### Database vs Code Mismatches
+
+8. **`loadAuthData()` will always fail:** Firestore rules block reads on `config/auth` (`allow read: if false`). The code tries to read it on mount but catches the error and falls back to localStorage. This is by design (comment in code: "reads are blocked to protect password hashes") but means auth data cannot be recovered if localStorage is cleared.
+
+9. **Lobby games have `knockoutConfig` entries:** ESports-BGMI (`gmmx5azkk`) and Real Cricket 26 (`gmmyl39wj`) both have `knockoutConfig` with `stage: 'pool'`. Lobby games don't use knockout brackets, so these configs are unused dead data.
+
+10. **Missing `type` field on team games:** Cricket, Badminton, Kabaddi, Football games don't have an explicit `type` field in Firestore. The code defaults to `'team'` when `!g.type || g.type === 'team'` which works but is inconsistent.
+
+### Potential Code Issues
+
+11. **Second round scoring inconsistency:** `secondRound.js` uses Win=3, Draw=1, Loss=0 (no participation point), while pool stage uses Win=4 (3+1 participation), Draw=2 (1+1), Loss=1. This is intentional per the comments but could confuse users since the PointsExplainer doesn't mention second round scoring.
+
+12. **`breakdownData.js` doesn't account for participation cap:** `getTeamIndividualGameBreakdown()` adds `participationPts` for each athlete without enforcing `maxParticipationCap`. The actual points calculation in `getIndividualPointsForTeam()` does enforce it. This means the breakdown popover may show slightly different numbers than the actual standings for teams that hit the cap.
+
+13. **Race condition in `_SYNC_FROM_FIRESTORE`:** The `isSyncingRef` is set to `true` before dispatch and reset after 100ms timeout. If the user makes a change during this 100ms window, it won't be saved (the auto-save effect checks `isSyncingRef.current`).
+
+14. **Firebase API key exposed in source code:** The Firebase config including API key is hardcoded in `firebase.js`. While Firebase API keys are designed to be public, the project relies entirely on Firestore security rules for protection. If rules are misconfigured, data could be written/deleted by anyone.
+
+15. **No CSRF protection:** The app has no CSRF tokens or origin validation. Since auth is client-side localStorage, any script on the same origin can access/modify auth data.
 
 ---
 
-## 14. Regression Test Checklist
+## 16. KNOWN BUGS
 
-### Authentication
-- [ ] First-time setup wizard appears when no auth data exists
-- [ ] Can set admin password (min 6 chars)
-- [ ] Recovery key is generated and displayed correctly (XXXX-XXXX-XXXX)
-- [ ] Can copy recovery key to clipboard
-- [ ] Can log in with correct password
-- [ ] Login fails with incorrect password
-- [ ] Lockout triggers after 5 failed attempts
+### Bug 1: Settings Page Incorrect Scoring Display
+**Description:** Settings.jsx shows "Bye (present): 2 pts (walkover)" and incorrect tiebreaker rules (Head-to-head, Alphabetical)
+**Root cause:** Hardcoded wrong values in the Settings component's JSX
+**Files:** `src/pages/Settings.jsx`
+**Severity:** Low (display only, doesn't affect actual scoring)
+
+### Bug 2: Points Breakdown Popover May Show Wrong Individual Sport Points
+**Description:** The detailed breakdown for individual sports in PointsBreakdownPopover doesn't enforce `maxParticipationCap`, so if a team exceeds the cap, the breakdown total may exceed the actual standings total.
+**Root cause:** `getTeamIndividualGameBreakdown()` in `breakdownData.js` adds participation points per athlete without checking the game-level cap
+**Files:** `src/utils/breakdownData.js` (function `getTeamIndividualGameBreakdown`)
+**Severity:** Medium (data accuracy in breakdown popover)
+
+### Bug 3: Recovery Key Auth Recovery Impossible After localStorage Clear
+**Description:** If user clears browser localStorage, auth data (password hash + recovery key hash) is lost. Firestore `config/auth` reads are blocked by security rules, so the app cannot recover auth data from the server.
+**Root cause:** By-design tradeoff — rules block reads to protect hashes, but this means no server-side recovery path.
+**Files:** `firestore.rules`, `src/context/AuthContext.jsx`
+**Severity:** High (admin access permanently lost unless Firestore rules are temporarily modified via Firebase Console)
+
+---
+
+## REGRESSION TEST CHECKLIST
+
+### Auth
+- [ ] First-time setup: set password, see recovery key
+- [ ] Login with correct password
+- [ ] Login with wrong password (see error, attempt counter)
+- [ ] 5 wrong attempts → lockout for 5 minutes
 - [ ] Lockout countdown displays correctly
-- [ ] Can recover password with recovery key
-- [ ] Recovery fails with wrong key
-- [ ] Can change password (requires current password)
-- [ ] Admin session persists across page navigation
-- [ ] Admin session expires after 30 min inactivity
-- [ ] Logout clears admin session
-- [ ] Non-admin cannot perform admin actions (toasts "Unauthorized")
+- [ ] Session persists across page navigation (not refresh)
+- [ ] Session expires after 30 min inactivity
+- [ ] Logout clears session
+- [ ] Password recovery with correct recovery key
+- [ ] Password recovery with wrong key (lockout applies)
+- [ ] Password change (current + new)
+- [ ] Admin-only views redirect to dashboard when not logged in
+
+### Dashboard
+- [ ] Shows correct team count, game count, athlete count
+- [ ] Pool played and KO played counts are accurate
+- [ ] Tournament progress cards show correct stage per game
+- [ ] Champion logos appear for completed games
+- [ ] Standings table sorts by tiebreaker rules
+- [ ] Dense ranking: tied teams share rank
+- [ ] Points breakdown popover opens and shows correct data
+- [ ] Search filters teams in standings
+- [ ] Table/Cards view toggle works
+- [ ] Team comparison mode works
+- [ ] Screenshot export works
+
+### Team Games (Pool Stage)
+- [ ] Pool standings show correct W/L/D/B/Pts per team
+- [ ] Bye gives present team 4 pts, absent team 0 pts
+- [ ] Draw gives both teams 2 pts
+- [ ] Win gives winner 4 pts, loser 1 pt
+
+### Knockout
+- [ ] Advance to knockout creates correct bracket
+- [ ] Cross-pool seeding works (A1 vs D2, etc.)
+- [ ] Knockout result entry advances winner to next match
+- [ ] SF loser feeds to 3rd place match
+- [ ] Knockout bonus applied for contested wins only
+- [ ] No bonus for walkover/bye wins in knockout
+- [ ] Champion display shows podium with confetti
+- [ ] Game marked as completed when all KO matches done
+- [ ] Bracket view displays correctly
+
+### Individual Sports
+- [ ] Add category to individual game
+- [ ] Register athlete with 8-digit reg number
+- [ ] Reg number uniqueness enforced
+- [ ] Assign athletes to categories
+- [ ] Record 1st/2nd/3rd placements
+- [ ] Mark athletes as absent
+- [ ] Participation points awarded correctly
+- [ ] maxParticipationCap limits participation points per team
+- [ ] Placement bonus never capped
+- [ ] Per-category points override works
+- [ ] Team standings aggregate correctly
+
+### Lobby/Esports
+- [ ] Add entries per school (up to maxEntriesPerSchool)
+- [ ] Create session with placements
+- [ ] Participation cap enforced per school per game
+- [ ] Same school can win multiple podium spots
+- [ ] Points config changes reflect in standings
+- [ ] Game completion toggle works
+
+### Match Management
+- [ ] Add pool match
+- [ ] Edit match result/status
+- [ ] Delete match
+- [ ] Bulk result entry for upcoming matches
+- [ ] Knockout match result entry with auto-advancement
+- [ ] No draws allowed in knockout
+- [ ] Score tracking (scoreA/scoreB)
 
 ### Team Management
-- [ ] Can add team with name and short code
-- [ ] Can upload team logo (compressed to 200x200 PNG)
-- [ ] Can edit team name, code, logo
-- [ ] Can delete team (cascades to pools, matches, athletes, entries)
-- [ ] Duplicate team names are rejected
-- [ ] Team profile modal shows correct stats
-- [ ] Team logos display correctly (or initials fallback)
-
-### Game Management
-- [ ] Can create team game with emoji
-- [ ] Can create individual game with emoji
-- [ ] Can create lobby game with emoji
-- [ ] Can edit game name and emoji
-- [ ] Can delete game (cascades to pools, matches, config, entries)
-- [ ] Game type badge displays correctly (Team/Individual/Lobby)
-
-### Pool Management
-- [ ] Can create pool for a game
-- [ ] Can assign teams to pool
-- [ ] Same team cannot be in two pools of the same game
-- [ ] Can remove team from pool (cascades pool matches)
-- [ ] Can delete pool (cascades matches)
-- [ ] Pool standings table shows correct stats
-
-### Match Management (Pool Stage)
-- [ ] Can add pool match (two different teams)
-- [ ] Can set match result: teamA win, teamB win, draw, bye
-- [ ] Can set bye with absent team selection
-- [ ] Can enter scores (scoreA, scoreB)
-- [ ] Can delete match
-- [ ] Bulk result entry works for multiple matches
-- [ ] Match filters work (game, status, type)
-- [ ] Match status colors display correctly (upcoming, live, completed)
-
-### Knockout Stage
-- [ ] Can advance from pool to knockout
-- [ ] Bracket generates with correct cross-pool seeding
-- [ ] Byes auto-advance in first round
-- [ ] Can enter knockout match results
-- [ ] Winner auto-advances to next match
-- [ ] SF losers auto-enter 3rd place match
-- [ ] Knockout bonus points apply for contested wins only
-- [ ] Knockout bonus does NOT apply for byes/walkovers
-- [ ] Can force advance (ignore remaining pool matches)
-- [ ] Can reset to pool stage
-- [ ] Champion display shows with confetti
-- [ ] Podium (1st/2nd/3rd) displays correctly
-- [ ] Can choose starting round (RO32/RO16/QF/SF/Final)
-- [ ] Can manually set bracket matchups
-- [ ] Bracket visualization renders correctly
-
-### Second Round Stage
-- [ ] Can advance pool toppers to second round
-- [ ] Second round round-robin matches generated correctly
-- [ ] Second round standings use correct scoring (3/1/0)
-- [ ] Second round rankings use Points → GD → Goals
-- [ ] Can advance from second round to SF bracket
-- [ ] Play-in match generated for bottom 2 teams
-- [ ] Can reset second round
-
-### Individual Game
-- [ ] Can add athlete with name, 8-digit reg number, team, game
-- [ ] Reg number validated (exactly 8 digits)
-- [ ] Duplicate reg numbers rejected
-- [ ] Can assign athlete to category
-- [ ] Can create category
-- [ ] Can enter results (1st, 2nd, 3rd placements + participants)
-- [ ] No duplicate placements allowed
-- [ ] Placement bonus + participation calculated correctly
-- [ ] Absent athletes get 0 points
-- [ ] Deleting athlete shifts placements up (2nd→1st, 3rd→2nd)
-- [ ] Can configure per-game points (1st, 2nd, 3rd, participation)
-- [ ] Can configure per-category point overrides
-- [ ] Can reset category config to game default
-- [ ] maxParticipationCap limits participation points per team
-- [ ] Placement bonuses are NEVER capped
-- [ ] Individual standings sorted: Points → Golds → Silvers → Bronzes
-
-### Lobby Game
-- [ ] Can add entry (school + optional entry name)
-- [ ] Can create session with name
-- [ ] Can set session placements (1st, 2nd, 3rd)
-- [ ] Can mark entries as participants
-- [ ] Podium stacking works (same school 1st + 2nd)
-- [ ] Participation per entry per session
-- [ ] maxParticipationCap works for lobby
-- [ ] Can configure lobby points
-- [ ] Can complete/reopen lobby game
-- [ ] Standings aggregate across all sessions
-- [ ] Deleting entry cascades to session results
-
-### Dashboard / Leaderboard
-- [ ] Leaderboard shows all teams with correct total points
-- [ ] Points aggregate from: pool + knockout + individual + lobby
-- [ ] Tiebreaker sorting is correct (Points → Wins+Golds → Silvers → Bronzes)
-- [ ] Dense ranking works (tied teams share rank, no gaps)
-- [ ] Champion badges show for completed games
-- [ ] Medal counts (golds, silvers, bronzes) are correct
-- [ ] Team comparison modal works
-- [ ] Stats cards show correct totals
-- [ ] Search/filter works on leaderboard
-- [ ] Screenshot export generates PNG download
-
-### Points Breakdown
-- [ ] Clicking points opens breakdown popover
-- [ ] Total breakdown shows all game sections
-- [ ] Pool breakdown shows per-match detail
-- [ ] Knockout breakdown shows per-match + bonus
-- [ ] Individual breakdown shows per-category + per-athlete
-- [ ] Lobby breakdown shows per-session
-- [ ] W/L/D/B stat popover shows specific match list
-- [ ] Game-specific breakdown shows pool + knockout split
+- [ ] Add team with name and short code
+- [ ] Upload team logo (compression applied)
+- [ ] Edit team details
+- [ ] Delete team (cascade: remove from pools, delete matches, remove athletes, clean lobby entries)
+- [ ] Team profile modal shows per-game stats
 
 ### Settings
-- [ ] Can edit tournament name
-- [ ] Can set tournament dates
-- [ ] Can upload/change tournament logo
-- [ ] Can change admin password
-- [ ] Export downloads valid JSON
-- [ ] Import loads valid JSON and replaces data
-- [ ] Import rejects invalid JSON (missing fields, bad types)
-- [ ] Import rejects oversized files (>5MB)
-- [ ] Load Sample populates demo data
-- [ ] Reset Data clears everything
-- [ ] Dark mode toggle works
-- [ ] Sync status shows correctly (saving, saved, error, offline)
+- [ ] Edit tournament name/dates/logo
+- [ ] Export JSON data
+- [ ] Import JSON data (validation works)
+- [ ] Load sample data
+- [ ] Reset all data (confirmation required)
+- [ ] Dark mode toggle
 - [ ] Force save button works
+- [ ] Cloud sync status displays correctly
 
-### Data Persistence & Sync
-- [ ] Data persists after page refresh
-- [ ] Changes sync across tabs/devices in real-time
-- [ ] Save indicator shows progress during logo upload
+### Data Sync
+- [ ] Changes auto-save after 1.5s debounce
+- [ ] Real-time sync across tabs
 - [ ] Offline banner appears when disconnected
-- [ ] Unsaved changes warn on page close
-- [ ] Empty state is NOT saved over existing Firestore data on load failure
-- [ ] Debounced save waits 1.5s before writing
+- [ ] Save indicator shows saving/saved/error states
+- [ ] beforeunload warning when unsaved changes exist
+- [ ] Empty state not saved over existing Firestore data
 
-### UI / Navigation
-- [ ] Desktop sidebar navigates correctly
-- [ ] Mobile bottom tabs navigate correctly
-- [ ] Dark mode styling consistent across all pages
-- [ ] Modals have focus trap and escape-to-close
-- [ ] Toast notifications appear and auto-dismiss
-- [ ] Loading screen shows during initial data load
-- [ ] Error boundary catches and displays errors
-- [ ] Responsive layout works on mobile/tablet/desktop
+### Responsive / Mobile
+- [ ] Bottom navigation appears on mobile
+- [ ] Sidebar appears on desktop
+- [ ] Tables scroll horizontally on small screens
+- [ ] Modals render as bottom sheets on mobile
+- [ ] Touch interactions work (button active states)
 
 ---
 
-## 15. Change Log
+## BUG TRACKER
 
-| Date | Description | Files Modified | Test Results |
-|---|---|---|---|
-| | | | |
+| Bug ID | Description | Root Cause | Status | Fix Details | Date Found | Date Fixed | Files Involved |
+|--------|-------------|------------|--------|-------------|------------|------------|----------------|
+| BUG-001 | Settings page shows bye=2pts instead of 4pts | Hardcoded wrong value in JSX | Open | — | 2026-03-25 | — | src/pages/Settings.jsx |
+| BUG-002 | Settings page shows wrong tiebreaker rules | Hardcoded "H2H, Alphabetical" instead of actual rules | Open | — | 2026-03-25 | — | src/pages/Settings.jsx |
+| BUG-003 | Individual points breakdown ignores participation cap | breakdownData.js doesn't enforce maxParticipationCap | Open | — | 2026-03-25 | — | src/utils/breakdownData.js |
+| BUG-004 | Auth unrecoverable after localStorage clear | Firestore config/auth reads blocked by design | Open | — | 2026-03-25 | — | firestore.rules, src/context/AuthContext.jsx |
 
 ---
 
-*End of SYSTEM_REFERENCE.md*
+## FIX HISTORY
+
+| Fix ID | What Was Broken | What Caused It | How It Was Fixed | Exact Code Changes | Date Fixed | Side Effects Checked |
+|--------|----------------|----------------|-----------------|-------------------|------------|---------------------|
+| — | — | — | — | — | — | — |
+
+---
+
+## CHANGE LOG
+
+| Date | What Changed | Files Modified | Tests Passed | Anything Broke |
+|------|-------------|----------------|--------------|----------------|
+| — | — | — | — | — |
