@@ -414,7 +414,7 @@ export default function Settings() {
             { label: 'Win', points: '4 pts', detail: '3 win + 1 participation', color: 'text-win' },
             { label: 'Draw', points: '2 pts', detail: '1 draw + 1 participation', color: 'text-draw' },
             { label: 'Loss', points: '1 pt', detail: '0 loss + 1 participation', color: 'text-loss' },
-            { label: 'Bye (present)', points: '2 pts', detail: 'Walkover points', color: 'text-bye' },
+            { label: 'Bye (present)', points: '4 pts', detail: '4 walkover (equal to win)', color: 'text-bye' },
             { label: 'Bye (absent)', points: '0 pts', detail: 'No points at all', color: darkMode ? 'text-gray-500' : 'text-gray-400' },
           ].map(row => (
             <div key={row.label} className={`flex items-center justify-between py-2.5 border-b ${
@@ -431,10 +431,12 @@ export default function Settings() {
         <div className={`mt-4 text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
           <p className="font-medium mb-1">Tiebreaker Rules:</p>
           <ol className="list-decimal list-inside space-y-0.5">
-            <li>Most wins</li>
-            <li>Head-to-head record</li>
-            <li>Alphabetical order</li>
+            <li>Total Overall Points</li>
+            <li>Most Wins + Gold Medals</li>
+            <li>Most Silver / Runner-Up finishes</li>
+            <li>Most Bronze / 3rd Place finishes</li>
           </ol>
+          <p className="mt-1 italic">No head-to-head. No alphabetical. Remaining ties share the same rank.</p>
         </div>
       </div>
 

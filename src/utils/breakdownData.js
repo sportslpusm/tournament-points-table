@@ -152,6 +152,11 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
   const gameCategories = allCategories.filter(c => c.gameId === game.id);
   const gameResults = allResults.filter(r => r.gameId === game.id);
 
+  // Enforce maxParticipationCap across all categories (same as getIndividualPointsForTeam)
+  const gameConfig = resolvePointsConfig(allPointsConfig, game.id, null);
+  const cap = gameConfig.maxParticipationCap ?? Infinity;
+  let participationCount = 0;
+
   const categoryBreakdowns = [];
   let subtotal = 0;
 
@@ -177,7 +182,6 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
 
       let placement = 'participant';
       let placementBonus = 0;
-      let participationPts = config.participation;
 
       if (result.placements?.first === athlete.id) {
         placement = 'first';
@@ -190,6 +194,16 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
         placementBonus = config.third;
       }
 
+      // Participation point is capped per team per game (matching real scoring)
+      let participationPts = 0;
+      let capped = false;
+      if (participationCount < cap) {
+        participationPts = config.participation;
+        participationCount++;
+      } else {
+        capped = true;
+      }
+
       const total = participationPts + placementBonus;
       subtotal += total;
 
@@ -198,6 +212,7 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
         placement,
         placementBonus,
         participationPts,
+        capped,
         total,
       });
     }
@@ -215,7 +230,7 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
     }
   }
 
-  return { categories: categoryBreakdowns, subtotal };
+  return { categories: categoryBreakdowns, subtotal, participationCap: cap, participationCount };
 }
 
 /**

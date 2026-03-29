@@ -173,5 +173,19 @@
     "title": "Individual Sports Now Show Champion",
     "description": "Individual sports like Powerlifting can now be marked as completed, just like team and lobby games. When completed, the top-scoring team is shown as champion on the leaderboard with a trophy badge and a podium display on the game page. Admins can use the 'Finish Game' button to finalize standings and 'Reopen Game' to make changes.",
     "tag": "New Feature"
+  },
+  {
+    "id": "ch-026",
+    "date": "2026-03-29",
+    "title": "Fixed Wrong Scoring Info on Settings Page",
+    "description": "The Settings page was showing incorrect information: Bye (present) was listed as 2 points instead of 4, and the tiebreaker rules said 'Head-to-head' and 'Alphabetical' which were never actually used. Both are now corrected to match how the app actually scores games.",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-027",
+    "date": "2026-03-29",
+    "title": "Fixed Points Breakdown Mismatch",
+    "description": "When you clicked on a team's points to see the detailed breakdown, individual sport totals could sometimes show higher than the actual standings if the team had many athletes. The breakdown now correctly respects the participation cap and shows which athletes were capped.",
+    "tag": "Bug Fix"
   }
 ]

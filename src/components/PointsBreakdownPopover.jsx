@@ -407,7 +407,8 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
   }
 
   if (breakdown.type === 'individual') {
-    const { categories, subtotal } = breakdown;
+    const { categories, subtotal, participationCap, participationCount } = breakdown;
+    const hasCap = participationCap != null && participationCap !== Infinity;
     const body = (
       <div className="space-y-3">
         {categories.length === 0 && (
@@ -425,6 +426,7 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
                   <span className="font-medium">{a.athlete.name}</span>
                   <span className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>({a.athlete.regNumber})</span>
                   <span className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>— {getPlacementLabel(a.placement)}</span>
+                  {a.capped && <span className="text-[10px] text-amber-400" title="Participation cap reached">cap</span>}
                 </span>
                 <span className="font-mono font-bold text-accent whitespace-nowrap">
                   {a.placementBonus > 0
@@ -437,6 +439,11 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
             <Subtotal value={cat.categoryTotal} label="Category subtotal" small darkMode={darkMode} />
           </div>
         ))}
+        {hasCap && (
+          <div className={`text-[10px] mt-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+            Participation capped at {participationCap} per team ({participationCount}/{participationCap} used)
+          </div>
+        )}
         <GrandTotal total={subtotal} darkMode={darkMode} />
       </div>
     );
@@ -580,6 +587,7 @@ function GameSection({ section, darkMode }) {
 
   if (section.type === 'individual') {
     const { individual, game, gameTotal } = section;
+    const hasCap = individual.participationCap != null && individual.participationCap !== Infinity;
     return (
       <div>
         <GameHeader game={game} subtitle={`(${gameTotal} pts)`} darkMode={darkMode} />
@@ -597,6 +605,7 @@ function GameSection({ section, darkMode }) {
                     {getPlacementEmoji(a.placement) && <span className="text-xs">{getPlacementEmoji(a.placement)}</span>}
                     <span>{a.athlete.name}</span>
                     <span className={`${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>({a.athlete.regNumber})</span>
+                    {a.capped && <span className="text-[10px] text-amber-400" title="Participation cap reached">cap</span>}
                   </span>
                   <span className="font-mono text-accent">
                     {a.placementBonus > 0 ? `${a.placementBonus}+${a.participationPts}=${a.total}` : a.total}
@@ -605,6 +614,11 @@ function GameSection({ section, darkMode }) {
               ))}
             </div>
           ))
+        )}
+        {hasCap && (
+          <div className={`text-[10px] mt-1 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+            Participation capped at {individual.participationCap} per team ({individual.participationCount}/{individual.participationCap} used)
+          </div>
         )}
         <Subtotal value={gameTotal} darkMode={darkMode} />
       </div>
