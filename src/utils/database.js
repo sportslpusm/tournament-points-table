@@ -5,6 +5,8 @@ import {
   collection, getDocs, writeBatch, serverTimestamp,
 } from 'firebase/firestore';
 import { compressImage } from './imageCompression';
+import { computeDiff, writeAuditEntries } from './auditLog';
+import { createBackup } from './backup';
 
 const TOURNAMENT_DOC = 'tournaments/main';
 const AUTH_DOC = 'config/auth';
@@ -247,6 +249,62 @@ async function deleteOrphanLogos(currentTeamIds, hasTournamentLogo) {
   }
 }
 
+// ── Audit & Backup State ────────────────────────────────────
+let previousState = null;  // last saved state for diff computation
+let saveCounter = 0;       // counts saves to trigger periodic backups
+const BACKUP_EVERY_N_SAVES = 5;  // auto-backup every 5th save
+
+/**
+ * After a successful save, compute diff and write audit entries.
+ * Also trigger periodic backups. All fire-and-forget.
+ */
+function postSaveHooks(state) {
+  // Compute diff if we have a previous state
+  if (previousState) {
+    try {
+      const diffs = computeDiff(previousState, state);
+      if (diffs.length > 0) {
+        // Check if any deletions happened (triggers immediate backup)
+        const hasDeletes = diffs.some(d => d.type === 'delete');
+
+        // Write audit entries (fire-and-forget)
+        writeAuditEntries(diffs).catch(() => {});
+
+        // Auto-backup: every N saves, or immediately on deletions
+        saveCounter++;
+        if (hasDeletes || saveCounter >= BACKUP_EVERY_N_SAVES) {
+          const reason = hasDeletes ? 'pre-delete' : 'auto';
+          createBackup(previousState, reason).catch(() => {});
+          saveCounter = 0;
+        }
+      }
+    } catch {
+      // Audit/backup errors never block the save flow
+    }
+  }
+
+  // Update previous state for next diff
+  previousState = {
+    tournament: state.tournament,
+    teams: state.teams || [],
+    games: state.games || [],
+    pools: state.pools || [],
+    matches: state.matches || [],
+    knockoutConfig: state.knockoutConfig || {},
+    knockoutMatches: state.knockoutMatches || [],
+    qualifiedTeams: state.qualifiedTeams || {},
+    athletes: state.athletes || [],
+    categories: state.categories || [],
+    individualResults: state.individualResults || [],
+    individualPointsConfig: state.individualPointsConfig || {},
+    lobbyEntries: state.lobbyEntries || [],
+    lobbyResults: state.lobbyResults || [],
+    lobbyPointsConfig: state.lobbyPointsConfig || {},
+    lobbyGameStatus: state.lobbyGameStatus || {},
+    individualGameStatus: state.individualGameStatus || {},
+  };
+}
+
 // ── Tournament Data ─────────────────────────────────────────
 
 export async function loadTournamentData() {
@@ -259,7 +317,28 @@ export async function loadTournamentData() {
     if (snap.exists()) {
       const data = snap.data();
       const { _updatedAt, ...tournamentData } = data;
-      return mergeLogos(tournamentData, logosMap);
+      const merged = mergeLogos(tournamentData, logosMap);
+      // Initialize previous state for audit diff tracking
+      previousState = {
+        tournament: merged.tournament,
+        teams: merged.teams || [],
+        games: merged.games || [],
+        pools: merged.pools || [],
+        matches: merged.matches || [],
+        knockoutConfig: merged.knockoutConfig || {},
+        knockoutMatches: merged.knockoutMatches || [],
+        qualifiedTeams: merged.qualifiedTeams || {},
+        athletes: merged.athletes || [],
+        categories: merged.categories || [],
+        individualResults: merged.individualResults || [],
+        individualPointsConfig: merged.individualPointsConfig || {},
+        lobbyEntries: merged.lobbyEntries || [],
+        lobbyResults: merged.lobbyResults || [],
+        lobbyPointsConfig: merged.lobbyPointsConfig || {},
+        lobbyGameStatus: merged.lobbyGameStatus || {},
+        individualGameStatus: merged.individualGameStatus || {},
+      };
+      return merged;
     }
     return null;
   } catch (err) {
@@ -301,6 +380,7 @@ async function doSave(state) {
     lobbyResults: state.lobbyResults || [],
     lobbyPointsConfig: state.lobbyPointsConfig || {},
     lobbyGameStatus: state.lobbyGameStatus || {},
+    individualGameStatus: state.individualGameStatus || {},
     _updatedAt: serverTimestamp(),
   };
 
@@ -327,6 +407,7 @@ async function doSave(state) {
 export async function saveTournamentData(state) {
   try {
     await doSave(state);
+    postSaveHooks(state);
     return true;
   } catch (err) {
     // If resource-exhausted, try recovery and retry once
@@ -334,6 +415,7 @@ export async function saveTournamentData(state) {
     if (recovered) {
       try {
         await doSave(state);
+        postSaveHooks(state);
         return true;
       } catch (retryErr) {
         // Save failed after recovery
@@ -500,6 +582,14 @@ export async function forceSave(state) {
 
 export function hasPendingSave() {
   return pendingSave !== null || saveTimer !== null;
+}
+
+/**
+ * Create a manual backup of the current state.
+ * Called from Settings page.
+ */
+export async function createManualBackup(state) {
+  return createBackup(state, 'manual');
 }
 
 // ── Connection Status ───────────────────────────────────────

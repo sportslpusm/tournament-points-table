@@ -187,5 +187,26 @@
     "title": "Fixed Points Breakdown Mismatch",
     "description": "When you clicked on a team's points to see the detailed breakdown, individual sport totals could sometimes show higher than the actual standings if the team had many athletes. The breakdown now correctly respects the participation cap and shows which athletes were capped.",
     "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-028",
+    "date": "2026-03-29",
+    "title": "Hardened Firestore Security Rules",
+    "description": "Previously, only 3 out of 15+ fields in the database had server-side validation. Now all array fields (knockout matches, athletes, categories, results, lobby entries, lobby results, pools) are validated with size limits, and all object fields are type-checked. This prevents anyone from writing garbage data to the database.",
+    "tag": "Security Fix"
+  },
+  {
+    "id": "ch-029",
+    "date": "2026-03-29",
+    "title": "Activity Log Added",
+    "description": "Every admin change is now automatically tracked in an activity log. The new Activity page (admin-only) shows a timeline of all changes with category filters (Team, Game, Match, Knockout, Individual, Lobby, Setting). Changes are recorded as human-readable descriptions like 'Added team: School of Engineering' or 'Deleted match: m123'.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-030",
+    "date": "2026-03-29",
+    "title": "Automatic Backups",
+    "description": "The app now automatically creates backup snapshots of all tournament data. Backups are created every 5 saves and automatically before any deletion. Up to 10 backups are kept. Admins can also create manual backups and restore any snapshot from the new Backups section in Settings. Each backup shows the timestamp, reason (auto/pre-delete/manual), team/game/match counts, and size.",
+    "tag": "New Feature"
   }
 ]

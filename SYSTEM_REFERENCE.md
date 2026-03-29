@@ -110,14 +110,17 @@ tournament-app/
 │   │   ├── TeamManagement.jsx      — Team CRUD with logos and per-game stats
 │   │   ├── AthleteManagement.jsx   — Athlete CRUD with reg number validation and category assignment
 │   │   ├── GamePoolManagement.jsx  — Game/pool/knockout configuration and management
-│   │   ├── Settings.jsx            — Tournament settings, password change, import/export, dark mode
+│   │   ├── Settings.jsx            — Tournament settings, password change, import/export, backups, dark mode
+│   │   ├── ActivityLog.jsx         — Admin-only activity log timeline (reads from Firestore auditLog collection)
 │   │   └── Changelog.jsx           — Admin-only changelog timeline (reads from src/data/changelog.json)
 │   ├── data/
 │   │   └── changelog.json          — Changelog entries (id, date, title, description, tag)
 │   └── utils/
 │       ├── auth.js                 — SHA-256 hashing, password validation, lockout, session management
 │       ├── breakdownData.js        — Detailed per-team points breakdown computation
-│       ├── database.js             — Firestore CRUD: load/save tournament data, logos, auth, debounced save
+│       ├── auditLog.js             — Audit trail: diff engine, write/read entries to Firestore auditLog collection
+│       ├── backup.js               — Backup utility: create/list/load/delete snapshots in Firestore backups collection
+│       ├── database.js             — Firestore CRUD: load/save tournament data, logos, auth, debounced save, audit+backup hooks
 │       ├── firebase.js             — Firebase app initialization with memory-only cache
 │       ├── imageCompression.js     — Canvas-based PNG compression (200×200, progressive reduction)
 │       ├── individualPoints.js     — Individual sport points: placements, participation, caps, per-category config
@@ -167,7 +170,16 @@ tournament-app/
 - `teams` array max 64 items
 - `games` array max 20 items
 - `matches` array max 500 items
-- All three fields (`teams`, `games`, `matches`) required for writes
+- `knockoutMatches` array max 200 items
+- `athletes` array max 500 items
+- `categories` array max 100 items
+- `individualResults` array max 500 items
+- `lobbyEntries` array max 500 items
+- `lobbyResults` array max 500 items
+- `pools` array max 40 items
+- Object fields (`knockoutConfig`, `qualifiedTeams`, `individualPointsConfig`, `lobbyPointsConfig`, `lobbyGameStatus`, `individualGameStatus`) must be maps
+- `tournament` must be a map
+- All three core fields (`teams`, `games`, `matches`) required for writes
 
 ##### `logos/{logoId}` (One document per logo)
 
@@ -188,17 +200,45 @@ tournament-app/
 
 **Firestore rules:** Public read (for cross-device auth recovery). Write allowed only if both hashes are exactly 64-char hex strings.
 
+##### `auditLog/{logId}` (Append-only change log)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp` | Timestamp | Server timestamp |
+| `action` | String | Human-readable description (max 500 chars) |
+| `category` | String | `team` │ `game` │ `match` │ `knockout` │ `individual` │ `lobby` │ `setting` │ `bulk` |
+| `changeType` | String | `add` │ `update` │ `delete` |
+| `deletedItem` | Map (optional) | Full item data for deleted items (for undo capability, max 50KB) |
+
+**Firestore rules:** Public read. Create allowed (with required fields). Update and delete denied — immutable history.
+
+##### `backups/{backupId}` (Automatic state snapshots)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp` | Timestamp | Server timestamp |
+| `reason` | String | `auto` │ `pre-delete` │ `manual` |
+| `sizeBytes` | Number | Approximate size of backup data |
+| `teamCount` | Number | Number of teams at time of backup |
+| `gameCount` | Number | Number of games at time of backup |
+| `matchCount` | Number | Number of matches at time of backup |
+| `data` | Map | Full tournament state snapshot (all fields from `tournaments/main`) |
+
+**Firestore rules:** Public read. Create allowed (requires `timestamp` and `data` map). Update denied. Delete allowed (for pruning old backups). Max 10 backups kept (auto-pruned client-side).
+
 #### Indexes
 No custom composite indexes defined. Firestore auto-indexes all fields.
 
 #### RLS / Access Policies (Firestore Security Rules)
-- `tournaments/{docId}`: Public read, validated writes (must have teams/games/matches arrays within size limits)
+- `tournaments/{docId}`: Public read, validated writes (all array fields type-checked with size limits matching `validation.js` LIMITS; all object fields must be maps; core fields required)
 - `logos/{logoId}`: Public read, validated writes (data must be string ≤ 3MB)
 - `config/{docId}`: Public read (for cross-device auth sync), validated writes (hash format enforcement)
+- `auditLog/{logId}`: Public read, create-only (no updates or deletes — immutable append-only log)
+- `backups/{backupId}`: Public read, create + delete allowed (no updates — for pruning old backups)
 - Everything else: **Denied** (`allow read, write: if false`)
 
 #### Triggers / Functions / Views / Stored Procedures
-**None.** No server-side Firebase Functions, Cloud Functions, or triggers are deployed.
+**None.** No server-side Firebase Functions, Cloud Functions, or triggers are deployed. Audit logging and backups are handled client-side.
 
 #### Realtime Subscriptions
 - `tournaments/main`: Real-time `onSnapshot` listener with `includeMetadataChanges: true`. Filters out local pending writes.
@@ -534,11 +574,11 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 
 11. **Second round scoring inconsistency:** `secondRound.js` uses Win=3, Draw=1, Loss=0 (no participation point), while pool stage uses Win=4 (3+1 participation), Draw=2 (1+1), Loss=1. This is intentional per the comments but could confuse users since the PointsExplainer doesn't mention second round scoring.
 
-12. **`breakdownData.js` doesn't account for participation cap:** `getTeamIndividualGameBreakdown()` adds `participationPts` for each athlete without enforcing `maxParticipationCap`. The actual points calculation in `getIndividualPointsForTeam()` does enforce it. This means the breakdown popover may show slightly different numbers than the actual standings for teams that hit the cap.
+12. **~~`breakdownData.js` doesn't account for participation cap~~** (FIXED, FIX-005): Now enforces `maxParticipationCap` in `getTeamIndividualGameBreakdown()` with capped indicator per athlete.
 
 13. **Race condition in `_SYNC_FROM_FIRESTORE`:** The `isSyncingRef` is set to `true` before dispatch and reset after 100ms timeout. If the user makes a change during this 100ms window, it won't be saved (the auto-save effect checks `isSyncingRef.current`).
 
-14. **Firebase API key exposed in source code:** The Firebase config including API key is hardcoded in `firebase.js`. While Firebase API keys are designed to be public, the project relies entirely on Firestore security rules for protection. If rules are misconfigured, data could be written/deleted by anyone.
+14. **Firebase API key exposed in source code:** The Firebase config including API key is hardcoded in `firebase.js`. While Firebase API keys are designed to be public, the project relies entirely on Firestore security rules for protection. Rules now validate all array field sizes and object types (hardened 2026-03-29), but someone with the API key could still write valid-shaped garbage data.
 
 15. **No CSRF protection:** The app has no CSRF tokens or origin validation. Since auth is client-side localStorage, any script on the same origin can access/modify auth data.
 
@@ -660,6 +700,17 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 - [ ] Dark mode toggle
 - [ ] Force save button works
 - [ ] Cloud sync status displays correctly
+- [ ] Backups section shows list of backups
+- [ ] Create Backup button creates a manual backup
+- [ ] Restore button restores a backup (with confirmation dialog)
+- [ ] Delete backup button removes a backup
+
+### Activity Log
+- [ ] Activity Log page loads and shows entries
+- [ ] Filter tabs filter by category
+- [ ] Refresh button reloads entries
+- [ ] Empty state displays when no entries
+- [ ] Entries show correct action, category, and timestamp
 
 ### Data Sync
 - [ ] Changes auto-save after 1.5s debounce
@@ -712,3 +763,4 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 | 2026-03-29 | FIX-002: Fixed points breakdown crash (BUG-006). Clicking any points number on the leaderboard no longer crashes the app. Also added null safety guards on game object access and error logging to ErrorBoundary. | `src/utils/breakdownData.js`, `src/components/PointsBreakdownPopover.jsx`, `src/components/ErrorBoundary.jsx`, `SYSTEM_REFERENCE.md` | All popover types verified (total, KO, individual, lobby, W/L/D/B) | No — fix only removes an out-of-scope variable reference and adds defensive guards |
 | 2026-03-29 | FIX-003: Added game completion and champion display for individual sports (BUG-007). Powerlifting now shows "Completed" badge and top team champion on leaderboard, matching team and lobby games. Admin can use Finish/Reopen buttons. Podium display added. | `src/context/TournamentContext.jsx`, `src/pages/Dashboard.jsx`, `src/pages/IndividualGameView.jsx`, `SYSTEM_REFERENCE.md` | Dashboard loads correctly, Powerlifting shows Completed + champion, trophy badges work for individual/lobby/team games, build succeeds | No — additive feature, no existing behavior changed |
 | 2026-03-29 | FIX-004+005: Fixed Settings page wrong scoring info (BUG-001/002) and points breakdown participation cap mismatch (BUG-003). Settings now shows correct bye=4pts and accurate tiebreaker rules. Breakdown popover now enforces maxParticipationCap and shows cap info. | `src/pages/Settings.jsx`, `src/utils/breakdownData.js`, `src/components/PointsBreakdownPopover.jsx`, `SYSTEM_REFERENCE.md`, `src/data/changelog.json` | All 56 tests pass. Settings page verified. Breakdown popover verified for all types. | No — display-only fixes, no scoring logic changed |
+| 2026-03-29 | Data & Integrity upgrade: (1) Hardened Firestore rules — all array fields now validated with size limits matching validation.js, all object fields type-checked as maps. (2) Audit trail — new `auditLog` Firestore collection with append-only change log, diff engine computes human-readable diffs on every save, new Activity Log admin page with category filters. (3) Backup automation — new `backups` Firestore collection, auto-backup every 5 saves and before deletions, manual backup button, restore from any snapshot, max 10 kept with auto-pruning. New Backups section in Settings page. | `firestore.rules`, `src/utils/auditLog.js` (new), `src/utils/backup.js` (new), `src/utils/database.js`, `src/pages/ActivityLog.jsx` (new), `src/pages/Settings.jsx`, `src/components/Layout.jsx`, `src/App.jsx`, `SYSTEM_REFERENCE.md`, `src/data/changelog.json` | Build succeeds. Activity Log page renders. Settings backup section renders. No console errors. | No — additive features. Audit and backup are fire-and-forget (never block saves). Firestore rules are stricter (may reject writes that previously passed if they contained unexpected field types). |

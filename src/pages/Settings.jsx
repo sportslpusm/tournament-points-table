@@ -1,10 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { useAuth } from '../context/AuthContext';
 import { useSyncStatus } from '../context/SyncContext';
 import { generateSampleData } from '../utils/sampleData';
 import { validatePassword } from '../utils/auth';
 import { validateImportData, LIMITS } from '../utils/validation';
+import { createManualBackup } from '../utils/database';
+import { listBackups, loadBackup, deleteBackup } from '../utils/backup';
 import ImageUpload from '../components/ImageUpload';
 import { ConfirmDialog } from '../components/Modal';
 
@@ -31,6 +33,76 @@ export default function Settings() {
   const [pwSuccess, setPwSuccess] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
+
+  // Backup state
+  const [backups, setBackups] = useState([]);
+  const [backupsLoading, setBackupsLoading] = useState(false);
+  const [backupCreating, setBackupCreating] = useState(false);
+  const [restoringId, setRestoringId] = useState(null);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(null);
+
+  const loadBackupsList = useCallback(async () => {
+    try {
+      setBackupsLoading(true);
+      const list = await listBackups();
+      setBackups(list);
+    } catch {
+      // Silent fail
+    } finally {
+      setBackupsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadBackupsList(); }, [loadBackupsList]);
+
+  async function handleCreateBackup() {
+    setBackupCreating(true);
+    try {
+      const id = await createManualBackup(state);
+      if (id) {
+        showToast('Backup created successfully');
+        loadBackupsList();
+      } else {
+        showToast('Backup failed — data may be too large', 'error');
+      }
+    } catch {
+      showToast('Failed to create backup', 'error');
+    } finally {
+      setBackupCreating(false);
+    }
+  }
+
+  async function handleRestoreBackup(backupId) {
+    setRestoringId(backupId);
+    try {
+      const data = await loadBackup(backupId);
+      if (!data) {
+        showToast('Failed to load backup data', 'error');
+        return;
+      }
+      dispatch({ type: 'IMPORT_DATA', payload: { ...data, tournament: data.tournament || state.tournament } });
+      setName(data.tournament?.name || 'My Tournament');
+      setStartDate(data.tournament?.startDate || '');
+      setEndDate(data.tournament?.endDate || '');
+      setLogo(data.tournament?.logo || null);
+      showToast('Backup restored successfully');
+    } catch {
+      showToast('Failed to restore backup', 'error');
+    } finally {
+      setRestoringId(null);
+      setShowRestoreConfirm(null);
+    }
+  }
+
+  async function handleDeleteBackup(backupId) {
+    try {
+      await deleteBackup(backupId);
+      setBackups(prev => prev.filter(b => b.id !== backupId));
+      showToast('Backup deleted');
+    } catch {
+      showToast('Failed to delete backup', 'error');
+    }
+  }
 
   function handleSaveTournament() {
     dispatch({
@@ -333,6 +405,110 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* Backups */}
+      <div className={sectionCls}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className={`font-bold tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>Backups</h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadBackupsList}
+              disabled={backupsLoading}
+              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                darkMode
+                  ? 'bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              } ${backupsLoading ? 'opacity-50' : ''}`}
+            >
+              {backupsLoading ? '...' : 'Refresh'}
+            </button>
+            <button
+              onClick={handleCreateBackup}
+              disabled={backupCreating}
+              className={`text-xs font-bold px-3 py-1 rounded-lg transition-colors ${
+                darkMode
+                  ? 'bg-accent/10 border border-accent/20 text-accent hover:bg-accent/20'
+                  : 'bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100'
+              } ${backupCreating ? 'opacity-50' : ''}`}
+            >
+              {backupCreating ? 'Creating...' : '+ Create Backup'}
+            </button>
+          </div>
+        </div>
+        <p className={`text-xs mb-3 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+          Auto-backups are created every 5 saves and before deletions. Manual JSON export is also available above. Up to 10 backups are kept.
+        </p>
+
+        {backups.length === 0 && !backupsLoading && (
+          <div className={`text-center py-6 text-sm ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+            No backups yet. Create one manually or they will appear after a few saves.
+          </div>
+        )}
+
+        {backups.length > 0 && (
+          <div className="space-y-2">
+            {backups.map(backup => (
+              <div
+                key={backup.id}
+                className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border ${
+                  darkMode
+                    ? 'bg-white/[0.02] border-white/[0.06]'
+                    : 'bg-gray-50 border-gray-200/80'
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">
+                      {backup.reason === 'manual' ? '📌' : backup.reason === 'pre-delete' ? '🛡️' : '🔄'}
+                    </span>
+                    <span className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                      {backup.reason === 'manual' ? 'Manual' : backup.reason === 'pre-delete' ? 'Pre-delete' : 'Auto'} backup
+                    </span>
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${
+                      backup.reason === 'pre-delete'
+                        ? darkMode ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-orange-50 border-orange-200 text-orange-600'
+                        : backup.reason === 'manual'
+                        ? darkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-600'
+                        : darkMode ? 'bg-gray-500/10 border-gray-500/20 text-gray-400' : 'bg-gray-50 border-gray-200 text-gray-500'
+                    }`}>
+                      {backup.reason}
+                    </span>
+                  </div>
+                  <div className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {backup.timestamp ? backup.timestamp.toLocaleString() : 'Unknown time'}
+                    {backup.teamCount != null && ` · ${backup.teamCount} teams · ${backup.gameCount} games · ${backup.matchCount} matches`}
+                    {backup.sizeBytes != null && ` · ${(backup.sizeBytes / 1024).toFixed(0)}KB`}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => setShowRestoreConfirm(backup.id)}
+                    disabled={restoringId === backup.id}
+                    className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${
+                      darkMode
+                        ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                    } ${restoringId === backup.id ? 'opacity-50' : ''}`}
+                  >
+                    {restoringId === backup.id ? '...' : 'Restore'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBackup(backup.id)}
+                    className={`text-xs px-2 py-1.5 rounded-lg transition-colors ${
+                      darkMode
+                        ? 'text-gray-600 hover:text-red-400 hover:bg-red-500/10'
+                        : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
+                    }`}
+                    title="Delete backup"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Sync Status */}
       <div className={sectionCls}>
         <h3 className={sectionTitle}>Cloud Sync Status</h3>
@@ -446,6 +622,13 @@ export default function Settings() {
         onConfirm={handleReset}
         title="Reset All Data"
         message="This will permanently delete all teams, games, pools, and matches. This action cannot be undone."
+      />
+      <ConfirmDialog
+        isOpen={!!showRestoreConfirm}
+        onClose={() => setShowRestoreConfirm(null)}
+        onConfirm={() => handleRestoreBackup(showRestoreConfirm)}
+        title="Restore Backup"
+        message="This will overwrite all current tournament data with the backup snapshot. A new auto-backup of the current state will be created first. Continue?"
       />
     </div>
   );

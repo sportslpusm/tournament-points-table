@@ -3,15 +3,58 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Tournament data — public read, validated writes
+    // All array size limits mirror src/utils/validation.js LIMITS
     match /tournaments/{docId} {
       allow read: if true;
       allow write: if request.resource.data.keys().hasAll(['teams', 'games', 'matches'])
+                   // Core arrays — type + size
                    && request.resource.data.teams is list
                    && request.resource.data.teams.size() <= 64
                    && request.resource.data.games is list
                    && request.resource.data.games.size() <= 20
                    && request.resource.data.matches is list
-                   && request.resource.data.matches.size() <= 500;
+                   && request.resource.data.matches.size() <= 500
+                   // Knockout arrays
+                   && (!('knockoutMatches' in request.resource.data.keys())
+                       || (request.resource.data.knockoutMatches is list
+                           && request.resource.data.knockoutMatches.size() <= 200))
+                   // Individual game arrays
+                   && (!('athletes' in request.resource.data.keys())
+                       || (request.resource.data.athletes is list
+                           && request.resource.data.athletes.size() <= 500))
+                   && (!('categories' in request.resource.data.keys())
+                       || (request.resource.data.categories is list
+                           && request.resource.data.categories.size() <= 100))
+                   && (!('individualResults' in request.resource.data.keys())
+                       || (request.resource.data.individualResults is list
+                           && request.resource.data.individualResults.size() <= 500))
+                   // Lobby game arrays
+                   && (!('lobbyEntries' in request.resource.data.keys())
+                       || (request.resource.data.lobbyEntries is list
+                           && request.resource.data.lobbyEntries.size() <= 500))
+                   && (!('lobbyResults' in request.resource.data.keys())
+                       || (request.resource.data.lobbyResults is list
+                           && request.resource.data.lobbyResults.size() <= 500))
+                   // Pool array
+                   && (!('pools' in request.resource.data.keys())
+                       || (request.resource.data.pools is list
+                           && request.resource.data.pools.size() <= 40))
+                   // Object fields — type check only
+                   && (!('knockoutConfig' in request.resource.data.keys())
+                       || request.resource.data.knockoutConfig is map)
+                   && (!('qualifiedTeams' in request.resource.data.keys())
+                       || request.resource.data.qualifiedTeams is map)
+                   && (!('individualPointsConfig' in request.resource.data.keys())
+                       || request.resource.data.individualPointsConfig is map)
+                   && (!('lobbyPointsConfig' in request.resource.data.keys())
+                       || request.resource.data.lobbyPointsConfig is map)
+                   && (!('lobbyGameStatus' in request.resource.data.keys())
+                       || request.resource.data.lobbyGameStatus is map)
+                   && (!('individualGameStatus' in request.resource.data.keys())
+                       || request.resource.data.individualGameStatus is map)
+                   // Tournament name — string, max 200 chars
+                   && (!('tournament' in request.resource.data.keys())
+                       || request.resource.data.tournament is map);
     }
 
     // Logos — public read, validated writes (must be string data under 3MB)
@@ -30,6 +73,27 @@ service cloud.firestore {
                    && request.resource.data.passwordHash.size() == 64
                    && request.resource.data.recoveryKeyHash is string
                    && request.resource.data.recoveryKeyHash.size() == 64;
+    }
+
+    // Audit log — append-only, public read for admin UI
+    // No updates or deletes allowed — immutable history
+    match /auditLog/{logId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['timestamp', 'action', 'category'])
+                    && request.resource.data.action is string
+                    && request.resource.data.action.size() <= 500
+                    && request.resource.data.category is string
+                    && request.resource.data.category.size() <= 50;
+      allow update, delete: if false;
+    }
+
+    // Backups — limited to 15 snapshots, public read for admin restore UI
+    match /backups/{backupId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['timestamp', 'data'])
+                    && request.resource.data.data is map;
+      allow update: if false;
+      allow delete: if true;  // Allow pruning old backups
     }
 
     // Deny everything else

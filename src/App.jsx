@@ -16,6 +16,7 @@ import TeamManagement from './pages/TeamManagement';
 import AthleteManagement from './pages/AthleteManagement';
 import GamePoolManagement from './pages/GamePoolManagement';
 import Settings from './pages/Settings';
+import ActivityLog from './pages/ActivityLog';
 import Changelog from './pages/Changelog';
 
 function GameRouter() {
@@ -64,7 +65,7 @@ function AppContent() {
   }
 
   // Redirect admin-only views to dashboard if not admin
-  const adminOnlyViews = ['gameManagement', 'settings', 'changelog'];
+  const adminOnlyViews = ['gameManagement', 'settings', 'activityLog', 'changelog'];
   const effectiveView = (!isAdmin && adminOnlyViews.includes(currentView)) ? 'dashboard' : currentView;
 
   const pages = {
@@ -75,6 +76,7 @@ function AppContent() {
     athletes: AthleteManagement,
     gameManagement: GamePoolManagement,
     settings: Settings,
+    activityLog: ActivityLog,
     changelog: Changelog,
   };
 
