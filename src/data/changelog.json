@@ -166,5 +166,12 @@
     "title": "Fixed Points Breakdown Crash",
     "description": "Fixed a bug where clicking any points number on the leaderboard table crashed the app with 'Something went wrong'. The issue was a scoping error in the individual game breakdown calculation. Also added safety guards to prevent similar crashes and enabled error logging for easier future debugging.",
     "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-025",
+    "date": "2026-03-29",
+    "title": "Individual Sports Now Show Champion",
+    "description": "Individual sports like Powerlifting can now be marked as completed, just like team and lobby games. When completed, the top-scoring team is shown as champion on the leaderboard with a trophy badge and a podium display on the game page. Admins can use the 'Finish Game' button to finalize standings and 'Reopen Game' to make changes.",
+    "tag": "New Feature"
   }
 ]

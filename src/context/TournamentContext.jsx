@@ -30,6 +30,7 @@ const initialState = {
   lobbyResults: [],
   lobbyPointsConfig: {},
   lobbyGameStatus: {}, // gameId → 'active' | 'completed'
+  individualGameStatus: {}, // gameId → 'completed'
   darkMode: true,
   currentView: 'dashboard',
   selectedGameId: null,
@@ -114,6 +115,7 @@ function tournamentReducer(state, action) {
         lobbyResults: safeArr(incoming.lobbyResults, LIMITS.MAX_INDIVIDUAL_RESULTS) || state.lobbyResults,
         lobbyPointsConfig: safeObj(incoming.lobbyPointsConfig) || state.lobbyPointsConfig,
         lobbyGameStatus: safeObj(incoming.lobbyGameStatus) || state.lobbyGameStatus,
+        individualGameStatus: safeObj(incoming.individualGameStatus) || state.individualGameStatus,
       };
     }
 
@@ -271,6 +273,7 @@ function tournamentReducer(state, action) {
       const { [gameId]: _ipc, ...restIndPointsConfig } = state.individualPointsConfig;
       const { [gameId]: _lpc, ...restLobbyPointsConfig } = state.lobbyPointsConfig;
       const { [gameId]: _lgs, ...restLobbyGameStatus } = state.lobbyGameStatus;
+      const { [gameId]: _igs, ...restIndGameStatus } = state.individualGameStatus;
       return {
         ...state,
         games: state.games.filter(g => g.id !== gameId),
@@ -287,6 +290,7 @@ function tournamentReducer(state, action) {
         lobbyResults: state.lobbyResults.filter(r => r.gameId !== gameId),
         lobbyPointsConfig: restLobbyPointsConfig,
         lobbyGameStatus: restLobbyGameStatus,
+        individualGameStatus: restIndGameStatus,
         selectedGameId: state.selectedGameId === gameId ? null : state.selectedGameId,
       };
     }
@@ -827,6 +831,20 @@ function tournamentReducer(state, action) {
       return { ...state, lobbyGameStatus: restLgs };
     }
 
+    // Individual game status (complete / reopen)
+    case 'COMPLETE_INDIVIDUAL_GAME': {
+      const { gameId: cigId } = action.payload;
+      return {
+        ...state,
+        individualGameStatus: { ...state.individualGameStatus, [cigId]: 'completed' },
+      };
+    }
+    case 'REOPEN_INDIVIDUAL_GAME': {
+      const { gameId: rigId } = action.payload;
+      const { [rigId]: _, ...restIgs } = state.individualGameStatus;
+      return { ...state, individualGameStatus: restIgs };
+    }
+
     // Dark mode
     case 'TOGGLE_DARK_MODE':
       return { ...state, darkMode: !state.darkMode };
@@ -853,6 +871,7 @@ function tournamentReducer(state, action) {
         lobbyResults: action.payload.lobbyResults || [],
         lobbyPointsConfig: action.payload.lobbyPointsConfig || {},
         lobbyGameStatus: action.payload.lobbyGameStatus || {},
+        individualGameStatus: action.payload.individualGameStatus || {},
         currentView: 'dashboard',
         toasts: state.toasts,
         darkMode: state.darkMode,
@@ -872,6 +891,7 @@ function tournamentReducer(state, action) {
         lobbyResults: action.payload.lobbyResults || [],
         lobbyPointsConfig: action.payload.lobbyPointsConfig || {},
         lobbyGameStatus: action.payload.lobbyGameStatus || {},
+        individualGameStatus: action.payload.individualGameStatus || {},
         currentView: 'dashboard',
         toasts: state.toasts,
         darkMode: state.darkMode,
@@ -1007,6 +1027,7 @@ export function TournamentProvider({ children }) {
       lobbyResults: state.lobbyResults,
       lobbyPointsConfig: state.lobbyPointsConfig,
       lobbyGameStatus: state.lobbyGameStatus,
+      individualGameStatus: state.individualGameStatus,
     };
 
     const serialized = JSON.stringify(savePayload);

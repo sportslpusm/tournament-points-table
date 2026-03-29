@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTournament, useDispatch } from '../context/TournamentContext';
 import { getTeamStatsForMatches, sortTeamsByTiebreaker, getTeamCombinedStats } from '../utils/points';
 import { getTeamFurthestRound, getChampion } from '../utils/knockout';
-import { getIndividualPointsForTeam, getTeamMedals } from '../utils/individualPoints';
+import { getIndividualPointsForTeam, getTeamMedals, getIndividualGameTeamStandings } from '../utils/individualPoints';
 import { getLobbyPointsForTeam, getLobbyGameStandings } from '../utils/lobbyPoints';
 import TeamLogo from '../components/TeamLogo';
 import EmptyState from '../components/EmptyState';
@@ -12,7 +12,7 @@ import PointsBreakdownPopover from '../components/PointsBreakdownPopover';
 export default function Dashboard() {
   const state = useTournament();
   const { dispatch } = useDispatch();
-  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyEntries: rawLobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus } = state;
+  const { teams, games, pools, matches, darkMode, knockoutConfig, knockoutMatches, athletes, individualResults, individualPointsConfig, categories, lobbyEntries: rawLobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus, individualGameStatus } = state;
   const lobbyEntries = Array.isArray(rawLobbyEntries) ? rawLobbyEntries : [];
   const [search, setSearch] = useState('');
   const searchRef = useRef(null);
@@ -172,10 +172,26 @@ export default function Dashboard() {
       // Get champion badges per game
       const championOf = [];
       for (const gid of allGameIds) {
-        const champ = getChampion(knockoutMatches, gid);
-        if (champ === team.id) {
-          const game = games.find(g => g.id === gid);
-          if (game) championOf.push(game);
+        const game = games.find(g => g.id === gid);
+        if (!game) continue;
+        // Team games: knockout final winner
+        if (!game.type || game.type === 'team') {
+          const champ = getChampion(knockoutMatches, gid);
+          if (champ === team.id) championOf.push(game);
+        }
+        // Individual games: top team when game is marked completed
+        if (game.type === 'individual' && individualGameStatus?.[gid] === 'completed') {
+          const indStandings = getIndividualGameTeamStandings(gid, athletes, categories, individualResults, teams, null, individualPointsConfig);
+          if (indStandings.length > 0 && indStandings[0].teamId === team.id) {
+            championOf.push(game);
+          }
+        }
+        // Lobby games: top team when game is completed
+        if (game.type === 'lobby' && lobbyGameStatus?.[gid] === 'completed') {
+          const lobbyStandings = getLobbyGameStandings(gid, lobbyResults, lobbyEntries, teams, lobbyPointsConfig);
+          if (lobbyStandings.length > 0 && lobbyStandings[0].team?.id === team.id) {
+            championOf.push(game);
+          }
         }
       }
 
@@ -231,7 +247,7 @@ export default function Dashboard() {
     });
     // New tiebreaker: points → wins+golds → silvers → bronzes (no H2H, no alphabetical)
     return sortTeamsByTiebreaker(teamStats);
-  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus]);
+  }, [teams, matches, games, pools, knockoutMatches, knockoutConfig, athletes, individualResults, individualPointsConfig, lobbyEntries, lobbyResults, lobbyPointsConfig, lobbyGameStatus, individualGameStatus, categories]);
 
   const filtered = standings.filter(s =>
     s.teamName.toLowerCase().includes(search.toLowerCase())
@@ -266,8 +282,17 @@ export default function Dashboard() {
         const gameCats = categories.filter(c => c.gameId === g.id);
         const completedCats = gameCats.filter(c => c.status === 'completed').length;
         const totalCats = gameCats.length;
-        const stage = totalCats > 0 && completedCats === totalCats ? 'completed' : 'pool';
-        return { game: g, stage, champTeam: null, isIndividual: true, isLobby: false, completedCats, totalCats };
+        const isMarkedComplete = individualGameStatus?.[g.id] === 'completed';
+        const stage = isMarkedComplete ? 'completed' : (totalCats > 0 && completedCats === totalCats ? 'completed' : 'pool');
+        // Find champion (top team by standings) when game is completed
+        let indChampTeam = null;
+        if (stage === 'completed') {
+          const indStandings = getIndividualGameTeamStandings(g.id, athletes, categories, individualResults, teams, null, individualPointsConfig);
+          if (indStandings.length > 0) {
+            indChampTeam = indStandings[0].team;
+          }
+        }
+        return { game: g, stage, champTeam: indChampTeam, isIndividual: true, isLobby: false, completedCats, totalCats };
       }
       if (g.type === 'lobby') {
         const sessions = lobbyResults.filter(r => r.gameId === g.id);
@@ -290,7 +315,7 @@ export default function Dashboard() {
       const champTeam = champ ? teams.find(t => t.id === champ) : null;
       return { game: g, stage, champTeam, isIndividual: false, isLobby: false };
     });
-  }, [games, knockoutConfig, knockoutMatches, teams, categories, lobbyResults, lobbyEntries, lobbyGameStatus, lobbyPointsConfig]);
+  }, [games, knockoutConfig, knockoutMatches, teams, categories, lobbyResults, lobbyEntries, lobbyGameStatus, lobbyPointsConfig, individualGameStatus, athletes, individualResults, individualPointsConfig]);
 
   // Recent results (pool + knockout)
   const recentResults = useMemo(() => {
@@ -462,13 +487,13 @@ export default function Dashboard() {
                 completed: 'bg-win/10 text-win border-win/20',
               };
               const stageLabel = isIndividual
-                ? (totalCats > 0 ? `${completedCats}/${totalCats}` : 'Individual')
+                ? (stage === 'completed' ? 'Completed' : totalCats > 0 ? `${completedCats}/${totalCats}` : 'Individual')
                 : isLobby
                   ? (stage === 'completed' ? 'Completed' : lobbySessions > 0 ? `${lobbySessions} sessions` : 'Lobby')
                   : (stage === 'pool' ? 'Pool' : stage === 'knockout' ? 'Knockout' : 'Completed');
 
               const colorCls = isIndividual
-                ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                ? (stage === 'completed' ? stageColors.completed : 'bg-purple-500/10 text-purple-400 border-purple-500/20')
                 : isLobby
                   ? (stage === 'completed' ? stageColors.completed : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20')
                   : stageColors[stage];

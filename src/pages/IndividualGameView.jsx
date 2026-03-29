@@ -19,7 +19,7 @@ export default function IndividualGameView() {
   const state = useTournament();
   const { dispatch, showToast } = useDispatch();
   const { isAdmin } = useAuth();
-  const { games, teams, darkMode, selectedGameId, athletes, categories, individualResults, individualPointsConfig } = state;
+  const { games, teams, darkMode, selectedGameId, athletes, categories, individualResults, individualPointsConfig, individualGameStatus } = state;
 
   const game = games.find(g => g.id === selectedGameId);
   const gameCategories = categories.filter(c => c.gameId === selectedGameId);
@@ -295,7 +295,7 @@ export default function IndividualGameView() {
 
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center gap-3 mb-1 flex-wrap">
           <span className="text-3xl">{game.emoji}</span>
           <h1 className={`text-2xl md:text-3xl font-black tracking-tight ${darkMode ? 'gradient-text' : 'text-gray-900'}`}>
             {game.name}
@@ -303,11 +303,79 @@ export default function IndividualGameView() {
           <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-500/10 text-purple-400">
             Individual Sport
           </span>
+          {individualGameStatus?.[selectedGameId] === 'completed' && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-win/10 text-win border border-win/20">
+              Completed
+            </span>
+          )}
+          {isAdmin && gameCategories.length > 0 && (
+            individualGameStatus?.[selectedGameId] === 'completed' ? (
+              <button
+                onClick={() => {
+                  if (confirm('Reopen this game? You will be able to edit results again.')) {
+                    dispatch({ type: 'REOPEN_INDIVIDUAL_GAME', payload: { gameId: selectedGameId } });
+                    showToast('Game reopened');
+                  }
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium bg-amber-500 text-white hover:bg-amber-600 transition-all duration-200"
+              >
+                Reopen Game
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (confirm('Mark this game as completed? This finalizes standings and shows the champion.')) {
+                    dispatch({ type: 'COMPLETE_INDIVIDUAL_GAME', payload: { gameId: selectedGameId } });
+                    showToast('Game completed!');
+                  }
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-medium bg-win text-white hover:bg-win/90 transition-all duration-200"
+              >
+                Finish Game
+              </button>
+            )
+          )}
         </div>
         <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
           {gameCategories.length} categories · {gameAthletes.length} athletes · {gameCategories.filter(c => c.status === 'completed').length} completed
         </p>
       </div>
+
+      {/* Champion Podium (shown when game is completed) */}
+      {individualGameStatus?.[selectedGameId] === 'completed' && standings.length > 0 && (
+        <div className={`rounded-2xl p-5 mb-6 border text-center ${
+          darkMode ? 'bg-navy-850/40 border-win/20' : 'bg-win/5 border-win/20'
+        }`}>
+          <div className="text-sm font-bold mb-3 text-win">🏆 Final Standings</div>
+          <div className="flex justify-center items-end gap-4 sm:gap-8">
+            {/* 2nd Place */}
+            {standings.length > 1 && (
+              <div className="text-center">
+                <TeamLogo team={standings[1].team} size={40} />
+                <div className="text-2xl mt-1">🥈</div>
+                <div className={`text-xs font-bold mt-0.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{standings[1].team.shortCode || standings[1].team.name}</div>
+                <div className="text-[10px] text-accent font-mono">{standings[1].totalPoints} pts</div>
+              </div>
+            )}
+            {/* 1st Place */}
+            <div className="text-center -mt-4">
+              <TeamLogo team={standings[0].team} size={56} />
+              <div className="text-3xl mt-1">🥇</div>
+              <div className={`text-sm font-black mt-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{standings[0].team.shortCode || standings[0].team.name}</div>
+              <div className="text-xs text-accent font-mono font-bold">{standings[0].totalPoints} pts</div>
+            </div>
+            {/* 3rd Place */}
+            {standings.length > 2 && (
+              <div className="text-center">
+                <TeamLogo team={standings[2].team} size={40} />
+                <div className="text-2xl mt-1">🥉</div>
+                <div className={`text-xs font-bold mt-0.5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{standings[2].team.shortCode || standings[2].team.name}</div>
+                <div className="text-[10px] text-accent font-mono">{standings[2].totalPoints} pts</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 overflow-x-auto pb-1">
