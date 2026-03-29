@@ -10,8 +10,8 @@ export default class ErrorBoundary extends Component {
     return { hasError: true, error };
   }
 
-  componentDidCatch() {
-    // Error logged internally — no console output in production
+  componentDidCatch(error, errorInfo) {
+    console.error('[ErrorBoundary]', error, errorInfo?.componentStack);
   }
 
   render() {

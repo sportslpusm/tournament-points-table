@@ -215,7 +215,7 @@ export function getTeamIndividualGameBreakdown(teamId, game, allAthletes, allRes
     }
   }
 
-  return { categories: categoryBreakdowns, subtotal, config };
+  return { categories: categoryBreakdowns, subtotal };
 }
 
 /**

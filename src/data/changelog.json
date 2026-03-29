@@ -159,5 +159,12 @@
     "title": "Admin Changelog Page Added",
     "description": "Added a changelog page visible only to admins. Shows a timeline of all changes, fixes, and new features added to the app, written in plain language so anyone can understand what changed.",
     "tag": "New Feature"
+  },
+  {
+    "id": "ch-024",
+    "date": "2026-03-29",
+    "title": "Fixed Points Breakdown Crash",
+    "description": "Fixed a bug where clicking any points number on the leaderboard table crashed the app with 'Something went wrong'. The issue was a scoping error in the individual game breakdown calculation. Also added safety guards to prevent similar crashes and enabled error logging for easier future debugging.",
+    "tag": "Bug Fix"
   }
 ]

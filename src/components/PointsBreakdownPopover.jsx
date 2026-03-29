@@ -401,13 +401,13 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
       </div>
     );
     return {
-      title: `${team.name} — ${breakdown.game.emoji} ${breakdown.game.name} (${subtotal} pts)`,
+      title: `${team.name} — ${breakdown.game?.emoji || ''} ${breakdown.game?.name || 'Game'} (${subtotal} pts)`,
       body,
     };
   }
 
   if (breakdown.type === 'individual') {
-    const { categories, subtotal, config } = breakdown;
+    const { categories, subtotal } = breakdown;
     const body = (
       <div className="space-y-3">
         {categories.length === 0 && (
@@ -441,7 +441,7 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
       </div>
     );
     return {
-      title: `${team.name} — ${breakdown.game.emoji} ${breakdown.game.name} (${subtotal} pts)`,
+      title: `${team.name} — ${breakdown.game?.emoji || ''} ${breakdown.game?.name || 'Game'} (${subtotal} pts)`,
       body,
     };
   }
@@ -481,7 +481,7 @@ function getGameBreakdownContent(teamId, team, gameId, state) {
   );
 
   return {
-    title: `${team.name} — ${breakdown.game.emoji} ${breakdown.game.name} (${total} pts)`,
+    title: `${team.name} — ${breakdown.game?.emoji || ''} ${breakdown.game?.name || 'Game'} (${total} pts)`,
     body,
   };
 }
@@ -692,6 +692,7 @@ function LobbyGameDetailSection({ section, lobbyEntries, darkMode }) {
 }
 
 function GameHeader({ game, subtitle, darkMode }) {
+  if (!game) return null;
   return (
     <div className={`flex items-center gap-2 mb-1.5 pb-1 border-b ${darkMode ? 'border-white/[0.06]' : 'border-gray-100'}`}>
       <span className="text-base">{game.emoji}</span>
