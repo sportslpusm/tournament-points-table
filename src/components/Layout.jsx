@@ -13,6 +13,7 @@ const ALL_NAV_ITEMS = [
   { view: 'athletes', label: 'Athletes', icon: '🏃', adminOnly: false },
   { view: 'gameManagement', label: 'Manage', icon: '⚙️', adminOnly: true },
   { view: 'settings', label: 'Settings', icon: '🔧', adminOnly: true },
+  { view: 'changelog', label: 'Changelog', icon: '📝', adminOnly: true },
 ];
 
 export default function Layout({ children }) {

@@ -1,0 +1,163 @@
+[
+  {
+    "id": "ch-001",
+    "date": "2026-03-15",
+    "title": "Tournament App Launched",
+    "description": "The Tournament Points Table app was created from scratch. Includes team management, pool-stage game tracking, knockout brackets, match management, leaderboard with tiebreaker ranking, and admin password protection.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-002",
+    "date": "2026-03-16",
+    "title": "Points Breakdown and Explainer Added",
+    "description": "You can now click on any team's points in the leaderboard to see a detailed breakdown of where their points came from (which games, wins, byes, knockout bonuses). Also added a 'How Points Work' panel explaining the scoring system.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-003",
+    "date": "2026-03-16",
+    "title": "Security Hardening",
+    "description": "Fixed a security issue where admin credentials could leak. Removed debug logs from production. Added Firestore security rules to protect the database. Fixed multiple vulnerabilities found during a security review.",
+    "tag": "Security Fix"
+  },
+  {
+    "id": "ch-004",
+    "date": "2026-03-16",
+    "title": "Better Error Messages",
+    "description": "Replaced browser alert popups with smooth toast notifications. Added character limits on all text inputs to prevent abuse. Fixed clipboard copy errors being silently ignored.",
+    "tag": "Improvement"
+  },
+  {
+    "id": "ch-005",
+    "date": "2026-03-16",
+    "title": "Updated Branding",
+    "description": "Added the SWW & USC logo to the header and the event logo on the dashboard. The app now properly represents the General Sports Championship branding.",
+    "tag": "Improvement"
+  },
+  {
+    "id": "ch-006",
+    "date": "2026-03-18",
+    "title": "Fixed Knockout Bracket Seeding",
+    "description": "Fixed a bug where teams were placed in the wrong slots during knockout bracket generation. Cross-pool seeding (e.g., Pool A winner vs Pool D runner-up) now works correctly.",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-007",
+    "date": "2026-03-18",
+    "title": "Game Status Badges on Leaderboard",
+    "description": "Each game on the leaderboard now shows its current status (Pool Stage, Knockout, Completed) with game-specific emojis and champion logos for completed games.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-008",
+    "date": "2026-03-19",
+    "title": "Fixed Critical Scoring Errors",
+    "description": "Fixed multiple scoring bugs: Bye (walkover) now correctly gives 4 points instead of 2. Added a participation cap to prevent point inflation. Updated tiebreaker rules to use Wins+Golds then Silvers then Bronzes (never head-to-head or alphabetical).",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-009",
+    "date": "2026-03-19",
+    "title": "Participation Cap Setting for Individual Games",
+    "description": "Admins can now set a maximum participation cap per team for individual games. This prevents teams from earning unlimited participation points by entering many athletes.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-010",
+    "date": "2026-03-20",
+    "title": "Lobby/Esports Games Support",
+    "description": "Added full support for lobby-style games like BGMI and Real Cricket. Schools can register multiple entries (teams), compete in sessions with placements, and earn points with configurable participation caps.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-011",
+    "date": "2026-03-20",
+    "title": "Fixed Ranking System",
+    "description": "Fixed the ranking to use 'dense ranking' where tied teams share the same rank and the next rank is the very next number (e.g., 1st, 1st, 2nd) instead of skipping numbers (1st, 1st, 3rd).",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-012",
+    "date": "2026-03-20",
+    "title": "Lobby Game Champions and Podium",
+    "description": "Completed lobby games now show champion display with podium (1st/2nd/3rd place). Lobby session counts are included in the Games Played column on the leaderboard.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-013",
+    "date": "2026-03-20",
+    "title": "Comprehensive Security Audit",
+    "description": "Performed a full code security audit. Hardened scoring calculations against edge cases, added null safety checks across the app, and improved accessibility for screen readers.",
+    "tag": "Security Fix"
+  },
+  {
+    "id": "ch-014",
+    "date": "2026-03-20",
+    "title": "Mobile and iframe Fixes",
+    "description": "Fixed multiple issues on mobile devices and when the app is embedded in the USC website: modals now display correctly, the layout works properly on iPhones (Safari/Chrome), bottom navigation stays visible, and popovers don't overflow off-screen.",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-015",
+    "date": "2026-03-20",
+    "title": "Complete UI Redesign",
+    "description": "Redesigned the entire app with a premium glassmorphism design. All components, pages, modals, and navigation got a visual refresh with smoother animations, better contrast, and a more polished look in both light and dark modes.",
+    "tag": "Improvement"
+  },
+  {
+    "id": "ch-016",
+    "date": "2026-03-20",
+    "title": "Per-Category Points Configuration",
+    "description": "Individual games like Powerlifting now support custom point values for each weight category. For example, a flagship category can award more points than others.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-017",
+    "date": "2026-03-23",
+    "title": "Second Round Feature Added",
+    "description": "Added a new 'Second Round' stage for games like Football. After pool stage, top teams from each pool play a round-robin second round before advancing to knockout semifinals.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-018",
+    "date": "2026-03-23",
+    "title": "Manual Knockout Matchup Builder",
+    "description": "Admins can now choose between automatic seeding or manually picking which teams advance to knockout and arranging matchups using a visual VS dropdown builder. Works for both pool-to-knockout and second-round-to-knockout flows.",
+    "tag": "New Feature"
+  },
+  {
+    "id": "ch-019",
+    "date": "2026-03-23",
+    "title": "Fixed Knockout Matchups Getting Scrambled",
+    "description": "Fixed a bug where manually arranged knockout matchups were being rearranged by the automatic cross-pool seeding logic. Manual matchups now stay exactly as the admin set them.",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-020",
+    "date": "2026-03-23",
+    "title": "Fixed Browser Autofill Issues",
+    "description": "Fixed an annoying issue where Chrome's autofill was populating the search bar with the tournament name and showing autofill suggestions behind the login modal. The login form no longer interferes with the search input.",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-021",
+    "date": "2026-03-23",
+    "title": "Improved Database Performance",
+    "description": "Switched Firestore to memory-only caching to prevent stale data issues. The app now always loads fresh data from the server, which is more reliable for a tournament that multiple people are viewing at the same time.",
+    "tag": "Improvement"
+  },
+  {
+    "id": "ch-022",
+    "date": "2026-03-25",
+    "title": "Fixed Login on New Devices",
+    "description": "Fixed a bug where logging in from a new device or after clearing browser data showed 'Set Admin Password' instead of the normal login form. The app now correctly detects that a password already exists and shows the login form. Also fixed the related issue where admin access was permanently lost after clearing browser data.",
+    "tag": "Bug Fix"
+  },
+  {
+    "id": "ch-023",
+    "date": "2026-03-29",
+    "title": "Admin Changelog Page Added",
+    "description": "Added a changelog page visible only to admins. Shows a timeline of all changes, fixes, and new features added to the app, written in plain language so anyone can understand what changed.",
+    "tag": "New Feature"
+  }
+]

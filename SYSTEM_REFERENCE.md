@@ -58,7 +58,7 @@ tournament-app/
 ├── .npmrc                         — legacy-peer-deps=true
 ├── dev.mjs                        — Custom Vite dev server launcher (host: true)
 ├── eslint.config.js               — ESLint flat config with React hooks/refresh plugins
-├── firestore.rules                — Firestore security rules (public read tournaments/logos, blocked config reads)
+├── firestore.rules                — Firestore security rules (public read tournaments/logos/config, validated writes)
 ├── index.html                     — SPA entry point with meta tags, Google Fonts, OG tags
 ├── netlify.toml                   — Netlify build config (npm run build, publish dist, SPA redirect)
 ├── package.json                   — Dependencies and scripts (dev, build, lint, preview)
@@ -110,7 +110,10 @@ tournament-app/
 │   │   ├── TeamManagement.jsx      — Team CRUD with logos and per-game stats
 │   │   ├── AthleteManagement.jsx   — Athlete CRUD with reg number validation and category assignment
 │   │   ├── GamePoolManagement.jsx  — Game/pool/knockout configuration and management
-│   │   └── Settings.jsx            — Tournament settings, password change, import/export, dark mode
+│   │   ├── Settings.jsx            — Tournament settings, password change, import/export, dark mode
+│   │   └── Changelog.jsx           — Admin-only changelog timeline (reads from src/data/changelog.json)
+│   ├── data/
+│   │   └── changelog.json          — Changelog entries (id, date, title, description, tag)
 │   └── utils/
 │       ├── auth.js                 — SHA-256 hashing, password validation, lockout, session management
 │       ├── breakdownData.js        — Detailed per-team points breakdown computation
@@ -183,7 +186,7 @@ tournament-app/
 | `recoveryKeyHash` | String | 64-char hex SHA-256 hash |
 | `_updatedAt` | Timestamp | Server timestamp |
 
-**Firestore rules:** Read BLOCKED (`allow read: if false`). Write allowed only if both hashes are exactly 64-char hex strings.
+**Firestore rules:** Public read (for cross-device auth recovery). Write allowed only if both hashes are exactly 64-char hex strings.
 
 #### Indexes
 No custom composite indexes defined. Firestore auto-indexes all fields.
@@ -191,7 +194,7 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 #### RLS / Access Policies (Firestore Security Rules)
 - `tournaments/{docId}`: Public read, validated writes (must have teams/games/matches arrays within size limits)
 - `logos/{logoId}`: Public read, validated writes (data must be string ≤ 3MB)
-- `config/{docId}`: **Read BLOCKED** (protects password hashes), validated writes (hash format enforcement)
+- `config/{docId}`: Public read (for cross-device auth sync), validated writes (hash format enforcement)
 - Everything else: **Denied** (`allow read, write: if false`)
 
 #### Triggers / Functions / Views / Stored Procedures
@@ -294,7 +297,14 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 - **Export includes:** All tournament data + optional auth data (password/recovery hashes)
 - **Import validates:** JSON structure, array sizes, field types, sanitizes strings
 
-### 7.8 Second Round (Optional Stage)
+### 7.8 Changelog (Admin Only)
+- **What it does:** Shows a reverse-chronological timeline of all changes, fixes, and features added to the app
+- **Components:** `Changelog.jsx`
+- **Data source:** `src/data/changelog.json` — static JSON array of entries, each with id, date, title, description, and tag (Bug Fix / New Feature / Improvement / Security Fix)
+- **Access:** Admin-only — nav item and route hidden from non-admin users. Route redirects to dashboard if not logged in.
+- **Design:** Timeline with date-grouped entries, colored tag badges, glassmorphism cards matching app theme. Supports dark/light mode.
+
+### 7.9 Second Round (Optional Stage)
 - **What it does:** Intermediate stage between pool and knockout. Pool toppers play round-robin → top 3 to SF, bottom 2 to play-in
 - **Components:** `GameView.jsx` (uses logic from `secondRound.js`)
 - **Scoring:** Different from pool: Win=3pts, Draw=1pt, Loss=0pts. Uses goals scored/conceded for tiebreaker.
@@ -315,7 +325,7 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 | `debouncedSave(state)` | Debounced save (1.5s delay, 10s if errors) | Admin | tournaments/main, logos/* |
 | `forceSave(state)` | Immediate save (bypass debounce) | Admin | tournaments/main, logos/* |
 | `subscribeToChanges(callback)` | Real-time listener for cross-tab sync | No | tournaments/main, logos/* |
-| `loadAuthData()` | Load auth config (will fail — reads blocked by rules) | No | config/auth |
+| `loadAuthData()` | Load auth config from Firestore (used for cross-device auth recovery) | No | config/auth |
 | `saveAuthData(data)` | Write auth hashes to Firestore | No (but only called during setup/password change) | config/auth |
 
 ---
@@ -693,3 +703,4 @@ No custom composite indexes defined. Firestore auto-indexes all fields.
 | Date | What Changed | Files Modified | Tests Passed | Anything Broke |
 |------|-------------|----------------|--------------|----------------|
 | 2026-03-25 | FIX-001: Fixed cross-device login bug. New devices now recover auth from Firestore instead of showing "Set Admin Password". Also fixes auth recovery after localStorage clear. | `firestore.rules`, `src/context/AuthContext.jsx`, `SYSTEM_REFERENCE.md` | All 56 tests pass | No — existing device login flow unchanged, build succeeds |
+| 2026-03-29 | Added admin-only Changelog page with timeline of all 23 historical changes. Entries stored in `src/data/changelog.json`. | `src/pages/Changelog.jsx` (new), `src/data/changelog.json` (new), `src/App.jsx`, `src/components/Layout.jsx`, `SYSTEM_REFERENCE.md` | All 56 tests pass | No — new page only, no existing features affected |
